@@ -1,24 +1,25 @@
 # Ultra HD Wallpaper
 
-An Android wallpaper application foundation for UHD/4K still wallpapers and Android live wallpapers.
+Native Android wallpaper app foundation in Kotlin.
 
-## Current foundation
-- Native Android application written in Kotlin.
-- Initial home screen with featured still and live wallpaper sections.
-- Still wallpaper apply flow with Home Screen, Lock Screen, and Both choices on Android 7.0+.
-- Android Live Wallpaper service registered through the system wallpaper picker.
-- Internet permission reserved for the upcoming remote catalog and image delivery layer.
+## Implemented
+- Android application shell and first home screen.
+- Wallpaper cards open a dedicated full-screen preview.
+- Still wallpaper apply dialog: Home Screen, Lock Screen, or Both on Android 7.0+.
+- Live wallpaper preview handoff to the Android system wallpaper picker.
+- Initial animated live wallpaper service with lifecycle-aware frame rendering.
+- Internet permission reserved for the remote wallpaper catalog.
 
-## Important current limitations
-- The visible wallpaper cards are temporary local gradient placeholders, not the final 5,000+ online wallpaper catalog.
-- The first live wallpaper service is a static gradient proof of integration; animation, preview polish, and live media catalog are not implemented yet.
-- The repository has not been built or tested on a physical Android device yet.
-- No APK is available yet.
+## Current prototype limitations
+- Home-screen wallpaper cards still use generated gradient placeholders, not the final photo collection.
+- The live wallpaper is an animated gradient proof of the Android service pipeline, not the final live-video/image catalog.
+- The remote 5,000+ wallpaper catalog, search, category filtering, favorites, download cache, and production media delivery are not connected yet.
+- No build or physical-device test has been run; no APK is available yet.
 
-## Planned architecture
-Keep the APK lightweight by storing catalog metadata and thumbnails remotely, loading full-resolution files on demand, and caching selected wallpapers locally. The app should not bundle thousands of image files.
+## Planned lightweight delivery
+Keep the APK small by serving catalog metadata and thumbnails remotely, downloading full-resolution images only when selected, and caching them locally. Live wallpaper assets should be streamed or downloaded on demand rather than bundled into the APK.
 
-## Android project
+## Android configuration
 - Application ID: `com.civamel.ultrahdwallpaper`
 - Minimum SDK: 23
 - Target SDK: 35
