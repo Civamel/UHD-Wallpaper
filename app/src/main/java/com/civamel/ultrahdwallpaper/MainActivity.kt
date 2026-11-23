@@ -106,7 +106,14 @@ class MainActivity : Activity() {
         scroll.addView(content); root.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
         val bottom=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER; setPadding(0,dp(8),0,dp(7)); setBackgroundColor(Color.WHITE) }
         listOf("▣\nWallpaper","▦\nCategory","▤\nQuotes","♧\nStock").forEachIndexed { i,label ->
-            bottom.addView(text(label,13,if(i==0) blue else ink,i==0).apply { gravity=Gravity.CENTER; setOnClickListener { if(i==1) showCategories() else if(i==2) showQuotes() else if(i==3) Toast.makeText(this@MainActivity,"Stock wallpapers",Toast.LENGTH_SHORT).show() } },LinearLayout.LayoutParams(0,dp(62),1f))
+            bottom.addView(text(label,13,if(i==0) blue else ink,i==0).apply { gravity=Gravity.CENTER; setOnClickListener {
+                when(i) {
+                    0 -> { showOnlyFavorites=false; selectedCategory="All"; buildHome() }
+                    1 -> showCategories()
+                    2 -> showQuotes()
+                    3 -> showFavorites()
+                }
+            } },LinearLayout.LayoutParams(0,dp(62),1f))
         }
         root.addView(bottom)
         val ad=text("ADVERTISEMENT  •  Ultra HD Wallpaper",10,Color.DKGRAY,false).apply { gravity=Gravity.CENTER; setBackgroundColor(Color.rgb(245,245,245)) }
@@ -133,6 +140,8 @@ class MainActivity : Activity() {
         bottom.addView(View(this@MainActivity),LinearLayout.LayoutParams(dp(20),1))
         bottom.addView(circle("⇩"){Toast.makeText(this@MainActivity,"Unduhan akan tersedia setelah katalog online terhubung",Toast.LENGTH_LONG).show()})
         root.addView(bottom,FrameLayout.LayoutParams(-1,dp(90),Gravity.BOTTOM))
+        val ad=text("ADVERTISEMENT  •  Ultra HD Wallpaper",10,Color.WHITE,false).apply { gravity=Gravity.CENTER; setBackgroundColor(0xff292929.toInt()) }
+        root.addView(ad,FrameLayout.LayoutParams(-1,dp(42),Gravity.BOTTOM).apply { bottomMargin=dp(90) })
         setContentView(root)
     }
 
