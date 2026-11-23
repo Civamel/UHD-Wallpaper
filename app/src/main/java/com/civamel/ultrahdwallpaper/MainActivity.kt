@@ -41,7 +41,9 @@ class MainActivity : Activity() {
     }
     private var selectedTab = "Wallpaper"
     private var promoVisible = true
-    private val favorites = mutableSetOf<Int>()
+    private val favorites = mutableSetOf<String>()
+    private var sortMode = "Paling populer"
+    private val preferences by lazy { getSharedPreferences("wallpaper_preferences", MODE_PRIVATE) }
     private var searchQuery = ""
     private var selectedCategory = "All"
     private var showOnlyFavorites = false
@@ -53,39 +55,36 @@ class MainActivity : Activity() {
         window.statusBarColor = Color.WHITE
         window.navigationBarColor = Color.WHITE
         if (Build.VERSION.SDK_INT >= 23) window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+        favorites.addAll(preferences.getStringSet("favorite_titles", emptySet()) ?: emptySet())
         buildHome()
-        loadRemoteCatalog()
+        loadBundledCatalog()
     }
 
-    private fun loadRemoteCatalog() {
-        Thread {
-            var connection: HttpURLConnection? = null
-            try {
-                connection = (URL("https://raw.githubusercontent.com/Civamel/UHD-Wallpaper/main/catalog/wallpapers.json").openConnection() as HttpURLConnection).apply { connectTimeout = 12000; readTimeout = 12000; requestMethod = "GET" }
-                val body = connection.inputStream.bufferedReader().use { it.readText() }
-                val items = JSONObject(body).getJSONArray("wallpapers")
-                val newNames = mutableListOf<String>()
-                val newCategories = mutableListOf<String>()
-                val newThumbs = mutableListOf<String>()
-                val newFull = mutableListOf<String>()
-                for (i in 0 until items.length()) {
-                    val item = items.getJSONObject(i)
-                    newNames.add(item.getString("title"))
-                    newCategories.add(item.optString("category", "Abstract"))
-                    newThumbs.add(item.getString("thumbnail"))
-                    newFull.add(item.getString("image"))
-                }
-                if (newNames.isNotEmpty()) runOnUiThread {
-                    names.clear(); names.addAll(newNames)
-                    itemCategories.clear(); itemCategories.addAll(newCategories)
-                    thumbnailUrls.clear(); thumbnailUrls.addAll(newThumbs)
-                    fullUrls.clear(); fullUrls.addAll(newFull)
-                    buildHome()
-                }
-            } catch (_: Exception) {
-                // Keep the built-in offline preview catalog when the network is unavailable.
-            } finally { connection?.disconnect() }
-        }.start()
+    private fun loadBundledCatalog() {
+        try {
+            val body = assets.open("wallpapers.json").bufferedReader().use { it.readText() }
+            val items = JSONObject(body).getJSONArray("wallpapers")
+            val newNames = mutableListOf<String>()
+            val newCategories = mutableListOf<String>()
+            val newThumbs = mutableListOf<String>()
+            val newFull = mutableListOf<String>()
+            for (i in 0 until items.length()) {
+                val item = items.getJSONObject(i)
+                newNames.add(item.getString("title"))
+                newCategories.add(item.optString("category", "Abstract"))
+                newThumbs.add(item.getString("thumbnail"))
+                newFull.add(item.getString("image"))
+            }
+            if (newNames.isNotEmpty()) {
+                names.clear(); names.addAll(newNames)
+                itemCategories.clear(); itemCategories.addAll(newCategories)
+                thumbnailUrls.clear(); thumbnailUrls.addAll(newThumbs)
+                fullUrls.clear(); fullUrls.addAll(newFull)
+                buildHome()
+            }
+        } catch (_: Exception) {
+            Toast.makeText(this, "Katalog bawaan gagal dibaca", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun loadImage(url: String, onLoaded: (Bitmap?) -> Unit) {
@@ -130,15 +129,19 @@ class MainActivity : Activity() {
             promo.addView(text("×",25,Color.WHITE,false).apply { gravity=Gravity.CENTER; setOnClickListener { promoVisible=false; buildHome() } },LinearLayout.LayoutParams(dp(34),dp(48)))
             val pp=LinearLayout.LayoutParams(-1,dp(54)); pp.setMargins(dp(12),dp(8),dp(12),dp(12)); content.addView(promo,pp)
         }
-        val sort=TextView(this@MainActivity).apply { text="Urutkan berdasarkan: PALING POPULER   ▾"; textSize=14f; setTextColor(blue); setPadding(dp(18),dp(12),dp(12),dp(18)); setOnClickListener {
-            AlertDialog.Builder(this@MainActivity).setTitle("Urutkan berdasarkan").setItems(arrayOf("Paling populer","Terbaru","Acak","Paling banyak diunduh")) { _,w -> text="Urutkan berdasarkan: "+arrayOf("PALING POPULER","TERBARU","ACAK","PALING BANYAK DIUNDUH")[w]+"   ▾" }.show()
+        val sort=TextView(this@MainActivity).apply { text="Urutkan berdasarkan: "+sortMode.uppercase()+"   ▾"; textSize=14f; setTextColor(blue); setPadding(dp(18),dp(12),dp(12),dp(18)); setOnClickListener {
+            val options = arrayOf("Paling populer", "Terbaru", "A-Z", "Acak")
+            AlertDialog.Builder(this@MainActivity).setTitle("Urutkan berdasarkan").setItems(options) { _, w ->
+                sortMode = options[w]
+                buildHome()
+            }.show()
         }}
         content.addView(sort)
         val grid=GridLayout(this@MainActivity).apply { columnCount=3; useDefaultMargins=false }
-        val visibleIndexes = names.indices.filter { index ->
+        val filteredIndexes = names.indices.filter { index ->
             val categoryMatch = selectedCategory == "All" || itemCategories[index] == selectedCategory
             val searchMatch = searchQuery.isBlank() || names[index].contains(searchQuery, true) || itemCategories[index].contains(searchQuery, true)
-            val favoriteMatch = !showOnlyFavorites || favorites.contains(index)
+            val favoriteMatch = !showOnlyFavorites || favorites.contains(names[index])
             val tabMatch = when (selectedTab) {
                 "Live" -> index % 3 == 0
                 "Parallax" -> index % 3 == 1
@@ -147,6 +150,12 @@ class MainActivity : Activity() {
                 else -> true
             }
             categoryMatch && searchMatch && favoriteMatch && tabMatch
+        }
+        val visibleIndexes = when (sortMode) {
+            "Terbaru" -> filteredIndexes.reversed()
+            "A-Z" -> filteredIndexes.sortedBy { names[it].lowercase() }
+            "Acak" -> filteredIndexes.shuffled()
+            else -> filteredIndexes
         }
         visibleIndexes.forEach { index ->
             val name = names[index]
@@ -194,7 +203,7 @@ class MainActivity : Activity() {
         top.addView(circle("↗"){shareWallpaper()})
         root.addView(top,FrameLayout.LayoutParams(-1,dp(76),Gravity.TOP))
         val bottom=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(dp(20),dp(12),dp(20),dp(20)) }
-        bottom.addView(circle(if(index in favorites) "♥" else "♡"){ if(!favorites.add(index)) favorites.remove(index); showPreview(index) })
+        bottom.addView(circle(if(names[index] in favorites) "♥" else "♡"){ if(!favorites.add(names[index])) favorites.remove(names[index]); preferences.edit().putStringSet("favorite_titles", favorites.toSet()).apply(); showPreview(index) })
         bottom.addView(View(this@MainActivity),LinearLayout.LayoutParams(0,1,1f))
         val apply=Button(this@MainActivity).apply { text="Terapkan"; isAllCaps=false; textSize=16f; setTextColor(Color.WHITE); background=rounded(blue,32); setOnClickListener { if(selectedTab=="Live" || selectedTab=="Charging Live") applyLiveWallpaper() else applyWallpaper(index) } }
         bottom.addView(apply,LinearLayout.LayoutParams(dp(150),dp(54)))
@@ -248,7 +257,7 @@ class MainActivity : Activity() {
         setContentView(ScrollView(this@MainActivity).apply { addView(root) })
     }
 
-    private fun showFavorites(){ showOnlyFavorites=true; selectedCategory="All"; buildHome() }
+    private fun showFavorites(){ showOnlyFavorites=true; selectedCategory="All"; selectedTab="Wallpaper"; buildHome() }
     private fun showCategories(){ AlertDialog.Builder(this@MainActivity).setTitle("Category").setItems(categoryNames.toTypedArray()){_,w-> selectedCategory=categoryNames[w]; selectedTab="Wallpaper"; showOnlyFavorites=false; buildHome() }.show() }
     private fun showQuotes(){ AlertDialog.Builder(this@MainActivity).setTitle("Quotes").setMessage("Inspirasi harian untuk layar kamu.").setPositiveButton("OK",null).show() }
     private fun search(){ val input=EditText(this@MainActivity).apply { hint="Cari wallpaper"; setText(searchQuery) }; AlertDialog.Builder(this@MainActivity).setTitle("Search").setView(input).setPositiveButton("Cari"){_,_-> searchQuery=input.text.toString().trim(); showOnlyFavorites=false; buildHome() }.setNeutralButton("Hapus"){_,_-> searchQuery=""; buildHome() }.setNegativeButton("Batal",null).show() }
