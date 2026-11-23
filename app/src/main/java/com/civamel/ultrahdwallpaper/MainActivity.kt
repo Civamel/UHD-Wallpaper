@@ -200,10 +200,16 @@ class MainActivity : Activity() {
         top.addView(circle("‹"){buildHome()})
         top.addView(View(this@MainActivity),LinearLayout.LayoutParams(0,1,1f))
         top.addView(circle("💎"){Toast.makeText(this@MainActivity,"Premium",Toast.LENGTH_SHORT).show()})
-        top.addView(circle("ⓘ"){Toast.makeText(this@MainActivity,names[index],Toast.LENGTH_SHORT).show()})
+        top.addView(circle("ⓘ"){ AlertDialog.Builder(this@MainActivity).setTitle(names[index]).setMessage("Kategori: "+itemCategories.getOrNull(index).orEmpty()+"
+
+Wallpaper Ultra HD. Pilih Terapkan untuk memasang wallpaper atau Unduh untuk menyimpan gambar.").setPositiveButton("Mengerti",null).show() })
         top.addView(circle("↗"){shareWallpaper()})
         root.addView(top,FrameLayout.LayoutParams(-1,dp(76),Gravity.TOP))
         val bottom=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(dp(20),dp(12),dp(20),dp(20)) }
+        val details=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER_VERTICAL }
+        details.addView(text(names[index],15,Color.WHITE,true))
+        details.addView(text(itemCategories.getOrNull(index).orEmpty(),12,0xffcccccc.toInt(),false))
+        bottom.addView(details,LinearLayout.LayoutParams(0,dp(54),1f))
         bottom.addView(circle(if(names[index] in favorites) "♥" else "♡"){ if(!favorites.add(names[index])) favorites.remove(names[index]); preferences.edit().putStringSet("favorite_titles", favorites.toSet()).apply(); showPreview(index) })
         bottom.addView(View(this@MainActivity),LinearLayout.LayoutParams(0,1,1f))
         val apply=Button(this@MainActivity).apply { text="Terapkan"; isAllCaps=false; textSize=16f; setTextColor(Color.WHITE); background=rounded(blue,32); setOnClickListener { if(selectedTab=="Live" || selectedTab=="Charging Live") applyLiveWallpaper() else applyWallpaper(index) } }
@@ -217,7 +223,8 @@ class MainActivity : Activity() {
     }
 
     private fun applyWallpaper(index:Int) {
-        AlertDialog.Builder(this@MainActivity).setTitle("Terapkan wallpaper").setItems(arrayOf("Layar utama","Layar kunci","Keduanya")) { _,which ->
+        val targets = if (Build.VERSION.SDK_INT >= 24) arrayOf("Layar utama","Layar kunci","Keduanya") else arrayOf("Layar utama")
+        AlertDialog.Builder(this@MainActivity).setTitle("Terapkan wallpaper").setItems(targets) { _,which ->
             val flags = when(which) { 1 -> WallpaperManager.FLAG_LOCK; 2 -> WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK; else -> WallpaperManager.FLAG_SYSTEM }
             val applyBitmap: (Bitmap) -> Unit = { bitmap ->
                 Thread {
