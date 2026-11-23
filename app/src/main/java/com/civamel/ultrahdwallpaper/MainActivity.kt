@@ -33,6 +33,11 @@ class MainActivity : Activity() {
     private var selectedTab = "Wallpaper"
     private var promoVisible = true
     private val favorites = mutableSetOf<Int>()
+    private var searchQuery = ""
+    private var selectedCategory = "All"
+    private var showOnlyFavorites = false
+    private val categoryNames = listOf("All", "Abstract", "Animals", "Anime", "Art", "Cars", "Nature", "Ocean", "Space", "Technology")
+    private val itemCategories = listOf("Abstract","Art","Abstract","Animals","Ocean","Abstract","Nature","Animals","Space","Nature","Nature","Art","Technology","Art","Abstract","Space","Technology","Nature")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,7 +61,7 @@ class MainActivity : Activity() {
         val tabScroll=HorizontalScrollView(this@MainActivity).apply { isHorizontalScrollBarEnabled=false }
         val tabRow=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL }
         tabs.forEach { tab ->
-            val item=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER; setOnClickListener { selectedTab=tab; buildHome() } }
+            val item=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER; setOnClickListener { selectedTab=tab; showOnlyFavorites=false; buildHome() } }
             item.addView(text(tab,16,if(tab==selectedTab) blue else ink,true).apply { gravity=Gravity.CENTER; setPadding(dp(15),dp(12),dp(15),dp(12)) })
             item.addView(View(this@MainActivity).apply { setBackgroundColor(if(tab==selectedTab) blue else Color.TRANSPARENT) },LinearLayout.LayoutParams(-1,dp(3)))
             tabRow.addView(item)
@@ -75,12 +80,26 @@ class MainActivity : Activity() {
         }}
         content.addView(sort)
         val grid=GridLayout(this@MainActivity).apply { columnCount=3; useDefaultMargins=false }
-        names.forEachIndexed { index,name ->
+        val visibleIndexes = names.indices.filter { index ->
+            val categoryMatch = selectedCategory == "All" || itemCategories[index] == selectedCategory
+            val searchMatch = searchQuery.isBlank() || names[index].contains(searchQuery, true) || itemCategories[index].contains(searchQuery, true)
+            val favoriteMatch = !showOnlyFavorites || favorites.contains(index)
+            val tabMatch = when (selectedTab) {
+                "Live" -> index % 3 == 0
+                "Parallax" -> index % 3 == 1
+                "Double" -> index % 3 == 2
+                "Charging Live" -> index % 4 == 0
+                else -> true
+            }
+            categoryMatch && searchMatch && favoriteMatch && tabMatch
+        }
+        visibleIndexes.forEach { index ->
+            val name = names[index]
             val cell=FrameLayout(this@MainActivity)
             val art=View(this@MainActivity).apply { background=artDrawable(index); setOnClickListener { showPreview(index) } }
-            cell.addView(art,FrameLayout.LayoutParams(-1,dp(202)))
+            cell.addView(art,FrameLayout.LayoutParams(-1,dp(148)))
             if(index%5==1) cell.addView(text("♛",20,Color.WHITE,true).apply { gravity=Gravity.TOP or Gravity.END; setPadding(dp(5),dp(4),dp(8),0) })
-            val params=GridLayout.LayoutParams().apply { width=0; height=dp(202); columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); setMargins(dp(1),dp(1),dp(1),dp(1)) }
+            val params=GridLayout.LayoutParams().apply { width=0; height=dp(148); columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); setMargins(dp(1),dp(1),dp(1),dp(1)) }
             grid.addView(cell,params)
         }
         content.addView(grid)
@@ -109,7 +128,7 @@ class MainActivity : Activity() {
         val bottom=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(dp(20),dp(12),dp(20),dp(20)) }
         bottom.addView(circle(if(index in favorites) "♥" else "♡"){ if(!favorites.add(index)) favorites.remove(index); showPreview(index) })
         bottom.addView(View(this@MainActivity),LinearLayout.LayoutParams(0,1,1f))
-        val apply=Button(this@MainActivity).apply { text="Terapkan"; isAllCaps=false; textSize=16f; setTextColor(Color.WHITE); background=rounded(blue,32); setOnClickListener { applyWallpaper(index) } }
+        val apply=Button(this@MainActivity).apply { text="Terapkan"; isAllCaps=false; textSize=16f; setTextColor(Color.WHITE); background=rounded(blue,32); setOnClickListener { if(selectedTab=="Live" || selectedTab=="Charging Live") applyLiveWallpaper() else applyWallpaper(index) } }
         bottom.addView(apply,LinearLayout.LayoutParams(dp(150),dp(54)))
         bottom.addView(View(this@MainActivity),LinearLayout.LayoutParams(dp(20),1))
         bottom.addView(circle("⇩"){Toast.makeText(this@MainActivity,"Unduhan akan tersedia setelah katalog online terhubung",Toast.LENGTH_LONG).show()})
@@ -143,12 +162,22 @@ class MainActivity : Activity() {
         setContentView(ScrollView(this@MainActivity).apply { addView(root) })
     }
 
-    private fun showFavorites(){ val ids=favorites.toList(); if(ids.isEmpty()){Toast.makeText(this@MainActivity,"Belum ada wallpaper favorit",Toast.LENGTH_SHORT).show();return}; showPreview(ids.first()) }
-    private fun showCategories(){ AlertDialog.Builder(this@MainActivity).setTitle("Category").setItems(arrayOf("Nature","Abstract","Animals","Ocean","Space","Minimal")){_,w-> selectedTab="Wallpaper";buildHome();Toast.makeText(this@MainActivity,arrayOf("Nature","Abstract","Animals","Ocean","Space","Minimal")[w],Toast.LENGTH_SHORT).show()}.show() }
+    private fun showFavorites(){ showOnlyFavorites=true; selectedCategory="All"; buildHome() }
+    private fun showCategories(){ AlertDialog.Builder(this@MainActivity).setTitle("Category").setItems(categoryNames.toTypedArray()){_,w-> selectedCategory=categoryNames[w]; selectedTab="Wallpaper"; showOnlyFavorites=false; buildHome() }.show() }
     private fun showQuotes(){ AlertDialog.Builder(this@MainActivity).setTitle("Quotes").setMessage("Inspirasi harian untuk layar kamu.").setPositiveButton("OK",null).show() }
-    private fun search(){ val input=EditText(this@MainActivity).apply { hint="Cari wallpaper" }; AlertDialog.Builder(this@MainActivity).setTitle("Search").setView(input).setPositiveButton("Cari"){_,_->Toast.makeText(this@MainActivity,"Pencarian: "+input.text,Toast.LENGTH_SHORT).show()}.setNegativeButton("Batal",null).show() }
+    private fun search(){ val input=EditText(this@MainActivity).apply { hint="Cari wallpaper"; setText(searchQuery) }; AlertDialog.Builder(this@MainActivity).setTitle("Search").setView(input).setPositiveButton("Cari"){_,_-> searchQuery=input.text.toString().trim(); showOnlyFavorites=false; buildHome() }.setNeutralButton("Hapus"){_,_-> searchQuery=""; buildHome() }.setNegativeButton("Batal",null).show() }
     private fun shareWallpaper(){ val i=Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,"Ultra HD Wallpaper"); startActivity(Intent.createChooser(i,"Bagikan")) }
-    private fun toggleTheme(){ Toast.makeText(this@MainActivity,"Tema gelap akan ditambahkan pada pengembangan berikutnya",Toast.LENGTH_SHORT).show() }
+    private fun applyLiveWallpaper() {
+        try {
+            val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER).apply {
+                putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, ComponentName(this@MainActivity, LiveWallpaperService::class.java))
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(this@MainActivity,"Pemilih live wallpaper tidak tersedia: "+e.localizedMessage,Toast.LENGTH_LONG).show()
+        }
+    }
+    private fun toggleTheme(){ Toast.makeText(this@MainActivity,"Pengaturan tema sedang disiapkan",Toast.LENGTH_SHORT).show() }
     private fun circle(symbol:String, action:()->Unit):View = TextView(this@MainActivity).apply { text=symbol; textSize=24f; gravity=Gravity.CENTER; setTextColor(Color.BLACK); background=rounded(0xffdddddd.toInt(),50); setOnClickListener{action()} }.also { it.layoutParams=LinearLayout.LayoutParams(dp(48),dp(48)).apply { setMargins(dp(4),0,dp(4),0) } }
     private fun artDrawable(index:Int):GradientDrawable { val a=palettes[index%palettes.size]; return GradientDrawable(GradientDrawable.Orientation.TL_BR,a).apply { cornerRadius=dp(2).toFloat() } }
     private fun rounded(color:Int,radius:Int)=GradientDrawable().apply { setColor(color); cornerRadius=dp(radius).toFloat() }
