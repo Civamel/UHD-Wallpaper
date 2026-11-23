@@ -257,11 +257,13 @@ class MainActivity : Activity() {
     }
 
     private fun showSettings() {
-        val root=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL; setBackgroundColor(Color.WHITE); setPadding(dp(22),dp(22),dp(22),dp(12)) }
-        root.addView(text("‹   Pengaturan",22,ink,true).apply { setOnClickListener { buildHome() } })
-        root.addView(space(28)); root.addView(text("Pengaturan",24,ink,true)); root.addView(space(12))
+        val settingsBg = if (darkMode) 0xff121318.toInt() else Color.WHITE
+        val settingsText = if (darkMode) 0xfff2f2f5.toInt() else ink
+        val root=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL; setBackgroundColor(settingsBg); setPadding(dp(22),dp(22),dp(22),dp(12)) }
+        root.addView(text("‹   Pengaturan",22,settingsText,true).apply { setOnClickListener { buildHome() } })
+        root.addView(space(28)); root.addView(text("Pengaturan",24,settingsText,true)); root.addView(space(12))
         listOf("♟   Notifikasi","♡   Favorit","文   Bahasa Aplikasi","▧   Pengubah Wallpaper Otomatis","⇩   Unduh","▤   Wallpaper Penerangan Tepi","Bagikan Aplikasi","☆   Nilai kami","♧   Umpan Balik").forEach { item ->
-            val row=text(item+"     ›",17,ink,false).apply { setPadding(dp(16),dp(18),dp(10),dp(18)); background=rounded(Color.WHITE,16); setOnClickListener { if(item.contains("Favorit")) showFavorites() else Toast.makeText(this@MainActivity,item,Toast.LENGTH_SHORT).show() } }
+            val row=text(item+"     ›",17,settingsText,false).apply { setPadding(dp(16),dp(18),dp(10),dp(18)); background=rounded(if(darkMode) 0xff24262d.toInt() else Color.WHITE,16); setOnClickListener { if(item.contains("Favorit")) showFavorites() else Toast.makeText(this@MainActivity,item,Toast.LENGTH_SHORT).show() } }
             root.addView(row,LinearLayout.LayoutParams(-1,-2))
         }
         setContentView(ScrollView(this@MainActivity).apply { addView(root) })
@@ -322,20 +324,20 @@ class MainActivity : Activity() {
     private fun showCategories(){
         val root = LinearLayout(this@MainActivity).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.WHITE)
+            setBackgroundColor(if(darkMode) 0xff121318.toInt() else Color.WHITE)
             setPadding(dp(18), dp(18), dp(18), dp(12))
         }
         val header = LinearLayout(this@MainActivity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        header.addView(text("‹", 30, ink, false).apply {
+        header.addView(text("‹", 30, if(darkMode) 0xfff2f2f5.toInt() else ink, false).apply {
             gravity = Gravity.CENTER
             setOnClickListener { buildHome() }
         }, LinearLayout.LayoutParams(dp(48), dp(52)))
-        header.addView(text("Category", 23, ink, true))
+        header.addView(text("Category", 23, if(darkMode) 0xfff2f2f5.toInt() else ink, true))
         root.addView(header)
-        root.addView(text("Explore wallpapers by category", 14, Color.GRAY, false).apply {
+        root.addView(text("Explore wallpapers by category", 14, if(darkMode) 0xffaaaaaa.toInt() else Color.GRAY, false).apply {
             setPadding(dp(4), dp(4), 0, dp(18))
         })
         val scroll = ScrollView(this@MainActivity)
@@ -346,7 +348,7 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(14), dp(8), dp(14), dp(8))
-                background = rounded(0xfff4f4f7.toInt(), 14)
+                background = rounded(if(darkMode) 0xff24262d.toInt() else 0xfff4f4f7.toInt(), 14)
                 setOnClickListener {
                     selectedCategory = category
                     selectedTab = "Wallpaper"
@@ -356,8 +358,8 @@ class MainActivity : Activity() {
             }
             row.addView(text(symbols[index], 23, purple, false).apply { gravity = Gravity.CENTER },
                 LinearLayout.LayoutParams(dp(48), dp(48)))
-            row.addView(text(category, 16, ink, true), LinearLayout.LayoutParams(0, -2, 1f))
-            row.addView(text("›", 25, ink, false))
+            row.addView(text(category, 16, if(darkMode) 0xfff2f2f5.toInt() else ink, true), LinearLayout.LayoutParams(0, -2, 1f))
+            row.addView(text("›", 25, if(darkMode) 0xfff2f2f5.toInt() else ink, false))
             val params = LinearLayout.LayoutParams(-1, dp(64))
             params.bottomMargin = dp(9)
             list.addView(row, params)
@@ -380,30 +382,30 @@ class MainActivity : Activity() {
         var currentIndex = 0
         val root = LinearLayout(this@MainActivity).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.rgb(248, 248, 251))
+            setBackgroundColor(if(darkMode) 0xff121318.toInt() else Color.rgb(248, 248, 251))
             setPadding(dp(20), dp(18), dp(20), dp(18))
         }
         val header = LinearLayout(this@MainActivity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        header.addView(text("‹", 30, ink, false).apply {
+        header.addView(text("‹", 30, if(darkMode) 0xfff2f2f5.toInt() else ink, false).apply {
             gravity = Gravity.CENTER
             setOnClickListener { buildHome() }
         }, LinearLayout.LayoutParams(dp(48), dp(52)))
-        header.addView(text("Quotes", 23, ink, true))
+        header.addView(text("Quotes", 23, if(darkMode) 0xfff2f2f5.toInt() else ink, true))
         root.addView(header)
-        root.addView(text("Words to inspire your day", 14, Color.GRAY, false).apply {
+        root.addView(text("Words to inspire your day", 14, if(darkMode) 0xffaaaaaa.toInt() else Color.GRAY, false).apply {
             setPadding(dp(4), dp(2), 0, dp(20))
         })
         val card = LinearLayout(this@MainActivity).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(dp(24), dp(34), dp(24), dp(34))
-            background = rounded(Color.WHITE, 22)
+            background = rounded(if(darkMode) 0xff24262d.toInt() else Color.WHITE, 22)
             elevation = dp(3).toFloat()
         }
-        val quoteText = text("", 23, ink, true).apply {
+        val quoteText = text("", 23, if(darkMode) 0xfff2f2f5.toInt() else ink, true).apply {
             gravity = Gravity.CENTER
             setLineSpacing(dp(5).toFloat(), 1f)
         }
