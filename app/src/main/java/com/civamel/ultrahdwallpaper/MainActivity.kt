@@ -61,6 +61,7 @@ class MainActivity : Activity() {
         darkMode = preferences.getBoolean("dark_mode", false)
         buildHome()
         loadBundledCatalog()
+        refreshRemoteCatalog()
     }
 
     private fun loadBundledCatalog() {
@@ -476,3 +477,59 @@ class MainActivity : Activity() {
     private fun space(h:Int)=View(this@MainActivity).apply { layoutParams=LinearLayout.LayoutParams(1,dp(h)) }
     private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
 }
+
+    // Fetch an updatable catalog without bundling thousands of image files in the APK.
+    private fun refreshRemoteCatalog() {
+        Thread {
+            var connection: HttpURLConnection? = null
+            val parsed = try {
+                val url = URL("https://raw.githubusercontent.com/Civamel/UHD-Wallpaper/main/catalog/wallpapers.json")
+                connection = (url.openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 12000
+                    readTimeout = 18000
+                    requestMethod = "GET"
+                    setRequestProperty("Accept", "application/json")
+                    setRequestProperty("Cache-Control", "no-cache")
+                }
+                if (connection.responseCode !in 200..299) throw IllegalStateException("HTTP " + connection.responseCode)
+                val body = connection.inputStream.bufferedReader().use { it.readText() }
+                val items = JSONObject(body).getJSONArray("wallpapers")
+                val titles = mutableListOf<String>()
+                val categories = mutableListOf<String>()
+                val thumbs = mutableListOf<String>()
+                val images = mutableListOf<String>()
+                for (i in 0 until items.length()) {
+                    val item = items.optJSONObject(i) ?: continue
+                    val title = item.optString("title").trim()
+                    val thumbnail = item.optString("thumbnail").trim()
+                    val image = item.optString("image").trim()
+                    if (title.isEmpty() || thumbnail.isEmpty() || image.isEmpty()) continue
+                    if (!thumbnail.startsWith("https://") || !image.startsWith("https://")) continue
+                    titles.add(title)
+                    categories.add(item.optString("category", "Abstract").ifBlank { "Abstract" })
+                    thumbs.add(thumbnail)
+                    images.add(image)
+                }
+                if (titles.isEmpty()) throw IllegalStateException("Katalog online kosong atau tidak valid")
+                arrayOf(titles, categories, thumbs, images)
+            } catch (_: Exception) {
+                null
+            } finally {
+                connection?.disconnect()
+            }
+            if (parsed != null) {
+                runOnUiThread {
+                    names.clear()
+                    names.addAll(parsed[0])
+                    itemCategories.clear()
+                    itemCategories.addAll(parsed[1])
+                    thumbnailUrls.clear()
+                    thumbnailUrls.addAll(parsed[2])
+                    fullUrls.clear()
+                    fullUrls.addAll(parsed[3])
+                    imageCache.evictAll()
+                    buildHome()
+                }
+            }
+        }.start()
+    }
