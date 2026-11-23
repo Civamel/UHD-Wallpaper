@@ -310,7 +310,53 @@ class MainActivity : Activity() {
     }
 
     private fun showFavorites(){ showOnlyFavorites=true; selectedCategory="All"; selectedTab="Wallpaper"; buildHome() }
-    private fun showCategories(){ AlertDialog.Builder(this@MainActivity).setTitle("Category").setItems(categoryNames.toTypedArray()){_,w-> selectedCategory=categoryNames[w]; selectedTab="Wallpaper"; showOnlyFavorites=false; buildHome() }.show() }
+    private fun showCategories(){
+        val root = LinearLayout(this@MainActivity).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.WHITE)
+            setPadding(dp(18), dp(18), dp(18), dp(12))
+        }
+        val header = LinearLayout(this@MainActivity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        header.addView(text("‹", 30, ink, false).apply {
+            gravity = Gravity.CENTER
+            setOnClickListener { buildHome() }
+        }, LinearLayout.LayoutParams(dp(48), dp(52)))
+        header.addView(text("Category", 23, ink, true))
+        root.addView(header)
+        root.addView(text("Explore wallpapers by category", 14, Color.GRAY, false).apply {
+            setPadding(dp(4), dp(4), 0, dp(18))
+        })
+        val scroll = ScrollView(this@MainActivity)
+        val list = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
+        val symbols = listOf("▦", "✦", "🐾", "▶", "🎨", "🚘", "🌿", "🌊", "☄", "⚙")
+        categoryNames.forEachIndexed { index, category ->
+            val row = LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(14), dp(8), dp(14), dp(8))
+                background = rounded(0xfff4f4f7.toInt(), 14)
+                setOnClickListener {
+                    selectedCategory = category
+                    selectedTab = "Wallpaper"
+                    showOnlyFavorites = false
+                    buildHome()
+                }
+            }
+            row.addView(text(symbols[index], 23, purple, false).apply { gravity = Gravity.CENTER },
+                LinearLayout.LayoutParams(dp(48), dp(48)))
+            row.addView(text(category, 16, ink, true), LinearLayout.LayoutParams(0, -2, 1f))
+            row.addView(text("›", 25, ink, false))
+            val params = LinearLayout.LayoutParams(-1, dp(64))
+            params.bottomMargin = dp(9)
+            list.addView(row, params)
+        }
+        scroll.addView(list)
+        root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        setContentView(root)
+    }
     private fun showQuotes(){ AlertDialog.Builder(this@MainActivity).setTitle("Quotes").setMessage("Inspirasi harian untuk layar kamu.").setPositiveButton("OK",null).show() }
     private fun search(){ val input=EditText(this@MainActivity).apply { hint="Cari wallpaper"; setText(searchQuery) }; AlertDialog.Builder(this@MainActivity).setTitle("Search").setView(input).setPositiveButton("Cari"){_,_-> searchQuery=input.text.toString().trim(); showOnlyFavorites=false; buildHome() }.setNeutralButton("Hapus"){_,_-> searchQuery=""; buildHome() }.setNegativeButton("Batal",null).show() }
     private fun shareWallpaper(){ val i=Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,"Ultra HD Wallpaper"); startActivity(Intent.createChooser(i,"Bagikan")) }
