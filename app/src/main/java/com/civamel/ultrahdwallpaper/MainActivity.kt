@@ -8,6 +8,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
@@ -17,17 +18,16 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
-import android.graphics.Color
 
 class MainActivity : Activity() {
     private val ink = Color.rgb(18, 20, 25)
+    private val panel = Color.rgb(35, 38, 47)
     private val accent = Color.rgb(91, 112, 245)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.statusBarColor = ink
         window.navigationBarColor = ink
-        window.decorView.systemUiVisibility = 0
         buildHome()
     }
 
@@ -35,12 +35,11 @@ class MainActivity : Activity() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(ink)
-            setPadding(dp(20), dp(22), dp(20), dp(18))
+            setPadding(dp(20), dp(22), dp(20), dp(14))
         }
         val scroll = ScrollView(this)
         val content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         scroll.addView(content)
-
         content.addView(label("ULTRA HD", 13, Color.LTGRAY, true))
         content.addView(label("Wallpaper", 30, Color.WHITE, true))
         content.addView(label("Discover wallpapers for every screen.", 14, Color.rgb(180,184,195), false))
@@ -48,16 +47,23 @@ class MainActivity : Activity() {
         content.addView(section("Featured wallpapers"))
         content.addView(wallpaperCard("Aurora Dreams", "4K • Nature", intArrayOf(0xff102b46.toInt(), 0xff397e9b.toInt()), false))
         content.addView(wallpaperCard("Midnight Flow", "4K • Abstract", intArrayOf(0xff17152e.toInt(), 0xff624a8a.toInt()), false))
-        content.addView(space(12))
+        content.addView(space(10))
         content.addView(section("Live wallpapers"))
         content.addView(wallpaperCard("Living Aurora", "Animated • Live wallpaper", intArrayOf(0xff102b46.toInt(), 0xff397e9b.toInt()), true))
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
-        val nav = TextView(this).apply {
-            text = "⌂  Home                         ◈  Categories                         ♡  Favorites"
-            textSize = 12f
-            setTextColor(Color.WHITE)
+        val nav = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            setPadding(0, dp(16), 0, dp(8))
+            setBackgroundColor(panel)
+            setPadding(0, dp(14), 0, dp(14))
+        }
+        listOf("⌂  Home", "◈  Categories", "♡  Favorites").forEach {
+            nav.addView(TextView(this).apply {
+                text = it
+                textSize = 12f
+                gravity = Gravity.CENTER
+                setTextColor(Color.WHITE)
+            }, LinearLayout.LayoutParams(0, -2, 1f))
         }
         root.addView(nav)
         setContentView(root)
@@ -66,33 +72,61 @@ class MainActivity : Activity() {
     private fun wallpaperCard(title: String, subtitle: String, colors: IntArray, live: Boolean): View {
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(14), dp(14), dp(14), dp(14))
-            setBackgroundColor(Color.rgb(35, 38, 47))
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            setBackgroundColor(panel)
         }
         val preview = View(this).apply {
-            background = android.graphics.drawable.GradientDrawable(
-                android.graphics.drawable.GradientDrawable.Orientation.TL_BR, colors
-            ).apply { cornerRadius = dp(14).toFloat() }
+            background = gradient(colors)
+            setOnClickListener { showPreview(title, subtitle, colors, live) }
         }
         card.addView(preview, LinearLayout.LayoutParams(-1, dp(178)))
         card.addView(space(10))
         card.addView(label(title, 18, Color.WHITE, true))
         card.addView(label(subtitle, 12, Color.LTGRAY, false))
-        card.addView(space(8))
+        card.addView(space(6))
         val button = Button(this).apply {
-            text = if (live) "Preview & set live wallpaper" else "Preview & apply wallpaper"
+            text = "Lihat wallpaper"
             setTextColor(Color.WHITE)
             setBackgroundColor(accent)
             isAllCaps = false
-            setOnClickListener {
-                if (live) openLiveWallpaper() else applyWallpaper(colors)
-            }
+            setOnClickListener { showPreview(title, subtitle, colors, live) }
         }
-        card.addView(button, LinearLayout.LayoutParams(-1, dp(48)))
+        card.addView(button, LinearLayout.LayoutParams(-1, dp(46)))
         val params = LinearLayout.LayoutParams(-1, -2)
         params.bottomMargin = dp(16)
         card.layoutParams = params
         return card
+    }
+
+    private fun showPreview(title: String, subtitle: String, colors: IntArray, live: Boolean) {
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(18), dp(18), dp(18))
+            setBackgroundColor(ink)
+        }
+        val top = TextView(this).apply {
+            text = "‹     Preview"
+            textSize = 18f
+            setTextColor(Color.WHITE)
+            setPadding(0, dp(8), 0, dp(16))
+            setOnClickListener { buildHome() }
+        }
+        root.addView(top)
+        val image = View(this).apply { background = gradient(colors) }
+        root.addView(image, LinearLayout.LayoutParams(-1, 0, 1f))
+        root.addView(space(18))
+        root.addView(label(title, 22, Color.WHITE, true))
+        root.addView(label(subtitle, 13, Color.LTGRAY, false))
+        root.addView(space(14))
+        val apply = Button(this).apply {
+            text = if (live) "Set Live Wallpaper" else "Apply Wallpaper"
+            isAllCaps = false
+            setTextColor(Color.WHITE)
+            setBackgroundColor(accent)
+            setOnClickListener { if (live) openLiveWallpaper() else applyWallpaper(colors) }
+        }
+        root.addView(apply, LinearLayout.LayoutParams(-1, dp(52)))
+        setContentView(root)
     }
 
     private fun applyWallpaper(colors: IntArray) {
@@ -126,11 +160,12 @@ class MainActivity : Activity() {
             }
             Toast.makeText(this, "Wallpaper berhasil diterapkan", Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
-            Toast.makeText(this, "Tidak dapat menerapkan wallpaper: " + e.localizedMessage, Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Gagal menerapkan wallpaper: " + e.localizedMessage, Toast.LENGTH_LONG).show()
         } finally {
             bitmap?.recycle()
         }
     }
+
     private fun openLiveWallpaper() {
         try {
             val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER).apply {
@@ -143,9 +178,15 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun gradient(colors: IntArray) = android.graphics.drawable.GradientDrawable(
+        android.graphics.drawable.GradientDrawable.Orientation.TL_BR, colors
+    ).apply { cornerRadius = dp(14).toFloat() }
+
     private fun section(text: String) = label(text, 20, Color.WHITE, true).apply { setPadding(0, dp(4), 0, dp(12)) }
     private fun label(text: String, size: Int, color: Int, bold: Boolean) = TextView(this).apply {
-        this.text = text; textSize = size.toFloat(); setTextColor(color)
+        this.text = text
+        textSize = size.toFloat()
+        setTextColor(color)
         if (bold) setTypeface(null, android.graphics.Typeface.BOLD)
     }
     private fun space(height: Int) = View(this).apply { layoutParams = LinearLayout.LayoutParams(1, dp(height)) }
