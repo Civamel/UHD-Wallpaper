@@ -47,7 +47,7 @@ class MainActivity : Activity() {
         val header = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(15),dp(12),dp(12),dp(10)) }
         header.addView(text("4k Wallpaper",25,ink,true), LinearLayout.LayoutParams(0,dp(54),1f))
         listOf("💎","☾","⌕","⚙").forEachIndexed { i,s ->
-            val v=text(s, i==0 && s=="💎" ? 25 : 32,ink,false).apply { gravity=Gravity.CENTER; setOnClickListener {
+            val v=text(s, if (i == 0 && s == "💎") 25 else 32,ink,false).apply { gravity=Gravity.CENTER; setOnClickListener {
                 when(i){0->Toast.makeText(this@MainActivity,"Wallpaper Premium",Toast.LENGTH_SHORT).show();1->toggleTheme();2->search();3->showSettings()}
             }}
             header.addView(v,LinearLayout.LayoutParams(dp(48),dp(54)))
