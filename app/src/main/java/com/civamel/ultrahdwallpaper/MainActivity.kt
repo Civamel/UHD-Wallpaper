@@ -48,7 +48,7 @@ class MainActivity : Activity() {
         header.addView(text("4k Wallpaper",25,ink,true), LinearLayout.LayoutParams(0,dp(54),1f))
         listOf("💎","☾","⌕","⚙").forEachIndexed { i,s ->
             val v=text(s, i==0 && s=="💎" ? 25 : 32,ink,false).apply { gravity=Gravity.CENTER; setOnClickListener {
-                when(i){0->Toast.makeText(this@MainActivity@MainActivity,"Wallpaper Premium",Toast.LENGTH_SHORT).show();1->toggleTheme();2->search();3->showSettings()}
+                when(i){0->Toast.makeText(this@MainActivity,"Wallpaper Premium",Toast.LENGTH_SHORT).show();1->toggleTheme();2->search();3->showSettings()}
             }}
             header.addView(v,LinearLayout.LayoutParams(dp(48),dp(54)))
         }
@@ -71,7 +71,7 @@ class MainActivity : Activity() {
             val pp=LinearLayout.LayoutParams(-1,dp(54)); pp.setMargins(dp(12),dp(8),dp(12),dp(12)); content.addView(promo,pp)
         }
         val sort=TextView(this@MainActivity).apply { text="Urutkan berdasarkan: PALING POPULER   ▾"; textSize=14f; setTextColor(blue); setPadding(dp(18),dp(12),dp(12),dp(18)); setOnClickListener {
-            AlertDialog.Builder(this@MainActivity@MainActivity).setTitle("Urutkan berdasarkan").setItems(arrayOf("Paling populer","Terbaru","Acak","Paling banyak diunduh")) { _,w -> text="Urutkan berdasarkan: "+arrayOf("PALING POPULER","TERBARU","ACAK","PALING BANYAK DIUNDUH")[w]+"   ▾" }.show()
+            AlertDialog.Builder(this@MainActivity).setTitle("Urutkan berdasarkan").setItems(arrayOf("Paling populer","Terbaru","Acak","Paling banyak diunduh")) { _,w -> text="Urutkan berdasarkan: "+arrayOf("PALING POPULER","TERBARU","ACAK","PALING BANYAK DIUNDUH")[w]+"   ▾" }.show()
         }}
         content.addView(sort)
         val grid=GridLayout(this@MainActivity).apply { columnCount=3; useDefaultMargins=false }
@@ -87,7 +87,7 @@ class MainActivity : Activity() {
         scroll.addView(content); root.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
         val bottom=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER; setPadding(0,dp(8),0,dp(7)); setBackgroundColor(Color.WHITE) }
         listOf("▣\nWallpaper","▦\nCategory","▤\nQuotes","♧\nStock").forEachIndexed { i,label ->
-            bottom.addView(text(label,13,if(i==0) blue else ink,i==0).apply { gravity=Gravity.CENTER; setOnClickListener { if(i==1) showCategories() else if(i==2) showQuotes() else if(i==3) Toast.makeText(this@MainActivity@MainActivity,"Stock wallpapers",Toast.LENGTH_SHORT).show() } },LinearLayout.LayoutParams(0,dp(62),1f))
+            bottom.addView(text(label,13,if(i==0) blue else ink,i==0).apply { gravity=Gravity.CENTER; setOnClickListener { if(i==1) showCategories() else if(i==2) showQuotes() else if(i==3) Toast.makeText(this@MainActivity,"Stock wallpapers",Toast.LENGTH_SHORT).show() } },LinearLayout.LayoutParams(0,dp(62),1f))
         }
         root.addView(bottom)
         val ad=text("ADVERTISEMENT  •  Ultra HD Wallpaper",10,Color.DKGRAY,false).apply { gravity=Gravity.CENTER; setBackgroundColor(Color.rgb(245,245,245)) }
@@ -102,8 +102,8 @@ class MainActivity : Activity() {
         val top=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(dp(18),dp(18),dp(18),0) }
         top.addView(circle("‹"){buildHome()})
         top.addView(View(this@MainActivity),LinearLayout.LayoutParams(0,1,1f))
-        top.addView(circle("💎"){Toast.makeText(this@MainActivity@MainActivity,"Premium",Toast.LENGTH_SHORT).show()})
-        top.addView(circle("ⓘ"){Toast.makeText(this@MainActivity@MainActivity,names[index],Toast.LENGTH_SHORT).show()})
+        top.addView(circle("💎"){Toast.makeText(this@MainActivity,"Premium",Toast.LENGTH_SHORT).show()})
+        top.addView(circle("ⓘ"){Toast.makeText(this@MainActivity,names[index],Toast.LENGTH_SHORT).show()})
         top.addView(circle("↗"){shareWallpaper()})
         root.addView(top,FrameLayout.LayoutParams(-1,dp(76),Gravity.TOP))
         val bottom=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(dp(20),dp(12),dp(20),dp(20)) }
@@ -112,7 +112,7 @@ class MainActivity : Activity() {
         val apply=Button(this@MainActivity).apply { text="Terapkan"; isAllCaps=false; textSize=16f; setTextColor(Color.WHITE); background=rounded(blue,32); setOnClickListener { applyWallpaper(index) } }
         bottom.addView(apply,LinearLayout.LayoutParams(dp(150),dp(54)))
         bottom.addView(View(this@MainActivity),LinearLayout.LayoutParams(dp(20),1))
-        bottom.addView(circle("⇩"){Toast.makeText(this@MainActivity@MainActivity,"Unduhan akan tersedia setelah katalog online terhubung",Toast.LENGTH_LONG).show()})
+        bottom.addView(circle("⇩"){Toast.makeText(this@MainActivity,"Unduhan akan tersedia setelah katalog online terhubung",Toast.LENGTH_LONG).show()})
         root.addView(bottom,FrameLayout.LayoutParams(-1,dp(90),Gravity.BOTTOM))
         setContentView(root)
     }
@@ -137,7 +137,7 @@ class MainActivity : Activity() {
         root.addView(text("‹   Pengaturan",22,ink,true).apply { setOnClickListener { buildHome() } })
         root.addView(space(28)); root.addView(text("Pengaturan",24,ink,true)); root.addView(space(12))
         listOf("♟   Notifikasi","♡   Favorit","文   Bahasa Aplikasi","▧   Pengubah Wallpaper Otomatis","⇩   Unduh","▤   Wallpaper Penerangan Tepi","Bagikan Aplikasi","☆   Nilai kami","♧   Umpan Balik").forEach { item ->
-            val row=text(item+"     ›",17,ink,false).apply { setPadding(dp(16),dp(18),dp(10),dp(18)); background=rounded(Color.WHITE,16); setOnClickListener { if(item.contains("Favorit")) showFavorites() else Toast.makeText(this@MainActivity@MainActivity,item,Toast.LENGTH_SHORT).show() } }
+            val row=text(item+"     ›",17,ink,false).apply { setPadding(dp(16),dp(18),dp(10),dp(18)); background=rounded(Color.WHITE,16); setOnClickListener { if(item.contains("Favorit")) showFavorites() else Toast.makeText(this@MainActivity,item,Toast.LENGTH_SHORT).show() } }
             root.addView(row,LinearLayout.LayoutParams(-1,-2))
         }
         setContentView(ScrollView(this@MainActivity).apply { addView(root) })
