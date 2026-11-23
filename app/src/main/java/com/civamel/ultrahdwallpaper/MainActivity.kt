@@ -9,6 +9,7 @@ import android.graphics.*
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
+import android.net.Uri
 import android.view.Gravity
 import android.view.View
 import android.widget.*
@@ -208,7 +209,7 @@ class MainActivity : Activity() {
         val apply=Button(this@MainActivity).apply { text="Terapkan"; isAllCaps=false; textSize=16f; setTextColor(Color.WHITE); background=rounded(blue,32); setOnClickListener { if(selectedTab=="Live" || selectedTab=="Charging Live") applyLiveWallpaper() else applyWallpaper(index) } }
         bottom.addView(apply,LinearLayout.LayoutParams(dp(150),dp(54)))
         bottom.addView(View(this@MainActivity),LinearLayout.LayoutParams(dp(20),1))
-        bottom.addView(circle("⇩"){Toast.makeText(this@MainActivity,"Unduhan akan tersedia setelah katalog online terhubung",Toast.LENGTH_LONG).show()})
+        bottom.addView(circle("⇩"){ requestDownload(index) })
         root.addView(bottom,FrameLayout.LayoutParams(-1,dp(90),Gravity.BOTTOM))
         val ad=text("ADVERTISEMENT  •  Ultra HD Wallpaper",10,Color.WHITE,false).apply { gravity=Gravity.CENTER; setBackgroundColor(0xff292929.toInt()) }
         root.addView(ad,FrameLayout.LayoutParams(-1,dp(42),Gravity.BOTTOM).apply { bottomMargin=dp(90) })
@@ -255,6 +256,57 @@ class MainActivity : Activity() {
             root.addView(row,LinearLayout.LayoutParams(-1,-2))
         }
         setContentView(ScrollView(this@MainActivity).apply { addView(root) })
+    }
+
+
+    private var pendingDownloadBitmap: Bitmap? = null
+    private val createImageRequest = 701
+
+    private fun requestDownload(index: Int) {
+        val url = fullUrls.getOrNull(index)
+        if (url == null) {
+            Toast.makeText(this, "Gambar belum tersedia", Toast.LENGTH_LONG).show()
+            return
+        }
+        Toast.makeText(this, "Menyiapkan gambar…", Toast.LENGTH_SHORT).show()
+        loadImage(url) { bitmap ->
+            if (bitmap == null) {
+                Toast.makeText(this, "Gagal memuat gambar. Periksa internet.", Toast.LENGTH_LONG).show()
+                return@loadImage
+            }
+            pendingDownloadBitmap = bitmap
+            val safeName = names[index].replace(Regex("[^A-Za-z0-9_-]"), "_")
+            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "image/jpeg"
+                putExtra(Intent.EXTRA_TITLE, safeName + ".jpg")
+            }
+            try { startActivityForResult(intent, createImageRequest) }
+            catch (_: Exception) {
+                pendingDownloadBitmap = null
+                Toast.makeText(this, "Penyimpanan tidak tersedia", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    @Deprecated("Deprecated API retained for minSdk compatibility")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != createImageRequest) return
+        val bitmap = pendingDownloadBitmap
+        pendingDownloadBitmap = null
+        if (resultCode != RESULT_OK || bitmap == null) return
+        val uri: Uri = data?.data ?: return
+        Thread {
+            val saved = try {
+                contentResolver.openOutputStream(uri)?.use { output ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 95, output)
+                } ?: false
+            } catch (_: Exception) { false }
+            runOnUiThread {
+                Toast.makeText(this, if (saved) "Wallpaper berhasil disimpan" else "Gagal menyimpan wallpaper", Toast.LENGTH_LONG).show()
+            }
+        }.start()
     }
 
     private fun showFavorites(){ showOnlyFavorites=true; selectedCategory="All"; selectedTab="Wallpaper"; buildHome() }
