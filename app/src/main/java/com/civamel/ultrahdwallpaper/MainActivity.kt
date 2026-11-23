@@ -13,13 +13,17 @@ import android.view.Gravity
 import android.view.View
 import android.widget.*
 import android.graphics.Typeface
+import android.util.LruCache
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
 class MainActivity : Activity() {
     private val blue = Color.rgb(0, 119, 255)
     private val purple = Color.rgb(158, 67, 238)
     private val ink = Color.rgb(28, 28, 30)
     private val tabs = listOf("Home", "Live", "Parallax", "Wallpaper", "Double", "Charging Live")
-    private val names = listOf("Neon Flow", "Color Splash", "Red Horizon", "White Wings", "Ocean Glass", "Dark Bubbles",
+    private val names = mutableListOf("Neon Flow", "Color Splash", "Red Horizon", "White Wings", "Ocean Glass", "Dark Bubbles",
         "Tropical Beach", "Blue Eyes", "Liquid Planet", "Golden Sunset", "Green Forest", "Stone Texture",
         "Lightning", "Fire Glow", "Smoke Art", "Crystal Lights", "Neon Apple", "Mountain Lake")
     private val palettes = listOf(
@@ -30,6 +34,11 @@ class MainActivity : Activity() {
         intArrayOf(0xff40104f.toInt(),0xffff8c26.toInt()), intArrayOf(0xffed8d24.toInt(),0xff1a9c36.toInt()),
         intArrayOf(0xff062f25.toInt(),0xff9bcf80.toInt()), intArrayOf(0xff20232a.toInt(),0xff656a73.toInt())
     )
+    private val thumbnailUrls = mutableListOf<String>()
+    private val fullUrls = mutableListOf<String>()
+    private val imageCache = object : LruCache<String, Bitmap>(24 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount / 1024
+    }
     private var selectedTab = "Wallpaper"
     private var promoVisible = true
     private val favorites = mutableSetOf<Int>()
@@ -37,7 +46,7 @@ class MainActivity : Activity() {
     private var selectedCategory = "All"
     private var showOnlyFavorites = false
     private val categoryNames = listOf("All", "Abstract", "Animals", "Anime", "Art", "Cars", "Nature", "Ocean", "Space", "Technology")
-    private val itemCategories = listOf("Abstract","Art","Abstract","Animals","Ocean","Abstract","Nature","Animals","Space","Nature","Nature","Art","Technology","Art","Abstract","Space","Technology","Nature")
+    private val itemCategories = mutableListOf("Abstract","Art","Abstract","Animals","Ocean","Abstract","Nature","Animals","Space","Nature","Nature","Art","Technology","Art","Abstract","Space","Technology","Nature")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,6 +54,52 @@ class MainActivity : Activity() {
         window.navigationBarColor = Color.WHITE
         if (Build.VERSION.SDK_INT >= 23) window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
         buildHome()
+        loadRemoteCatalog()
+    }
+
+    private fun loadRemoteCatalog() {
+        Thread {
+            var connection: HttpURLConnection? = null
+            try {
+                connection = (URL("https://raw.githubusercontent.com/Civamel/UHD-Wallpaper/main/catalog/wallpapers.json").openConnection() as HttpURLConnection).apply { connectTimeout = 12000; readTimeout = 12000; requestMethod = "GET" }
+                val body = connection.inputStream.bufferedReader().use { it.readText() }
+                val items = JSONObject(body).getJSONArray("wallpapers")
+                val newNames = mutableListOf<String>()
+                val newCategories = mutableListOf<String>()
+                val newThumbs = mutableListOf<String>()
+                val newFull = mutableListOf<String>()
+                for (i in 0 until items.length()) {
+                    val item = items.getJSONObject(i)
+                    newNames.add(item.getString("title"))
+                    newCategories.add(item.optString("category", "Abstract"))
+                    newThumbs.add(item.getString("thumbnail"))
+                    newFull.add(item.getString("image"))
+                }
+                if (newNames.isNotEmpty()) runOnUiThread {
+                    names.clear(); names.addAll(newNames)
+                    itemCategories.clear(); itemCategories.addAll(newCategories)
+                    thumbnailUrls.clear(); thumbnailUrls.addAll(newThumbs)
+                    fullUrls.clear(); fullUrls.addAll(newFull)
+                    buildHome()
+                }
+            } catch (_: Exception) {
+                // Keep the built-in offline preview catalog when the network is unavailable.
+            } finally { connection?.disconnect() }
+        }.start()
+    }
+
+    private fun loadImage(url: String, onLoaded: (Bitmap?) -> Unit) {
+        val cached = imageCache.get(url)
+        if (cached != null) { onLoaded(cached); return }
+        Thread {
+            var connection: HttpURLConnection? = null
+            val bitmap = try {
+                connection = (URL(url).openConnection() as HttpURLConnection).apply { connectTimeout = 15000; readTimeout = 20000; doInput = true }
+                connection.inputStream.use { BitmapFactory.decodeStream(it) }
+            } catch (_: Exception) { null } finally { connection?.disconnect() }
+            if (bitmap != null) imageCache.put(url, bitmap)
+            runOnUiThread { onLoaded(bitmap) }
+        }.start()
     }
 
     private fun buildHome() {
@@ -96,8 +151,13 @@ class MainActivity : Activity() {
         visibleIndexes.forEach { index ->
             val name = names[index]
             val cell=FrameLayout(this@MainActivity)
-            val art=View(this@MainActivity).apply { background=artDrawable(index); setOnClickListener { showPreview(index) } }
+            val art=ImageView(this@MainActivity).apply {
+                scaleType=ImageView.ScaleType.CENTER_CROP
+                setImageDrawable(artDrawable(index))
+                setOnClickListener { showPreview(index) }
+            }
             cell.addView(art,FrameLayout.LayoutParams(-1,dp(148)))
+            if (index < thumbnailUrls.size) loadImage(thumbnailUrls[index]) { bitmap -> if (bitmap != null && art.isAttachedToWindow) art.setImageBitmap(bitmap) }
             if(index%5==1) cell.addView(text("♛",20,Color.WHITE,true).apply { gravity=Gravity.TOP or Gravity.END; setPadding(dp(5),dp(4),dp(8),0) })
             val params=GridLayout.LayoutParams().apply { width=0; height=dp(148); columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); setMargins(dp(1),dp(1),dp(1),dp(1)) }
             grid.addView(cell,params)
@@ -123,8 +183,9 @@ class MainActivity : Activity() {
 
     private fun showPreview(index:Int) {
         val root=FrameLayout(this@MainActivity).apply { setBackgroundColor(Color.BLACK) }
-        val art=View(this@MainActivity).apply { background=artDrawable(index) }
+        val art=ImageView(this@MainActivity).apply { scaleType=ImageView.ScaleType.CENTER_CROP; setImageDrawable(artDrawable(index)) }
         root.addView(art,FrameLayout.LayoutParams(-1,-1))
+        if (index < fullUrls.size) loadImage(fullUrls[index]) { bitmap -> if (bitmap != null && art.isAttachedToWindow) art.setImageBitmap(bitmap) }
         val top=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(dp(18),dp(18),dp(18),0) }
         top.addView(circle("‹"){buildHome()})
         top.addView(View(this@MainActivity),LinearLayout.LayoutParams(0,1,1f))
@@ -147,16 +208,32 @@ class MainActivity : Activity() {
 
     private fun applyWallpaper(index:Int) {
         AlertDialog.Builder(this@MainActivity).setTitle("Terapkan wallpaper").setItems(arrayOf("Layar utama","Layar kunci","Keduanya")) { _,which ->
-            val colors=palettes[index%palettes.size]
-            val bitmap=Bitmap.createBitmap(1080,1920,Bitmap.Config.ARGB_8888)
-            val c=Canvas(bitmap); val p=Paint(Paint.ANTI_ALIAS_FLAG)
-            p.shader=LinearGradient(0f,0f,1080f,1920f,colors[0],colors[1],Shader.TileMode.CLAMP); c.drawRect(0f,0f,1080f,1920f,p)
-            try {
-                val wm=WallpaperManager.getInstance(this@MainActivity)
-                if(Build.VERSION.SDK_INT>=24) wm.setBitmap(bitmap,null,true,when(which){1->WallpaperManager.FLAG_LOCK;2->WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK;else->WallpaperManager.FLAG_SYSTEM}) else wm.setBitmap(bitmap)
-                Toast.makeText(this@MainActivity,"Wallpaper berhasil diterapkan",Toast.LENGTH_LONG).show()
-            } catch(e:Exception){Toast.makeText(this@MainActivity,"Gagal: "+e.localizedMessage,Toast.LENGTH_LONG).show()}
-            finally { bitmap.recycle() }
+            val flags = when(which) { 1 -> WallpaperManager.FLAG_LOCK; 2 -> WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK; else -> WallpaperManager.FLAG_SYSTEM }
+            val applyBitmap: (Bitmap) -> Unit = { bitmap ->
+                Thread {
+                    try {
+                        val wm = WallpaperManager.getInstance(this@MainActivity)
+                        if (Build.VERSION.SDK_INT >= 24) wm.setBitmap(bitmap, null, true, flags) else wm.setBitmap(bitmap)
+                        runOnUiThread { Toast.makeText(this@MainActivity,"Wallpaper berhasil diterapkan",Toast.LENGTH_LONG).show() }
+                    } catch(e:Exception) {
+                        runOnUiThread { Toast.makeText(this@MainActivity,"Gagal: "+e.localizedMessage,Toast.LENGTH_LONG).show() }
+                    }
+                }.start()
+            }
+            if (index < fullUrls.size) {
+                Toast.makeText(this@MainActivity,"Mengunduh wallpaper…",Toast.LENGTH_SHORT).show()
+                loadImage(fullUrls[index]) { bitmap ->
+                    if (bitmap != null) applyBitmap(bitmap)
+                    else Toast.makeText(this@MainActivity,"Gambar gagal dimuat. Periksa koneksi internet.",Toast.LENGTH_LONG).show()
+                }
+            } else {
+                val colors=palettes[index%palettes.size]
+                val bitmap=Bitmap.createBitmap(1080,1920,Bitmap.Config.ARGB_8888)
+                val canvas=Canvas(bitmap); val paint=Paint(Paint.ANTI_ALIAS_FLAG)
+                paint.shader=LinearGradient(0f,0f,1080f,1920f,colors[0],colors[1],Shader.TileMode.CLAMP)
+                canvas.drawRect(0f,0f,1080f,1920f,paint)
+                applyBitmap(bitmap)
+            }
         }.setNegativeButton("Batal",null).show()
     }
 
