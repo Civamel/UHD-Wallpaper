@@ -362,7 +362,88 @@ class MainActivity : Activity() {
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         setContentView(root)
     }
-    private fun showQuotes(){ AlertDialog.Builder(this@MainActivity).setTitle("Quotes").setMessage("Inspirasi harian untuk layar kamu.").setPositiveButton("OK",null).show() }
+    private fun showQuotes() {
+        val quotes = listOf(
+            "The best view comes after the hardest climb." to "Motivation",
+            "Small steps every day lead to big changes." to "Daily Inspiration",
+            "Make today meaningful, one moment at a time." to "Mindfulness",
+            "Your future is created by what you do today." to "Motivation",
+            "Find beauty in the little things." to "Life",
+            "Stay patient. Great things take time." to "Daily Inspiration",
+            "Let your dreams be bigger than your fears." to "Motivation",
+            "A calm mind brings a clearer perspective." to "Mindfulness"
+        )
+        var currentIndex = 0
+        val root = LinearLayout(this@MainActivity).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.rgb(248, 248, 251))
+            setPadding(dp(20), dp(18), dp(20), dp(18))
+        }
+        val header = LinearLayout(this@MainActivity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        header.addView(text("‹", 30, ink, false).apply {
+            gravity = Gravity.CENTER
+            setOnClickListener { buildHome() }
+        }, LinearLayout.LayoutParams(dp(48), dp(52)))
+        header.addView(text("Quotes", 23, ink, true))
+        root.addView(header)
+        root.addView(text("Words to inspire your day", 14, Color.GRAY, false).apply {
+            setPadding(dp(4), dp(2), 0, dp(20))
+        })
+        val card = LinearLayout(this@MainActivity).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(24), dp(34), dp(24), dp(34))
+            background = rounded(Color.WHITE, 22)
+            elevation = dp(3).toFloat()
+        }
+        val quoteText = text("", 23, ink, true).apply {
+            gravity = Gravity.CENTER
+            setLineSpacing(dp(5).toFloat(), 1f)
+        }
+        val categoryText = text("", 13, purple, true).apply {
+            gravity = Gravity.CENTER
+            setPadding(0, dp(24), 0, 0)
+        }
+        card.addView(text("“", 48, purple, true).apply { gravity = Gravity.CENTER })
+        card.addView(quoteText)
+        card.addView(categoryText)
+        root.addView(card, LinearLayout.LayoutParams(-1, 0, 1f).apply {
+            setMargins(0, dp(12), 0, dp(22))
+        })
+        fun updateQuote() {
+            quoteText.text = quotes[currentIndex].first
+            categoryText.text = quotes[currentIndex].second.uppercase()
+        }
+        val nextButton = Button(this@MainActivity).apply {
+            text = "Kutipan berikutnya"
+            isAllCaps = false
+            setTextColor(Color.WHITE)
+            background = rounded(blue, 28)
+            setOnClickListener {
+                currentIndex = (currentIndex + 1) % quotes.size
+                updateQuote()
+            }
+        }
+        root.addView(nextButton, LinearLayout.LayoutParams(-1, dp(52)))
+        val shareButton = Button(this@MainActivity).apply {
+            text = "Bagikan kutipan"
+            isAllCaps = false
+            setOnClickListener {
+                val quote = quotes[currentIndex].first
+                val intent = Intent(Intent.ACTION_SEND).setType("text/plain")
+                    .putExtra(Intent.EXTRA_TEXT, quote + "\\n\\n— Ultra HD Wallpaper")
+                startActivity(Intent.createChooser(intent, "Bagikan kutipan"))
+            }
+        }
+        root.addView(shareButton, LinearLayout.LayoutParams(-1, dp(50)).apply {
+            topMargin = dp(8)
+        })
+        updateQuote()
+        setContentView(root)
+    }
     private fun search(){ val input=EditText(this@MainActivity).apply { hint="Cari wallpaper"; setText(searchQuery) }; AlertDialog.Builder(this@MainActivity).setTitle("Search").setView(input).setPositiveButton("Cari"){_,_-> searchQuery=input.text.toString().trim(); showOnlyFavorites=false; buildHome() }.setNeutralButton("Hapus"){_,_-> searchQuery=""; buildHome() }.setNegativeButton("Batal",null).show() }
     private fun shareWallpaper(){ val i=Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,"Ultra HD Wallpaper"); startActivity(Intent.createChooser(i,"Bagikan")) }
     private fun applyLiveWallpaper() {
