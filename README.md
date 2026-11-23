@@ -24,3 +24,7 @@ Keep the APK small by serving catalog metadata and thumbnails remotely, download
 - Minimum SDK: 23
 - Target SDK: 35
 - Main branch: `main`
+
+
+## Wallpaper download
+Selected wallpapers can now be exported as JPEG using Android's document picker.
