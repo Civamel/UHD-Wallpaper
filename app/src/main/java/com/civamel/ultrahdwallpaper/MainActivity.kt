@@ -214,7 +214,7 @@ class MainActivity : Activity() {
         bottom.addView(details,LinearLayout.LayoutParams(0,dp(54),1f))
         bottom.addView(circle(if(names[index] in favorites) "♥" else "♡"){ if(!favorites.add(names[index])) favorites.remove(names[index]); preferences.edit().putStringSet("favorite_titles", favorites.toSet()).apply(); showPreview(index) })
         bottom.addView(View(this@MainActivity),LinearLayout.LayoutParams(0,1,1f))
-        val apply=Button(this@MainActivity).apply { text="Terapkan"; isAllCaps=false; textSize=16f; setTextColor(Color.WHITE); background=rounded(blue,32); setOnClickListener { if(selectedTab=="Live" || selectedTab=="Charging Live") applyLiveWallpaper() else applyWallpaper(index) } }
+        val apply=Button(this@MainActivity).apply { text="Terapkan"; isAllCaps=false; textSize=16f; setTextColor(Color.WHITE); background=rounded(blue,32); setOnClickListener { if(selectedTab=="Live" || selectedTab=="Charging Live") applyLiveWallpaper(index) else applyWallpaper(index) } }
         bottom.addView(apply,LinearLayout.LayoutParams(dp(150),dp(54)))
         bottom.addView(View(this@MainActivity),LinearLayout.LayoutParams(dp(20),1))
         bottom.addView(circle("⇩"){ requestDownload(index) })
@@ -452,7 +452,13 @@ class MainActivity : Activity() {
     }
     private fun search(){ val input=EditText(this@MainActivity).apply { hint="Cari wallpaper"; setText(searchQuery) }; AlertDialog.Builder(this@MainActivity).setTitle("Search").setView(input).setPositiveButton("Cari"){_,_-> searchQuery=input.text.toString().trim(); showOnlyFavorites=false; buildHome() }.setNeutralButton("Hapus"){_,_-> searchQuery=""; buildHome() }.setNegativeButton("Batal",null).show() }
     private fun shareWallpaper(){ val i=Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,"Ultra HD Wallpaper"); startActivity(Intent.createChooser(i,"Bagikan")) }
-    private fun applyLiveWallpaper() {
+    private fun applyLiveWallpaper(index: Int) {
+        val liveUrl = fullUrls.getOrNull(index)
+        if (liveUrl.isNullOrBlank()) {
+            Toast.makeText(this@MainActivity, "Gambar live wallpaper belum tersedia", Toast.LENGTH_LONG).show()
+            return
+        }
+        preferences.edit().putString("selected_live_wallpaper_url", liveUrl).putString("selected_live_wallpaper_title", names[index]).apply()
         try {
             val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER).apply {
                 putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, ComponentName(this@MainActivity, LiveWallpaperService::class.java))
