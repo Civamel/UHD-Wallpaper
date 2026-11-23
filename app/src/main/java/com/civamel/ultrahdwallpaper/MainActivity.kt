@@ -36,7 +36,7 @@ class MainActivity : Activity() {
     )
     private val thumbnailUrls = mutableListOf<String>()
     private val fullUrls = mutableListOf<String>()
-    private val imageCache = object : LruCache<String, Bitmap>(24 * 1024 * 1024) {
+    private val imageCache = object : LruCache<String, Bitmap>(24 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount / 1024
     }
     private var selectedTab = "Wallpaper"
