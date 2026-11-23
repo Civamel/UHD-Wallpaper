@@ -96,25 +96,41 @@ class MainActivity : Activity() {
     }
 
     private fun applyWallpaper(colors: IntArray) {
+        val choices = arrayOf("Home Screen", "Lock Screen", "Keduanya")
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Terapkan wallpaper")
+            .setItems(choices) { _, which -> setWallpaper(colors, which) }
+            .setNegativeButton("Batal", null)
+            .show()
+    }
+
+    private fun setWallpaper(colors: IntArray, destination: Int) {
+        var bitmap: Bitmap? = null
         try {
-            val bitmap = Bitmap.createBitmap(1080, 1920, Bitmap.Config.ARGB_8888)
+            bitmap = Bitmap.createBitmap(1080, 1920, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
             val paint = Paint(Paint.ANTI_ALIAS_FLAG)
             paint.shader = android.graphics.LinearGradient(0f, 0f, 1080f, 1920f, colors[0], colors[1], android.graphics.Shader.TileMode.CLAMP)
             canvas.drawRect(RectF(0f, 0f, 1080f, 1920f), paint)
             val manager = WallpaperManager.getInstance(this)
             if (Build.VERSION.SDK_INT >= 24) {
-                manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_SYSTEM)
+                val flags = when (destination) {
+                    1 -> WallpaperManager.FLAG_LOCK
+                    2 -> WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK
+                    else -> WallpaperManager.FLAG_SYSTEM
+                }
+                manager.setBitmap(bitmap, null, true, flags)
             } else {
                 manager.setBitmap(bitmap)
+                if (destination != 0) Toast.makeText(this, "Android versi ini hanya mendukung layar utama dari aplikasi.", Toast.LENGTH_LONG).show()
             }
             Toast.makeText(this, "Wallpaper berhasil diterapkan", Toast.LENGTH_LONG).show()
-            bitmap.recycle()
         } catch (e: Exception) {
-            Toast.makeText(this, "Tidak dapat menerapkan wallpaper: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Tidak dapat menerapkan wallpaper: " + e.localizedMessage, Toast.LENGTH_LONG).show()
+        } finally {
+            bitmap?.recycle()
         }
     }
-
     private fun openLiveWallpaper() {
         try {
             val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER).apply {
