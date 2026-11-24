@@ -55,6 +55,7 @@ class MainActivity : Activity() {
     private var selectedCategory = "All"
     private var showOnlyFavorites = false
     private var visibleItemLimit = 60
+    private var downloadSortMode = "Nama A-Z"
     private var darkMode = false
     private val categoryNames: List<String>
         get() = listOf("All") + itemCategories.map { it.trim() }.filter { it.isNotEmpty() }.distinct().sorted()
@@ -515,9 +516,30 @@ class MainActivity : Activity() {
             setOnClickListener { showSettings() }
         })
         val records = (preferences.getStringSet("download_records", emptySet()) ?: emptySet())
-            .toList().asReversed().filter { record ->
+            .toList().filter { record ->
                 File(File(filesDir, "downloads"), record.substringBefore("\t")).isFile
+            }.let { saved ->
+                when (downloadSortMode) {
+                    "Nama Z-A" -> saved.sortedByDescending { it.substringAfter("\t", "Wallpaper").lowercase() }
+                    "Ukuran terbesar" -> saved.sortedByDescending {
+                        File(File(filesDir, "downloads"), it.substringBefore("\t")).length()
+                    }
+                    else -> saved.sortedBy { it.substringAfter("\t", "Wallpaper").lowercase() }
+                }
             }
+        root.addView(text("Urutkan: $downloadSortMode  ▾", 14, if (darkMode) 0xffc5c9d4.toInt() else 0xff555966.toInt(), true).apply {
+            setPadding(0, 0, 0, dp(14))
+            setOnClickListener {
+                val modes = arrayOf("Nama A-Z", "Nama Z-A", "Ukuran terbesar")
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle("Urutkan unduhan")
+                    .setItems(modes) { _, which ->
+                        downloadSortMode = modes[which]
+                        showDownloads()
+                    }
+                    .show()
+            }
+        })
         if (records.isNotEmpty()) {
             root.addView(text("Hapus semua unduhan", 14, if (darkMode) 0xffff8b8b.toInt() else 0xffc62828.toInt(), true).apply {
                 gravity = Gravity.END
