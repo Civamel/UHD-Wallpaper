@@ -546,6 +546,27 @@ class MainActivity : Activity() {
                     maxLines = 2
                 }
                 row.addView(label, LinearLayout.LayoutParams(0, -2, 1f))
+                val share = text("↗", 22, if (darkMode) 0xff9bbcff.toInt() else blue, true).apply {
+                    gravity = Gravity.CENTER
+                    setOnClickListener {
+                        try {
+                            val uri = FileProvider.getUriForFile(
+                                this@MainActivity,
+                                "com.civamel.ultrahdwallpaper.fileprovider",
+                                imageFile
+                            )
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "image/jpeg"
+                                putExtra(Intent.EXTRA_STREAM, uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            startActivity(Intent.createChooser(intent, "Bagikan wallpaper"))
+                        } catch (_: Exception) {
+                            Toast.makeText(this@MainActivity, "Tidak dapat membagikan wallpaper", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+                row.addView(share, LinearLayout.LayoutParams(dp(42), dp(48)))
                 val delete = text("✕", 21, if (darkMode) 0xffff8b8b.toInt() else 0xffc62828.toInt(), true).apply {
                     gravity = Gravity.CENTER
                     setOnClickListener {
