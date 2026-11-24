@@ -3,6 +3,11 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+val releaseKeystorePath = System.getenv("ANDROID_KEYSTORE_FILE")
+val releaseKeystorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+val releaseKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
+val releaseKeyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+
 android {
     namespace = "com.civamel.ultrahdwallpaper"
     compileSdk = 35
@@ -23,8 +28,22 @@ android {
         versionCode = 1
         versionName = "1.0.0"
     }
-}
 
+    signingConfigs {
+        create("release") {
+            storeFile = file(releaseKeystorePath ?: "release-key.jks")
+            storePassword = releaseKeystorePassword ?: ""
+            keyAlias = releaseKeyAlias ?: ""
+            keyPassword = releaseKeyPassword ?: ""
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            signingConfig = signingConfigs.getByName("release")
+        }
+    }
+}
 
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
