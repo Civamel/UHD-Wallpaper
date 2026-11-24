@@ -321,7 +321,7 @@ class MainActivity : Activity() {
                     0 -> { showOnlyFavorites=false; selectedCategory="All"; visibleItemLimit=60; buildHome() }
                     1 -> showCategories()
                     2 -> showQuotes()
-                    3 -> showFavorites()
+                    3 -> startActivity(Intent(this@MainActivity, StockActivity::class.java))
                 }
             } },LinearLayout.LayoutParams(0,dp(62),1f))
         }
