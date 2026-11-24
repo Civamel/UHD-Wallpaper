@@ -56,6 +56,7 @@ class MainActivity : Activity() {
     private var showOnlyFavorites = false
     private var visibleItemLimit = 60
     private var downloadSortMode = "Nama A-Z"
+    private var downloadsSearchQuery = ""
     private var darkMode = false
     private val categoryNames: List<String>
         get() = listOf("All") + itemCategories.map { it.trim() }.filter { it.isNotEmpty() }.distinct().sorted()
@@ -515,20 +516,41 @@ class MainActivity : Activity() {
             setPadding(0, 0, 0, dp(14))
             setOnClickListener { showSettings() }
         })
-        val records = (preferences.getStringSet("download_records", emptySet()) ?: emptySet())
+        val allRecords = (preferences.getStringSet("download_records", emptySet()) ?: emptySet())
             .toList().filter { record ->
                 File(File(filesDir, "downloads"), record.substringBefore("\t")).isFile
-            }.let { saved ->
-                when (downloadSortMode) {
-                    "Nama Z-A" -> saved.sortedByDescending { it.substringAfter("\t", "Wallpaper").lowercase() }
-                    "Ukuran terbesar" -> saved.sortedByDescending {
-                        File(File(filesDir, "downloads"), it.substringBefore("\t")).length()
-                    }
-                    "Terlama" -> saved.sortedBy { File(File(filesDir, "downloads"), it.substringBefore("\t")).lastModified() }
-                    "Terbaru" -> saved.sortedByDescending { File(File(filesDir, "downloads"), it.substringBefore("\t")).lastModified() }
-                    else -> saved.sortedBy { it.substringAfter("\t", "Wallpaper").lowercase() }
-                }
             }
+        val query = downloadsSearchQuery.trim()
+        val records = allRecords.filter { record ->
+            query.isEmpty() || record.substringAfter("\t", "Wallpaper").contains(query, ignoreCase = true)
+        }.let { saved ->
+            when (downloadSortMode) {
+                "Nama Z-A" -> saved.sortedByDescending { it.substringAfter("\t", "Wallpaper").lowercase() }
+                "Ukuran terbesar" -> saved.sortedByDescending { File(File(filesDir, "downloads"), it.substringBefore("\t")).length() }
+                "Terlama" -> saved.sortedBy { File(File(filesDir, "downloads"), it.substringBefore("\t")).lastModified() }
+                "Terbaru" -> saved.sortedByDescending { File(File(filesDir, "downloads"), it.substringBefore("\t")).lastModified() }
+                else -> saved.sortedBy { it.substringAfter("\t", "Wallpaper").lowercase() }
+            }
+        }
+        val searchBox = EditText(this@MainActivity).apply {
+            setSingleLine(true)
+            hint = "Cari wallpaper yang diunduh..."
+            textSize = 14f
+            setTextColor(pageText)
+            setHintTextColor(if (darkMode) 0xff9296a2.toInt() else 0xff888888.toInt())
+            setPadding(dp(14), dp(11), dp(14), dp(11))
+            background = rounded(if (darkMode) 0xff24262d.toInt() else Color.WHITE, 12)
+            setText(downloadsSearchQuery)
+            addTextChangedListener(object : android.text.TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    val next = s?.toString() ?: ""
+                    if (downloadsSearchQuery != next) { downloadsSearchQuery = next; showDownloads() }
+                }
+                override fun afterTextChanged(s: android.text.Editable?) {}
+            })
+        }
+        root.addView(searchBox, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
         root.addView(text("Urutkan: $downloadSortMode  ▾", 14, if (darkMode) 0xffc5c9d4.toInt() else 0xff555966.toInt(), true).apply {
             setPadding(0, 0, 0, dp(14))
             setOnClickListener {
