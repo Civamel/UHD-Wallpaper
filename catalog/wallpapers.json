@@ -1,131 +1,312 @@
 {
-  "version": 1,
+  "version": 2,
   "wallpapers": [
     {
-      "title": "Neon Flow",
-      "category": "Abstract",
-      "thumbnail": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=480&h=720&q=78",
-      "image": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=3840&q=95",
-      "type": "live"
-    },
-    {
-      "title": "Color Splash",
-      "category": "Art",
-      "thumbnail": "https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=480&h=720&q=78",
-      "image": "https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=3840&q=95",
-      "type": "wallpaper"
-    },
-    {
-      "title": "Red Horizon",
+      "title": "Alpine Lake",
       "category": "Nature",
-      "thumbnail": "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=480&h=720&q=78",
-      "image": "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=3840&q=95",
-      "type": "wallpaper"
-    },
-    {
-      "title": "White Wings",
-      "category": "Animals",
-      "thumbnail": "https://images.unsplash.com/photo-1552728089-57bdde30beb3?auto=format&fit=crop&w=480&h=720&q=78",
-      "image": "https://images.unsplash.com/photo-1552728089-57bdde30beb3?auto=format&fit=crop&w=3840&q=95",
-      "type": "wallpaper"
-    },
-    {
-      "title": "Ocean Glass",
-      "category": "Ocean",
-      "thumbnail": "https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=480&h=720&q=78",
-      "image": "https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=3840&q=95",
-      "type": "wallpaper"
-    },
-    {
-      "title": "Dark Bubbles",
-      "category": "Abstract",
-      "thumbnail": "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=480&h=720&q=78",
-      "image": "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=3840&q=95",
-      "type": "live"
-    },
-    {
-      "title": "Tropical Beach",
-      "category": "Nature",
-      "thumbnail": "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=480&h=720&q=78",
-      "image": "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=3840&q=95",
-      "type": "wallpaper"
+      "thumbnail": "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=3840&q=95",
+      "type": "wallpaper",
+      "id": "alpine-lake",
+      "tags": [
+        "alpine",
+        "mountain",
+        "lake",
+        "landscape",
+        "nature"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
     },
     {
       "title": "Blue Eyes",
       "category": "Animals",
       "thumbnail": "https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=480&h=720&q=78",
       "image": "https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=3840&q=95",
-      "type": "wallpaper"
+      "type": "wallpaper",
+      "id": "blue-eyes",
+      "tags": [
+        "animal",
+        "portrait",
+        "eyes",
+        "wildlife",
+        "blue"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
     },
     {
-      "title": "Liquid Planet",
-      "category": "Space",
-      "thumbnail": "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=480&h=720&q=78",
-      "image": "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=3840&q=95",
-      "type": "wallpaper"
-    },
-    {
-      "title": "Golden Sunset",
-      "category": "Nature",
-      "thumbnail": "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=480&h=720&q=78",
-      "image": "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=3840&q=95",
-      "type": "wallpaper"
-    },
-    {
-      "title": "Green Forest",
-      "category": "Nature",
-      "thumbnail": "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=480&h=720&q=78",
-      "image": "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=3840&q=95",
-      "type": "wallpaper"
-    },
-    {
-      "title": "Stone Texture",
+      "title": "Color Splash",
       "category": "Art",
-      "thumbnail": "https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=480&h=720&q=78",
-      "image": "https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=3840&q=95",
-      "type": "wallpaper"
-    },
-    {
-      "title": "Lightning",
-      "category": "Nature",
-      "thumbnail": "https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=480&h=720&q=78",
-      "image": "https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=3840&q=95",
-      "type": "wallpaper"
-    },
-    {
-      "title": "Fire Glow",
-      "category": "Abstract",
-      "thumbnail": "https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=480&h=720&q=78",
-      "image": "https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=3840&q=95",
-      "type": "wallpaper"
-    },
-    {
-      "title": "Smoke Art",
-      "category": "Art",
-      "thumbnail": "https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=480&h=720&q=78",
-      "image": "https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=3840&q=95",
-      "type": "wallpaper"
+      "thumbnail": "https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=3840&q=95",
+      "type": "wallpaper",
+      "id": "color-splash",
+      "tags": [
+        "color",
+        "fluid",
+        "abstract",
+        "art",
+        "vibrant"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
     },
     {
       "title": "Crystal Lights",
       "category": "Abstract",
       "thumbnail": "https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=480&h=720&q=78",
       "image": "https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=3840&q=95",
-      "type": "live"
+      "type": "live",
+      "id": "crystal-lights",
+      "tags": [
+        "crystal",
+        "light",
+        "abstract",
+        "glow",
+        "colorful"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    },
+    {
+      "title": "Dark Bubbles",
+      "category": "Abstract",
+      "thumbnail": "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=3840&q=95",
+      "type": "live",
+      "id": "dark-bubbles",
+      "tags": [
+        "dark",
+        "bubbles",
+        "abstract",
+        "blue",
+        "minimal"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    },
+    {
+      "title": "Fire Glow",
+      "category": "Abstract",
+      "thumbnail": "https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=3840&q=95",
+      "type": "wallpaper",
+      "id": "fire-glow",
+      "tags": [
+        "fire",
+        "glow",
+        "abstract",
+        "warm",
+        "light"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    },
+    {
+      "title": "Golden Sunset",
+      "category": "Nature",
+      "thumbnail": "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=3840&q=95",
+      "type": "wallpaper",
+      "id": "golden-sunset",
+      "tags": [
+        "sunset",
+        "golden",
+        "landscape",
+        "nature",
+        "sky"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    },
+    {
+      "title": "Green Forest",
+      "category": "Nature",
+      "thumbnail": "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=3840&q=95",
+      "type": "wallpaper",
+      "id": "green-forest",
+      "tags": [
+        "forest",
+        "trees",
+        "green",
+        "nature",
+        "landscape"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    },
+    {
+      "title": "Lightning",
+      "category": "Nature",
+      "thumbnail": "https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=3840&q=95",
+      "type": "wallpaper",
+      "id": "lightning",
+      "tags": [
+        "lightning",
+        "storm",
+        "weather",
+        "sky",
+        "nature"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    },
+    {
+      "title": "Liquid Planet",
+      "category": "Space",
+      "thumbnail": "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=3840&q=95",
+      "type": "wallpaper",
+      "id": "liquid-planet",
+      "tags": [
+        "space",
+        "planet",
+        "galaxy",
+        "universe",
+        "cosmos"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
     },
     {
       "title": "Mountain Lake",
       "category": "Nature",
       "thumbnail": "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=480&h=720&q=78",
       "image": "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=3840&q=95",
-      "type": "live"
+      "type": "live",
+      "id": "mountain-lake",
+      "tags": [
+        "mountain",
+        "lake",
+        "landscape",
+        "nature",
+        "water"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
     },
     {
-      "title": "Alpine Lake",
+      "title": "Neon Flow",
+      "category": "Abstract",
+      "thumbnail": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=3840&q=95",
+      "type": "live",
+      "id": "neon-flow",
+      "tags": [
+        "neon",
+        "glow",
+        "abstract",
+        "technology",
+        "colorful"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    },
+    {
+      "title": "Ocean Glass",
+      "category": "Ocean",
+      "thumbnail": "https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=3840&q=95",
+      "type": "wallpaper",
+      "id": "ocean-glass",
+      "tags": [
+        "ocean",
+        "sea",
+        "water",
+        "blue",
+        "nature"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    },
+    {
+      "title": "Red Horizon",
       "category": "Nature",
-      "thumbnail": "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=480&h=720&q=78",
-      "image": "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=3840&q=95",
-      "type": "wallpaper"
+      "thumbnail": "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=3840&q=95",
+      "type": "wallpaper",
+      "id": "red-horizon",
+      "tags": [
+        "sunset",
+        "horizon",
+        "sky",
+        "nature",
+        "warm"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    },
+    {
+      "title": "Smoke Art",
+      "category": "Art",
+      "thumbnail": "https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=3840&q=95",
+      "type": "wallpaper",
+      "id": "smoke-art",
+      "tags": [
+        "smoke",
+        "abstract",
+        "art",
+        "texture",
+        "soft"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    },
+    {
+      "title": "Stone Texture",
+      "category": "Art",
+      "thumbnail": "https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=3840&q=95",
+      "type": "wallpaper",
+      "id": "stone-texture",
+      "tags": [
+        "texture",
+        "stone",
+        "abstract",
+        "pattern",
+        "dark"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    },
+    {
+      "title": "Tropical Beach",
+      "category": "Nature",
+      "thumbnail": "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=3840&q=95",
+      "type": "wallpaper",
+      "id": "tropical-beach",
+      "tags": [
+        "beach",
+        "tropical",
+        "ocean",
+        "summer",
+        "nature"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    },
+    {
+      "title": "White Wings",
+      "category": "Animals",
+      "thumbnail": "https://images.unsplash.com/photo-1552728089-57bdde30beb3?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1552728089-57bdde30beb3?auto=format&fit=crop&w=3840&q=95",
+      "type": "wallpaper",
+      "id": "white-wings",
+      "tags": [
+        "bird",
+        "wildlife",
+        "white",
+        "animal",
+        "nature"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
     }
-  ]
+  ],
+  "updatedAt": "2026-11-24"
 }
