@@ -328,6 +328,21 @@ class StockActivity : Activity() {
             setBackgroundColor(Color.BLACK)
         }
         layout.addView(preview, LinearLayout.LayoutParams(-1, dp(360)))
+        val categoryInfo = TextView(this).apply {
+            text = "KATEGORI  •  " + item.category
+            textSize = 12f
+            setTextColor(secondaryText)
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            setPadding(dp(4), dp(12), dp(4), dp(6))
+        }
+        layout.addView(categoryInfo, LinearLayout.LayoutParams(-1, -2))
+        val detailInfo = TextView(this).apply {
+            text = "Pratinjau wallpaper Stock"
+            textSize = 13f
+            setTextColor(primaryText)
+            setPadding(dp(4), 0, dp(4), dp(6))
+        }
+        layout.addView(detailInfo, LinearLayout.LayoutParams(-1, -2))
         AlertDialog.Builder(this).setTitle(item.title).setView(layout)
             .setNegativeButton("Tutup", null)
             .setPositiveButton("Terapkan", null)
