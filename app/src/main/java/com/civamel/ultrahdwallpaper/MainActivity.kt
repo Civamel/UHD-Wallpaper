@@ -533,8 +533,9 @@ class MainActivity : Activity() {
     private fun buildHome() {
         val pageBg = if (darkMode) 0xff121318.toInt() else Color.WHITE
         val pageText = if (darkMode) 0xfff2f2f5.toInt() else ink
+        val panelSurface = if (darkMode) 0xff77736e.toInt() else 0xff050608.toInt()
         val root = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(pageBg) }
-        val header = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(15),dp(6),dp(12),dp(5)); setBackgroundColor(0xff050608.toInt()) }
+        val header = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(15),dp(6),dp(12),dp(5)); setBackgroundColor(panelSurface) }
         header.addView(text(if (showOnlyFavorites) "Favorit (${favorites.size})" else "4k Ultra HD Wallpaper",25,0xfff4f7ff.toInt(),true).apply { if (!showOnlyFavorites) textSize = 16.25f }, LinearLayout.LayoutParams(0,dp(38),1f))
         listOf("✦","☾","⌕","⚙").forEachIndexed { i,glyph ->
             val icon = modernIcon(glyph, 34)
@@ -546,7 +547,7 @@ class MainActivity : Activity() {
         }
         root.addView(header)
         val tabScroll=HorizontalScrollView(this@MainActivity).apply { isHorizontalScrollBarEnabled=false }
-        val tabRow=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; setBackgroundColor(0xff050608.toInt()) }
+        val tabRow=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; setBackgroundColor(panelSurface) }
         tabs.forEach { tab ->
             val item=LinearLayout(this@MainActivity).apply {
                 orientation = LinearLayout.VERTICAL
@@ -571,6 +572,32 @@ class MainActivity : Activity() {
             promo.addView(text("♛   Get All Wallpaper Pro!",17,Color.WHITE,true),LinearLayout.LayoutParams(0,dp(36),1f))
             promo.addView(text("×",25,Color.WHITE,false).apply { gravity=Gravity.CENTER; setOnClickListener { promoVisible=false; buildHome() } },LinearLayout.LayoutParams(dp(30),dp(34)))
             val pp=LinearLayout.LayoutParams(-1,dp(38)); pp.setMargins(dp(12),dp(8),dp(12),dp(3)); content.addView(promo,pp)
+        }
+        val showDiscoverHeader = !showOnlyFavorites && (selectedTab == "Home" || selectedTab == "Wallpaper") && searchQuery.isBlank() && selectedCategory == "All"
+        if (showDiscoverHeader && names.isNotEmpty()) {
+            val slideScroll = HorizontalScrollView(this@MainActivity).apply { isHorizontalScrollBarEnabled = false; clipToPadding = false; setPadding(dp(10), dp(2), dp(10), dp(2)) }
+            val slideRow = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL }
+            (0 until minOf(8, names.size)).forEach { slideIndex ->
+                val slide = FrameLayout(this@MainActivity).apply { background = rounded(if (darkMode) 0xff303238.toInt() else 0xffe9e9ed.toInt(), 12); clipToOutline = true; setOnClickListener { showPreview(slideIndex) } }
+                val image = ImageView(this@MainActivity).apply { scaleType = ImageView.ScaleType.CENTER_CROP; setImageDrawable(artDrawable(slideIndex)) }
+                slide.addView(image, FrameLayout.LayoutParams(-1, -1))
+                slide.addView(View(this@MainActivity).apply { background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(Color.TRANSPARENT, 0xdd000000.toInt())) }, FrameLayout.LayoutParams(-1, dp(42), Gravity.BOTTOM))
+                slide.addView(text(names[slideIndex], 14, Color.WHITE, true).apply { gravity = Gravity.BOTTOM; setPadding(dp(10), 0, dp(8), dp(8)); maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }, FrameLayout.LayoutParams(-1, dp(40), Gravity.BOTTOM))
+                slideRow.addView(slide, LinearLayout.LayoutParams(dp(214), dp(108)).apply { setMargins(dp(3), dp(3), dp(7), dp(3)) })
+                thumbnailUrls.getOrNull(slideIndex)?.let { imageUrl -> loadImage(imageUrl) { bitmap -> if (bitmap != null && image.isAttachedToWindow) image.setImageBitmap(bitmap) } }
+            }
+            slideScroll.addView(slideRow)
+            content.addView(slideScroll, LinearLayout.LayoutParams(-1, dp(116)))
+            val popularPanel = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(10), dp(4), dp(10), dp(4)); background = rounded(0xff733044.toInt(), 10) }
+            popularPanel.addView(text("Popular Tags", 11, Color.WHITE, true).apply { setPadding(dp(2), 0, 0, dp(2)) })
+            val tagScroll = HorizontalScrollView(this@MainActivity).apply { isHorizontalScrollBarEnabled = false; clipToPadding = false }
+            val tagRow = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+            listOf("Anime", "Cartoon", "Girl", "Nature", "Neon & Fireworks", "Tourism", "Vehicles", "Fantasy", "AI Generated").forEach { tag ->
+                tagRow.addView(text(tag, 10, 0xff542332.toInt(), true).apply { gravity = Gravity.CENTER; setPadding(dp(10), dp(3), dp(10), dp(3)); background = rounded(0xffffe8ee.toInt(), 16); setOnClickListener { searchQuery = tag; showOnlyFavorites = false; visibleItemLimit = 60; buildHome() } }, LinearLayout.LayoutParams(-2, dp(23)).apply { setMargins(dp(2), 0, dp(5), 0) })
+            }
+            tagScroll.addView(tagRow)
+            popularPanel.addView(tagScroll, LinearLayout.LayoutParams(-1, dp(25)))
+            content.addView(popularPanel, LinearLayout.LayoutParams(-1, dp(56)).apply { setMargins(dp(12), dp(1), dp(12), dp(5)) })
         }
         val sort=TextView(this@MainActivity).apply { text="Filter : "+sortMode+"   ▾"; textSize=13f; setTextColor(if(darkMode) 0xff9bbcff.toInt() else blue); setPadding(dp(18),dp(2),dp(12),dp(6)); setOnClickListener {
             val options = arrayOf("Paling populer", "Terbaru", "A-Z", "Acak")
