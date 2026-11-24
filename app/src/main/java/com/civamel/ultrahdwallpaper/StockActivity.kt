@@ -22,6 +22,7 @@ class StockActivity : Activity() {
     private val executor = Executors.newFixedThreadPool(3)
     private var query = ""
     private var selectedCategory = "All"
+    private var gridHostView: LinearLayout? = null
     private val blue = Color.rgb(0, 119, 255)
     private val ink = Color.rgb(28, 28, 30)
 
@@ -148,7 +149,8 @@ class StockActivity : Activity() {
         categoryScroll.addView(categoryRow)
         root.addView(categoryScroll)
         val gridScroll = ScrollView(this)
-        val gridHost = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; id = android.R.id.content }
+        val gridHost = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        gridHostView = gridHost
         gridScroll.addView(gridHost)
         root.addView(gridScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         val ad = label("ADVERTISEMENT  •  Ultra HD Wallpaper", 10, Color.DKGRAY, false).apply {
@@ -161,8 +163,7 @@ class StockActivity : Activity() {
     }
 
     private fun renderGrid() {
-        val content = findViewById<LinearLayout>(android.R.id.content)
-        if (content != null) renderGridInto(content)
+        gridHostView?.let { renderGridInto(it) }
     }
 
     private fun renderGridInto(host: LinearLayout) {
