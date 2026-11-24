@@ -399,7 +399,7 @@ class MainActivity : Activity() {
         root.addView(text("‹   Pengaturan",22,settingsText,true).apply { setOnClickListener { buildHome() } })
         root.addView(space(28)); root.addView(text("Pengaturan",24,settingsText,true)); root.addView(space(12))
         listOf("♟   Notifikasi","♡   Favorit","文   Bahasa Aplikasi","▧   Pengubah Wallpaper Otomatis","⇩   Unduh","▤   Wallpaper Penerangan Tepi","Bagikan Aplikasi","☆   Nilai kami","♧   Umpan Balik").forEach { item ->
-            val row=text(item+"     ›",17,settingsText,false).apply { setPadding(dp(16),dp(18),dp(10),dp(18)); background=rounded(if(darkMode) 0xff24262d.toInt() else Color.WHITE,16); setOnClickListener { if(item.contains("Favorit")) showFavorites() else Toast.makeText(this@MainActivity,item,Toast.LENGTH_SHORT).show() } }
+            val row=text(item+"     ›",17,settingsText,false).apply { setPadding(dp(16),dp(18),dp(10),dp(18)); background=rounded(if(darkMode) 0xff24262d.toInt() else Color.WHITE,16); setOnClickListener { if(item.contains("Favorit")) showFavorites() else if(item.contains("Unduh")) showDownloads() else Toast.makeText(this@MainActivity,item,Toast.LENGTH_SHORT).show() } }
             root.addView(row,LinearLayout.LayoutParams(-1,-2))
         }
         setContentView(ScrollView(this@MainActivity).apply { addView(root) })
@@ -407,6 +407,7 @@ class MainActivity : Activity() {
 
 
     private var pendingDownloadBitmap: Bitmap? = null
+    private var pendingDownloadTitle: String = ""
     private val createImageRequest = 701
 
     private fun requestDownload(index: Int) {
@@ -422,6 +423,7 @@ class MainActivity : Activity() {
                 return@loadImage
             }
             pendingDownloadBitmap = bitmap
+            pendingDownloadTitle = names[index]
             val safeName = names[index].replace(Regex("[^A-Za-z0-9_-]"), "_")
             val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)
@@ -431,6 +433,7 @@ class MainActivity : Activity() {
             try { startActivityForResult(intent, createImageRequest) }
             catch (_: Exception) {
                 pendingDownloadBitmap = null
+                pendingDownloadTitle = ""
                 Toast.makeText(this, "Penyimpanan tidak tersedia", Toast.LENGTH_LONG).show()
             }
         }
@@ -441,7 +444,9 @@ class MainActivity : Activity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode != createImageRequest) return
         val bitmap = pendingDownloadBitmap
+        val title = pendingDownloadTitle
         pendingDownloadBitmap = null
+        pendingDownloadTitle = ""
         if (resultCode != RESULT_OK || bitmap == null) return
         val uri: Uri = data?.data ?: return
         Thread {
@@ -450,10 +455,100 @@ class MainActivity : Activity() {
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 95, output)
                 } ?: false
             } catch (_: Exception) { false }
+            val librarySaved = saved && saveToDownloadsLibrary(bitmap, title)
             runOnUiThread {
-                Toast.makeText(this, if (saved) "Wallpaper berhasil disimpan" else "Gagal menyimpan wallpaper", Toast.LENGTH_LONG).show()
+                val message = when { !saved -> "Gagal menyimpan wallpaper"; librarySaved -> "Wallpaper tersimpan dan masuk ke Unduhan"; else -> "Wallpaper tersimpan, tetapi gagal masuk ke pustaka Unduhan" }
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show()
             }
         }.start()
+    }
+
+    private fun saveToDownloadsLibrary(bitmap: Bitmap, title: String): Boolean {
+        return try {
+            val directory = File(filesDir, "downloads").apply { if (!exists()) mkdirs() }
+            val fileName = "wallpaper_" + System.currentTimeMillis() + ".jpg"
+            val imageFile = File(directory, fileName)
+            FileOutputStream(imageFile).use { output ->
+                if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 95, output)) throw IllegalStateException("JPEG gagal dibuat")
+            }
+            val records = (preferences.getStringSet("download_records", emptySet()) ?: emptySet()).toMutableSet()
+            records.add(fileName + "\t" + title)
+            preferences.edit().putStringSet("download_records", records).apply()
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun showDownloads() {
+        val pageBg = if (darkMode) 0xff121318.toInt() else 0xfff5f5f7.toInt()
+        val pageText = if (darkMode) 0xfff2f2f5.toInt() else ink
+        val root = LinearLayout(this@MainActivity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(18), dp(18), dp(12))
+            setBackgroundColor(pageBg)
+        }
+        root.addView(text("‹   Unduhan", 23, pageText, true).apply {
+            setPadding(0, 0, 0, dp(14))
+            setOnClickListener { showSettings() }
+        })
+        val records = (preferences.getStringSet("download_records", emptySet()) ?: emptySet())
+            .toList().asReversed().filter { record ->
+                File(File(filesDir, "downloads"), record.substringBefore("\t")).isFile
+            }
+        if (records.isEmpty()) {
+            val empty = text("Belum ada wallpaper yang diunduh.\n\nBuka wallpaper, tekan ikon unduh, lalu simpan gambarnya untuk melihatnya di sini.", 15, pageText, false).apply {
+                gravity = Gravity.CENTER
+                setPadding(dp(24), dp(36), dp(24), dp(36))
+            }
+            root.addView(empty, LinearLayout.LayoutParams(-1, 0, 1f))
+        } else {
+            val list = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
+            records.forEach { record ->
+                val fileName = record.substringBefore("\t")
+                val title = record.substringAfter("\t", "Wallpaper")
+                val imageFile = File(File(filesDir, "downloads"), fileName)
+                val row = LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(9), dp(9), dp(9), dp(9))
+                    background = rounded(if (darkMode) 0xff24262d.toInt() else Color.WHITE, 14)
+                }
+                val thumb = ImageView(this@MainActivity).apply {
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    setImageBitmap(BitmapFactory.decodeFile(imageFile.absolutePath))
+                }
+                row.addView(thumb, LinearLayout.LayoutParams(dp(72), dp(88)))
+                val label = text(title, 15, pageText, true).apply {
+                    setPadding(dp(12), 0, dp(8), 0)
+                    maxLines = 2
+                }
+                row.addView(label, LinearLayout.LayoutParams(0, -2, 1f))
+                val delete = text("✕", 21, if (darkMode) 0xffff8b8b.toInt() else 0xffc62828.toInt(), true).apply {
+                    gravity = Gravity.CENTER
+                    setOnClickListener {
+                        imageFile.delete()
+                        val updated = (preferences.getStringSet("download_records", emptySet()) ?: emptySet()).toMutableSet()
+                        updated.remove(record)
+                        preferences.edit().putStringSet("download_records", updated).apply()
+                        showDownloads()
+                    }
+                }
+                row.addView(delete, LinearLayout.LayoutParams(dp(42), dp(48)))
+                row.setOnClickListener {
+                    val preview = ImageView(this@MainActivity).apply {
+                        adjustViewBounds = true
+                        scaleType = ImageView.ScaleType.FIT_CENTER
+                        setImageBitmap(BitmapFactory.decodeFile(imageFile.absolutePath))
+                    }
+                    AlertDialog.Builder(this@MainActivity).setTitle(title).setView(preview)
+                        .setPositiveButton("Tutup", null).show()
+                }
+                list.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+            }
+            root.addView(ScrollView(this@MainActivity).apply { addView(list) }, LinearLayout.LayoutParams(-1, 0, 1f))
+        }
+        setContentView(root)
     }
 
     private fun showFavorites(){ showOnlyFavorites=true; selectedCategory="All"; selectedTab="Wallpaper"; visibleItemLimit=60; buildHome() }
