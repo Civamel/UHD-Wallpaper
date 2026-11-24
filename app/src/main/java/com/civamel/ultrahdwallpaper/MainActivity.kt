@@ -535,7 +535,7 @@ class MainActivity : Activity() {
         val pageText = if (darkMode) 0xfff2f2f5.toInt() else ink
         val root = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(pageBg) }
         val header = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(15),dp(12),dp(12),dp(10)) }
-        header.addView(text(if (showOnlyFavorites) "Favorit (${favorites.size})" else "4k Wallpaper",25,pageText,true), LinearLayout.LayoutParams(0,dp(54),1f))
+        header.addView(text(if (showOnlyFavorites) "Favorit (${favorites.size})" else "4k Ultra HD Wallpaper",25,pageText,true).apply { if (!showOnlyFavorites) textSize = 16.25f }, LinearLayout.LayoutParams(0,dp(54),1f))
         listOf("💎","☾","⌕","⚙").forEachIndexed { i,s ->
             val v=text(s, if (i == 0 && s == "💎") 25 else 32,pageText,false).apply { gravity=Gravity.CENTER; setOnClickListener {
                 when(i){0->Toast.makeText(this@MainActivity,"Wallpaper Premium",Toast.LENGTH_SHORT).show();1->toggleTheme();2->search();3->showSettings()}
