@@ -99,6 +99,9 @@ class MainActivity : Activity() {
     private var bannerAdView: com.google.android.libraries.ads.mobile.sdk.banner.AdView? = null
     private var adminSelectedImage: Uri? = null
     private var adminImageLabel: TextView? = null
+    private var homeScreenActive = false
+    private var gestureStartX = 0f
+    private var gestureStartY = 0f
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -117,6 +120,29 @@ class MainActivity : Activity() {
         initializeAds()
         // Start with a clean catalog: only wallpapers added by the owner in Admin are shown.
         loadFirestoreWallpapers()
+    }
+
+    override fun dispatchTouchEvent(event: android.view.MotionEvent): Boolean {
+        when (event.actionMasked) {
+            android.view.MotionEvent.ACTION_DOWN -> { gestureStartX = event.x; gestureStartY = event.y }
+            android.view.MotionEvent.ACTION_UP -> {
+                val dx = event.x - gestureStartX
+                val dy = event.y - gestureStartY
+                val threshold = dp(72).toFloat()
+                if (homeScreenActive && kotlin.math.abs(dx) > threshold && kotlin.math.abs(dx) > kotlin.math.abs(dy) * 1.25f) {
+                    val current = tabs.indexOf(selectedTab).coerceAtLeast(0)
+                    val next = (current + if (dx < 0) 1 else -1).coerceIn(0, tabs.lastIndex)
+                    if (next != current) {
+                        selectedTab = tabs[next]
+                        preferences.edit().putString("selected_wallpaper_tab", selectedTab).apply()
+                        showOnlyFavorites = false
+                        visibleItemLimit = 24
+                        buildHome()
+                    }
+                }
+            }
+        }
+        return super.dispatchTouchEvent(event)
     }
 
     override fun onResume() {
@@ -411,6 +437,9 @@ class MainActivity : Activity() {
                             doInput = true
                             instanceFollowRedirects = true
                             requestMethod = "GET"
+                            setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36")
+                            setRequestProperty("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+                            setRequestProperty("Connection", "keep-alive")
                         }
                         if (connection.responseCode !in 200..299) throw IllegalStateException("HTTP " + connection.responseCode)
                         val maxBytes = 40L * 1024L * 1024L
@@ -540,6 +569,7 @@ class MainActivity : Activity() {
     }
 
     private fun buildHome() {
+        homeScreenActive = true
         val pageBg = if (darkMode) 0xff121318.toInt() else Color.WHITE
         val pageText = if (darkMode) 0xfff2f2f5.toInt() else ink
         val panelSurface = if (darkMode) 0xff77736e.toInt() else 0xff050608.toInt()
@@ -683,7 +713,8 @@ class MainActivity : Activity() {
             }.show()
         }}
         content.addView(sort)
-        val grid=GridLayout(this@MainActivity).apply { columnCount=3; useDefaultMargins=false }
+        val tileHeight = ((resources.displayMetrics.widthPixels / resources.displayMetrics.density) / 2f * 1.48f).toInt().coerceAtLeast(190)
+        val grid=GridLayout(this@MainActivity).apply { columnCount=2; useDefaultMargins=false }
         val filteredIndexes = names.indices.filter { index ->
             val categoryMatch = selectedCategory == "All" || itemCategories[index] == selectedCategory
             val searchMatch = searchQuery.isBlank() || names[index].contains(searchQuery, true) || itemCategories[index].contains(searchQuery, true) || itemTags.getOrNull(index).orEmpty().any { it.contains(searchQuery, true) }
@@ -725,7 +756,7 @@ class MainActivity : Activity() {
                 setImageDrawable(artDrawable(index))
                 setOnClickListener { showPreview(index) }
             }
-            cell.addView(art,FrameLayout.LayoutParams(-1,dp(148)))
+            cell.addView(art,FrameLayout.LayoutParams(-1,dp(tileHeight)))
             cell.addView(text(if ((itemIds.getOrNull(index) ?: names[index]) in favorites) "♥" else "♡", 21, 0xffe0115f.toInt(), true).apply {
                 gravity = Gravity.CENTER
                 background = rounded(0xcc000000.toInt(), 18)
@@ -738,9 +769,22 @@ class MainActivity : Activity() {
             }, FrameLayout.LayoutParams(dp(32), dp(32), Gravity.TOP or Gravity.START).apply {
                 setMargins(dp(7), dp(7), 0, 0)
             })
-            if (index < thumbnailUrls.size) loadImage(thumbnailUrls[index]) { bitmap -> if (bitmap != null && art.isAttachedToWindow) art.setImageBitmap(bitmap) }
+            if (index < thumbnailUrls.size) loadImage(thumbnailUrls[index]) { bitmap ->
+                if (art.isAttachedToWindow) {
+                    if (bitmap != null && !bitmap.isRecycled) art.setImageBitmap(bitmap)
+                    else {
+                        art.setImageDrawable(null)
+                        art.setBackgroundColor(0xff21151b.toInt())
+                        val failed = text("Gambar gagal dimuat · tarik ke bawah untuk mencoba lagi", 11, 0xfff2cbd8.toInt(), true).apply {
+                            gravity = Gravity.CENTER
+                            setPadding(dp(8), dp(8), dp(8), dp(8))
+                        }
+                        (art.parent as? FrameLayout)?.addView(failed, FrameLayout.LayoutParams(-1, -1))
+                    }
+                }
+            }
             if(index%5==1) cell.addView(text("♛",20,Color.WHITE,true).apply { gravity=Gravity.TOP or Gravity.END; setPadding(dp(5),dp(4),dp(8),0) })
-            val params=GridLayout.LayoutParams().apply { width=0; height=dp(148); columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); setMargins(dp(1),dp(1),dp(1),dp(1)) }
+            val params=GridLayout.LayoutParams().apply { width=0; height=dp(tileHeight); columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); setMargins(dp(3),dp(3),dp(3),dp(3)) }
             grid.addView(cell,params)
         }
         content.addView(grid)
@@ -822,6 +866,7 @@ class MainActivity : Activity() {
     }
 
     private fun showPreview(index:Int) {
+        homeScreenActive = false
         recordRecentlyViewed(index)
         val root=FrameLayout(this@MainActivity).apply { setBackgroundColor(Color.BLACK) }
         val art=ImageView(this@MainActivity).apply { scaleType=ImageView.ScaleType.CENTER_CROP; setImageDrawable(artDrawable(index)) }
@@ -925,6 +970,7 @@ class MainActivity : Activity() {
     }
 
     private fun showCacheManager() {
+        homeScreenActive = false
         val directories = cacheDirectories()
         val sizes = directories.map { (label, directory) -> label to directoryBytes(directory) }
         val total = sizes.sumOf { it.second }
@@ -959,6 +1005,7 @@ class MainActivity : Activity() {
     }
 
     private fun showSettings() {
+        homeScreenActive = false
         val settingsBg = if (darkMode) 0xff121318.toInt() else Color.WHITE
         val settingsText = if (darkMode) 0xfff2f2f5.toInt() else ink
         val root=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL; setBackgroundColor(settingsBg); setPadding(dp(22),dp(22),dp(22),dp(12)) }
@@ -1013,6 +1060,7 @@ class MainActivity : Activity() {
     }
 
     private fun showAdminLogin() {
+        homeScreenActive = false
         val email = EditText(this).apply { hint = "Email admin"; inputType = 33 }
         val password = EditText(this).apply { hint = "Kata sandi"; inputType = 129 }
         val form = LinearLayout(this).apply {
@@ -1056,6 +1104,7 @@ class MainActivity : Activity() {
     }
 
     private fun showAdminPanel() {
+        homeScreenActive = false
         val bg = if (darkMode) 0xff121318.toInt() else Color.WHITE
         val fg = if (darkMode) 0xfff2f2f5.toInt() else ink
         val root = LinearLayout(this).apply {
@@ -1285,6 +1334,7 @@ class MainActivity : Activity() {
     }
 
     private fun showDownloads() {
+        homeScreenActive = false
         val pageBg = if (darkMode) 0xff121318.toInt() else 0xfff5f5f7.toInt()
         val pageText = if (darkMode) 0xfff2f2f5.toInt() else ink
         val root = LinearLayout(this@MainActivity).apply {
@@ -1581,6 +1631,7 @@ class MainActivity : Activity() {
     }
 
     private fun showRecentlyViewed() {
+        homeScreenActive = false
         val ids = try {
             val saved = org.json.JSONArray(preferences.getString("recent_wallpaper_ids", "[]") ?: "[]")
             (0 until saved.length()).map { saved.optString(it) }.filter { it.isNotBlank() }.distinct()
@@ -1662,6 +1713,7 @@ class MainActivity : Activity() {
     }
 
     private fun showFavorites(){
+        homeScreenActive = false
         refreshFavoritesFromPreferences()
         showOnlyFavorites = true
         selectedCategory = "All"
@@ -1674,6 +1726,7 @@ class MainActivity : Activity() {
         buildHome()
     }
     private fun showCategories(){
+        homeScreenActive = false
         val root = LinearLayout(this@MainActivity).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(if(darkMode) 0xff121318.toInt() else Color.WHITE)
@@ -1747,6 +1800,7 @@ class MainActivity : Activity() {
     }
 
     private fun showQuotes() {
+        homeScreenActive = false
         val quotes = listOf(
             "The best view comes after the hardest climb." to "Motivation",
             "Small steps every day lead to big changes." to "Daily Inspiration",
@@ -1845,6 +1899,7 @@ class MainActivity : Activity() {
     }
 
     private fun showSavedQuotes() {
+        homeScreenActive = false
         val saved = savedQuotes()
         val foreground = if (darkMode) 0xfff2f2f5.toInt() else ink
         val muted = if (darkMode) 0xffaaaaaa.toInt() else Color.GRAY
