@@ -686,11 +686,11 @@ class MainActivity : Activity() {
         }.setNegativeButton("Batal", null).show()
     }
 
-    private fun cacheDirectories(): List<File> = listOf(
-        File(filesDir, "wallpaper_images"),
-        File(filesDir, "live_wallpaper_cache"),
-        File(cacheDir, "stock_thumbnails"),
-        File(cacheDir, "stock_full_images")
+    private fun cacheDirectories(): List<Pair<String, File>> = listOf(
+        "Wallpaper UHD" to File(filesDir, "wallpaper_images"),
+        "Live Wallpaper" to File(filesDir, "live_wallpaper_cache"),
+        "Stock Thumbnail" to File(cacheDir, "stock_thumbnails"),
+        "Stock UHD" to File(filesDir, "stock_full_images")
     )
 
     private fun directoryBytes(file: File): Long {
@@ -707,22 +707,33 @@ class MainActivity : Activity() {
 
     private fun showCacheManager() {
         val directories = cacheDirectories()
-        val total = directories.sumOf { directoryBytes(it) }
+        val sizes = directories.map { (label, directory) -> label to directoryBytes(directory) }
+        val total = sizes.sumOf { it.second }
+        val details = sizes.joinToString("\\n") { (label, bytes) ->
+            "$label: " + formatCacheSize(bytes)
+        }
         AlertDialog.Builder(this)
             .setTitle("Kelola Cache")
-            .setMessage("Cache gambar yang digunakan aplikasi: " + formatCacheSize(total) +
-                "\\n\\nMembersihkan cache hanya menghapus salinan sementara. Wallpaper yang sudah disimpan melalui menu Unduh dan katalog tidak akan dihapus.")
+            .setMessage("Rincian cache gambar:\\n$details\\n\\nTotal: " + formatCacheSize(total) +
+                "\\n\\nCache berisi salinan sementara untuk mempercepat pemuatan gambar. File pada menu Unduh dan katalog tidak ikut dihapus.")
             .setPositiveButton("Bersihkan cache") { _, _ ->
-                var removed = 0L
-                directories.forEach { directory ->
-                    if (directory.exists()) {
-                        removed += directoryBytes(directory)
-                        directory.deleteRecursively()
+                AlertDialog.Builder(this)
+                    .setTitle("Konfirmasi")
+                    .setMessage("Bersihkan seluruh cache gambar sebesar " + formatCacheSize(total) + "? Wallpaper yang sudah disimpan melalui menu Unduh tetap aman.")
+                    .setPositiveButton("Ya, bersihkan") { _, _ ->
+                        var removed = 0L
+                        directories.forEach { (_, directory) ->
+                            if (directory.exists()) {
+                                removed += directoryBytes(directory)
+                                directory.deleteRecursively()
+                            }
+                        }
+                        imageCache.evictAll()
+                        Toast.makeText(this, "Cache dibersihkan: " + formatCacheSize(removed), Toast.LENGTH_LONG).show()
+                        showCacheManager()
                     }
-                }
-                imageCache.evictAll()
-                Toast.makeText(this, "Cache dibersihkan: " + formatCacheSize(removed), Toast.LENGTH_LONG).show()
-                showCacheManager()
+                    .setNegativeButton("Batal", null)
+                    .show()
             }
             .setNegativeButton("Tutup", null)
             .show()
