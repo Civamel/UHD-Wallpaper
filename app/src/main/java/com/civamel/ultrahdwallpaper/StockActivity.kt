@@ -24,6 +24,7 @@ class StockActivity : Activity() {
     private var query = ""
     private var selectedCategory = "All"
     private var selectedSort = "Default"
+    private var isRefreshingCatalog = false
     private var gridHostView: LinearLayout? = null
     private val blue = Color.rgb(0, 119, 255)
     private val ink = Color.rgb(28, 28, 30)
@@ -86,6 +87,46 @@ class StockActivity : Activity() {
         }
     }
 
+    private fun refreshCatalogManually() {
+        if (isRefreshingCatalog) {
+            Toast.makeText(this, "Katalog sedang diperbarui…", Toast.LENGTH_SHORT).show()
+            return
+        }
+        isRefreshingCatalog = true
+        Toast.makeText(this, "Memperbarui koleksi Stock…", Toast.LENGTH_SHORT).show()
+        executor.execute {
+            var connection: HttpURLConnection? = null
+            val parsed = try {
+                connection = (URL("https://raw.githubusercontent.com/Civamel/UHD-Wallpaper/main/catalog/wallpapers.json").openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 10000
+                    readTimeout = 15000
+                    requestMethod = "GET"
+                }
+                if (connection.responseCode in 200..299) {
+                    val body = connection.inputStream.bufferedReader().use { it.readText() }
+                    parseItems(body)
+                } else emptyList()
+            } catch (_: Exception) {
+                emptyList()
+            } finally {
+                connection?.disconnect()
+            }
+            if (!isFinishing && !isDestroyed) runOnUiThread {
+                isRefreshingCatalog = false
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                if (parsed.isNotEmpty()) {
+                    items.clear()
+                    items.addAll(parsed)
+                    if (selectedCategory != "All" && items.none { it.category == selectedCategory }) selectedCategory = "All"
+                    showGallery()
+                    Toast.makeText(this, "Koleksi berhasil diperbarui.", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "Belum dapat memperbarui katalog. Coba lagi nanti.", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
     private fun parseCatalog(body: String) {
         val parsed = parseItems(body)
         items.clear()
@@ -123,7 +164,11 @@ class StockActivity : Activity() {
             setOnClickListener { finish() }
         }, LinearLayout.LayoutParams(dp(48), dp(52)))
         header.addView(label("Stock", 24, primaryText, true), LinearLayout.LayoutParams(0, dp(52), 1f))
-        header.addView(label(items.size.toString() + " foto", 13, Color.GRAY, false))
+        header.addView(label(items.size.toString() + " foto", 13, secondaryText, false))
+        header.addView(label("↻", 25, blue, true).apply {
+            gravity = Gravity.CENTER
+            setOnClickListener { refreshCatalogManually() }
+        }, LinearLayout.LayoutParams(dp(44), dp(48)))
         root.addView(header)
         root.addView(label("Koleksi wallpaper pilihan untuk layar perangkat", 13, secondaryText, false).apply {
             setPadding(dp(18), 0, dp(18), dp(12))
