@@ -595,23 +595,23 @@ class MainActivity : Activity() {
     }
 
 
-    private var pendingDownloadBitmap: Bitmap? = null
+    private var pendingDownloadFile: File? = null
     private var pendingDownloadTitle: String = ""
     private val createImageRequest = 701
 
     private fun requestDownload(index: Int) {
         val url = fullUrls.getOrNull(index)
-        if (url == null) {
+        if (url.isNullOrBlank()) {
             Toast.makeText(this, "Gambar belum tersedia", Toast.LENGTH_LONG).show()
             return
         }
-        Toast.makeText(this, "Menyiapkan gambar…", Toast.LENGTH_SHORT).show()
-        loadImage(url) { bitmap ->
-            if (bitmap == null) {
+        Toast.makeText(this, "Menyiapkan file UHD asli…", Toast.LENGTH_SHORT).show()
+        loadWallpaperFile(url) { imageFile ->
+            if (imageFile == null) {
                 Toast.makeText(this, "Gagal memuat gambar. Periksa internet.", Toast.LENGTH_LONG).show()
-                return@loadImage
+                return@loadWallpaperFile
             }
-            pendingDownloadBitmap = bitmap
+            pendingDownloadFile = imageFile
             pendingDownloadTitle = names[index]
             val safeName = names[index].replace(Regex("[^A-Za-z0-9_-]"), "_")
             val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
@@ -619,9 +619,10 @@ class MainActivity : Activity() {
                 type = "image/jpeg"
                 putExtra(Intent.EXTRA_TITLE, safeName + ".jpg")
             }
-            try { startActivityForResult(intent, createImageRequest) }
-            catch (_: Exception) {
-                pendingDownloadBitmap = null
+            try {
+                startActivityForResult(intent, createImageRequest)
+            } catch (_: Exception) {
+                pendingDownloadFile = null
                 pendingDownloadTitle = ""
                 Toast.makeText(this, "Penyimpanan tidak tersedia", Toast.LENGTH_LONG).show()
             }
@@ -632,33 +633,41 @@ class MainActivity : Activity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode != createImageRequest) return
-        val bitmap = pendingDownloadBitmap
+        val sourceFile = pendingDownloadFile
         val title = pendingDownloadTitle
-        pendingDownloadBitmap = null
+        pendingDownloadFile = null
         pendingDownloadTitle = ""
-        if (resultCode != RESULT_OK || bitmap == null) return
+        if (resultCode != RESULT_OK || sourceFile == null || !sourceFile.isFile) return
         val uri: Uri = data?.data ?: return
         Thread {
             val saved = try {
                 contentResolver.openOutputStream(uri)?.use { output ->
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 95, output)
+                    FileInputStream(sourceFile).use { input -> input.copyTo(output) }
                 } ?: false
             } catch (_: Exception) { false }
-            val librarySaved = saved && saveToDownloadsLibrary(bitmap, title)
+            val librarySaved = saved && saveToDownloadsLibrary(sourceFile, title)
             runOnUiThread {
-                val message = when { !saved -> "Gagal menyimpan wallpaper"; librarySaved -> "Wallpaper tersimpan dan masuk ke Unduhan"; else -> "Wallpaper tersimpan, tetapi gagal masuk ke pustaka Unduhan" }
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                val message = when {
+                    !saved -> "Gagal menyimpan wallpaper"
+                    librarySaved -> "Wallpaper asli tersimpan dan masuk ke Unduhan"
+                    else -> "Wallpaper tersimpan, tetapi gagal masuk ke pustaka Unduhan"
+                }
                 Toast.makeText(this, message, Toast.LENGTH_LONG).show()
             }
         }.start()
     }
 
-    private fun saveToDownloadsLibrary(bitmap: Bitmap, title: String): Boolean {
+    private fun saveToDownloadsLibrary(sourceFile: File, title: String): Boolean {
         return try {
+            if (!isValidWallpaperFile(sourceFile)) return false
             val directory = File(filesDir, "downloads").apply { if (!exists()) mkdirs() }
             val fileName = "wallpaper_" + System.currentTimeMillis() + ".jpg"
             val imageFile = File(directory, fileName)
-            FileOutputStream(imageFile).use { output ->
-                if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 95, output)) throw IllegalStateException("JPEG gagal dibuat")
+            sourceFile.copyTo(imageFile, overwrite = true)
+            if (!isValidWallpaperFile(imageFile)) {
+                imageFile.delete()
+                return false
             }
             val records = (preferences.getStringSet("download_records", emptySet()) ?: emptySet()).toMutableSet()
             records.add(fileName + "\t" + title)
