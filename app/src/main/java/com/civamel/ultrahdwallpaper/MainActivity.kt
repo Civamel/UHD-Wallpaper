@@ -10,6 +10,9 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.net.Uri
+import androidx.core.content.FileProvider
+import java.io.File
+import java.io.FileOutputStream
 import android.view.Gravity
 import android.view.View
 import android.widget.*
@@ -254,7 +257,7 @@ class MainActivity : Activity() {
         top.addView(View(this@MainActivity),LinearLayout.LayoutParams(0,1,1f))
         top.addView(circle("💎"){Toast.makeText(this@MainActivity,"Premium",Toast.LENGTH_SHORT).show()})
         top.addView(circle("ⓘ"){ AlertDialog.Builder(this@MainActivity).setTitle(names[index]).setMessage("Kategori: "+itemCategories.getOrNull(index).orEmpty()+"\nJenis: "+(itemTypes.getOrNull(index) ?: "wallpaper")+"\n\nWallpaper Ultra HD. Pilih Terapkan untuk memasang wallpaper atau Unduh untuk menyimpan gambar.").setPositiveButton("Mengerti",null).show() })
-        top.addView(circle("↗"){shareWallpaper()})
+        top.addView(circle("↗"){shareWallpaper(index)})
         root.addView(top,FrameLayout.LayoutParams(-1,dp(76),Gravity.TOP))
         val bottom=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(dp(20),dp(12),dp(20),dp(20)) }
         val details=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER_VERTICAL }
@@ -503,7 +506,40 @@ class MainActivity : Activity() {
         setContentView(root)
     }
     private fun search(){ val input=EditText(this@MainActivity).apply { hint="Cari wallpaper"; setText(searchQuery) }; AlertDialog.Builder(this@MainActivity).setTitle("Search").setView(input).setPositiveButton("Cari"){_,_-> searchQuery=input.text.toString().trim(); showOnlyFavorites=false; visibleItemLimit=60; buildHome() }.setNeutralButton("Hapus"){_,_-> searchQuery=""; visibleItemLimit=60; buildHome() }.setNegativeButton("Batal",null).show() }
-    private fun shareWallpaper(){ val i=Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,"Ultra HD Wallpaper"); startActivity(Intent.createChooser(i,"Bagikan")) }
+    private fun shareWallpaper(index: Int) {
+        val url = fullUrls.getOrNull(index)
+        if (url.isNullOrBlank()) {
+            Toast.makeText(this, "Gambar belum tersedia", Toast.LENGTH_LONG).show()
+            return
+        }
+        Toast.makeText(this, "Menyiapkan gambar untuk dibagikan…", Toast.LENGTH_SHORT).show()
+        loadImage(url) { bitmap ->
+            if (bitmap == null) {
+                Toast.makeText(this, "Gambar gagal dimuat. Periksa koneksi internet.", Toast.LENGTH_LONG).show()
+                return@loadImage
+            }
+            try {
+                val shareDir = File(cacheDir, "shared_wallpapers").apply { mkdirs() }
+                val safeName = names[index].replace(Regex("[^A-Za-z0-9_-]"), "_")
+                val imageFile = File(shareDir, safeName + ".jpg")
+                FileOutputStream(imageFile).use { output ->
+                    if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 95, output)) throw IllegalStateException("Gagal menyiapkan JPEG")
+                }
+                val imageUri = FileProvider.getUriForFile(this, "com.civamel.ultrahdwallpaper.fileprovider", imageFile)
+                val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "image/jpeg"
+                    putExtra(Intent.EXTRA_STREAM, imageUri)
+                    putExtra(Intent.EXTRA_SUBJECT, names[index])
+                    putExtra(Intent.EXTRA_TEXT, names[index] + " — Ultra HD Wallpaper")
+                    clipData = android.content.ClipData.newUri(contentResolver, names[index], imageUri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                startActivity(Intent.createChooser(sendIntent, "Bagikan wallpaper"))
+            } catch (e: Exception) {
+                Toast.makeText(this, "Gagal membagikan gambar: " + e.localizedMessage, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
     private fun applyLiveWallpaper(index: Int) {
         val liveUrl = fullUrls.getOrNull(index)
         if (liveUrl.isNullOrBlank()) {
