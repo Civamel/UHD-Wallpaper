@@ -25,6 +25,9 @@ import android.util.LruCache
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.Executors
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
 
 class MainActivity : Activity() {
     // Add the separately created production AdMob IDs after the account owner provides them.
@@ -94,6 +97,7 @@ class MainActivity : Activity() {
     private var adsInitializationStarted = false
     private var bannerAdRequested = false
     private var bannerAdView: com.google.android.libraries.ads.mobile.sdk.banner.AdView? = null
+    private var adminSelectedImage: Uri? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -114,6 +118,7 @@ class MainActivity : Activity() {
         loadCachedRemoteCatalog()
         loadCachedShardedCatalog()
         refreshRemoteCatalog()
+        loadFirestoreWallpapers()
     }
 
     override fun onResume() {
@@ -982,7 +987,196 @@ class MainActivity : Activity() {
             rowParams.bottomMargin = dp(8)
             root.addView(row,rowParams)
         }
+        root.addView(text("Admin",11,if(darkMode) 0xff85858d.toInt() else 0xff999999.toInt(),false).apply { gravity=Gravity.CENTER; setPadding(0,dp(12),0,dp(4)); setOnClickListener { openAdminGate() } })
         setContentView(ScrollView(this@MainActivity).apply { addView(root) })
+    }
+
+
+    private fun openAdminGate() {
+        val auth = FirebaseAuth.getInstance()
+        val current = auth.currentUser
+        if (current != null) {
+            current.getIdToken(true).addOnSuccessListener { token ->
+                if (token.claims["admin"] == true) showAdminPanel()
+                else {
+                    auth.signOut()
+                    showAdminLogin()
+                }
+            }.addOnFailureListener { showAdminLogin() }
+        } else showAdminLogin()
+    }
+
+    private fun showAdminLogin() {
+        val email = EditText(this).apply { hint = "Email admin"; inputType = 33 }
+        val password = EditText(this).apply { hint = "Kata sandi"; inputType = 129 }
+        val form = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(8), dp(20), dp(4))
+            addView(email)
+            addView(password)
+        }
+        AlertDialog.Builder(this).setTitle("Admin Login").setView(form)
+            .setPositiveButton("Masuk", null).setNegativeButton("Batal", null).create().also { dialog ->
+                dialog.setOnShowListener {
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                        val e = email.text.toString().trim()
+                        val p = password.text.toString()
+                        if (e.isBlank() || p.isBlank()) {
+                            Toast.makeText(this, "Email dan kata sandi wajib diisi", Toast.LENGTH_SHORT).show()
+                            return@setOnClickListener
+                        }
+                        FirebaseAuth.getInstance().signInWithEmailAndPassword(e, p)
+                            .addOnSuccessListener {
+                                it.user?.getIdToken(true)?.addOnSuccessListener { token ->
+                                    if (token.claims["admin"] == true) {
+                                        dialog.dismiss()
+                                        showAdminPanel()
+                                    } else {
+                                        FirebaseAuth.getInstance().signOut()
+                                        Toast.makeText(this, "Akun ini tidak memiliki akses admin", Toast.LENGTH_LONG).show()
+                                    }
+                                }?.addOnFailureListener { error ->
+                                    FirebaseAuth.getInstance().signOut()
+                                    Toast.makeText(this, "Verifikasi admin gagal: ${error.localizedMessage}", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                            .addOnFailureListener { error ->
+                                Toast.makeText(this, "Login gagal: ${error.localizedMessage}", Toast.LENGTH_LONG).show()
+                            }
+                    }
+                }
+                dialog.show()
+            }
+    }
+
+    private fun showAdminPanel() {
+        val bg = if (darkMode) 0xff121318.toInt() else Color.WHITE
+        val fg = if (darkMode) 0xfff2f2f5.toInt() else ink
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(18), dp(20), dp(18))
+            setBackgroundColor(bg)
+        }
+        root.addView(text("‹   Admin Wallpaper", 22, fg, true).apply {
+            setPadding(0, 0, 0, dp(18))
+            setOnClickListener { showSettings() }
+        })
+        val title = EditText(this).apply { hint = "Judul wallpaper"; setTextColor(fg) }
+        val category = EditText(this).apply { hint = "Kategori, contoh: Nature"; setTextColor(fg) }
+        val type = Spinner(this).apply {
+            adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, listOf("wallpaper", "live"))
+        }
+        val imageLabel = text("Belum ada gambar dipilih", 13, fg, false).apply { setPadding(0, dp(12), 0, dp(12)) }
+        val choose = Button(this).apply {
+            text = "Pilih gambar"
+            setOnClickListener {
+                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "image/*"
+                }
+                startActivityForResult(intent, 7412)
+            }
+        }
+        val upload = Button(this).apply { text = "Upload wallpaper" }
+        root.addView(title)
+        root.addView(category)
+        root.addView(type)
+        root.addView(choose)
+        root.addView(imageLabel)
+        root.addView(upload)
+        root.addView(text("Gambar disimpan di Firebase Storage dan datanya di Firestore.", 12,
+            if (darkMode) 0xffa6a6ad.toInt() else Color.GRAY, false).apply { setPadding(0, dp(12), 0, 0) })
+        upload.setOnClickListener {
+            val uri = adminSelectedImage
+            val name = title.text.toString().trim()
+            val group = category.text.toString().trim()
+            if (uri == null || name.isBlank() || group.isBlank()) {
+                Toast.makeText(this, "Pilih gambar, isi judul dan kategori", Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
+            upload.isEnabled = false
+            upload.text = "Mengunggah…"
+            val id = "wp-" + java.util.UUID.randomUUID().toString().replace("-", "").take(16)
+            val ref = FirebaseStorage.getInstance().reference.child("wallpapers/$id.jpg")
+            ref.putFile(uri)
+                .continueWithTask { task ->
+                    if (!task.isSuccessful) throw task.exception ?: IllegalStateException("Upload gagal")
+                    ref.downloadUrl
+                }
+                .addOnSuccessListener { downloadUri ->
+                    val url = downloadUri.toString()
+                    val data = hashMapOf(
+                        "id" to id,
+                        "title" to name,
+                        "category" to group,
+                        "thumbnail" to url,
+                        "image" to url,
+                        "type" to type.selectedItem.toString(),
+                        "tags" to emptyList<String>(),
+                        "createdAt" to com.google.firebase.Timestamp.now()
+                    )
+                    FirebaseFirestore.getInstance().collection("wallpapers").document(id).set(data)
+                        .addOnSuccessListener {
+                            adminSelectedImage = null
+                            imageLabel.text = "Belum ada gambar dipilih"
+                            title.text.clear()
+                            Toast.makeText(this, "Wallpaper berhasil diunggah", Toast.LENGTH_LONG).show()
+                            upload.isEnabled = true
+                            upload.text = "Upload wallpaper"
+                        }
+                        .addOnFailureListener { error ->
+                            upload.isEnabled = true
+                            upload.text = "Upload wallpaper"
+                            Toast.makeText(this, "Data gagal disimpan: ${error.localizedMessage}", Toast.LENGTH_LONG).show()
+                        }
+                }
+                .addOnFailureListener { error ->
+                    upload.isEnabled = true
+                    upload.text = "Upload wallpaper"
+                    Toast.makeText(this, "Upload gagal: ${error.localizedMessage}", Toast.LENGTH_LONG).show()
+                }
+        }
+        setContentView(ScrollView(this).apply { addView(root) })
+    }
+
+    @Deprecated("Deprecated in Android API")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 7412 && resultCode == RESULT_OK) {
+            adminSelectedImage = data?.data
+            if (adminSelectedImage != null) {
+                try { contentResolver.takePersistableUriPermission(adminSelectedImage!!, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) {}
+                Toast.makeText(this, "Gambar dipilih", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun loadFirestoreWallpapers() {
+        FirebaseFirestore.getInstance().collection("wallpapers").get()
+            .addOnSuccessListener { snapshot ->
+                if (isFinishing || isDestroyed || snapshot.isEmpty) return@addOnSuccessListener
+                var changed = false
+                for (doc in snapshot.documents) {
+                    val id = doc.getString("id") ?: doc.id
+                    val title = doc.getString("title")?.trim().orEmpty()
+                    val thumb = doc.getString("thumbnail")?.trim().orEmpty()
+                    val image = doc.getString("image")?.trim().orEmpty()
+                    if (title.isBlank() || !thumb.startsWith("https://") || !image.startsWith("https://") || itemIds.contains(id)) continue
+                    names.add(title)
+                    itemIds.add(id)
+                    itemCategories.add(doc.getString("category")?.ifBlank { "Abstract" } ?: "Abstract")
+                    itemTypes.add(doc.getString("type")?.lowercase() ?: "wallpaper")
+                    itemTags.add(doc.get("tags") as? List<String> ?: emptyList())
+                    thumbnailUrls.add(thumb)
+                    fullUrls.add(image)
+                    changed = true
+                }
+                if (changed) {
+                    imageCache.evictAll()
+                    buildHome()
+                }
+            }
+            .addOnFailureListener { /* GitHub catalog remains available if Firestore is not configured yet. */ }
     }
 
     private fun shareApplication() {
