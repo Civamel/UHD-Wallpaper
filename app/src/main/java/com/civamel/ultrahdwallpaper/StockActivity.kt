@@ -486,20 +486,59 @@ class StockActivity : Activity() {
         }
     }
 
+    private fun thumbnailCacheFile(url: String): File {
+        val digest = java.security.MessageDigest.getInstance("SHA-256").digest(url.toByteArray(Charsets.UTF_8))
+        val key = digest.joinToString("") { "%02x".format(it) }
+        return File(File(cacheDir, "stock_thumbnails").apply { mkdirs() }, "$key.img")
+    }
+
+    private fun trimThumbnailCache(maxBytes: Long = 80L * 1024L * 1024L) {
+        try {
+            val directory = File(cacheDir, "stock_thumbnails")
+            val files = directory.listFiles()?.filter { it.isFile }?.sortedBy { it.lastModified() } ?: return
+            var total = files.sumOf { it.length() }
+            for (file in files) {
+                if (total <= maxBytes) break
+                val size = file.length()
+                if (file.delete()) total -= size
+            }
+        } catch (_: Exception) { }
+    }
+
     private fun loadThumbnail(url: String, done: (Bitmap?) -> Unit) {
         executor.execute {
-            var connection: HttpURLConnection? = null
+            val cacheFile = thumbnailCacheFile(url)
             val bitmap = try {
-                connection = (URL(url).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 10000
-                    readTimeout = 15000
-                    doInput = true
+                var bytes = if (cacheFile.isFile) {
+                    cacheFile.setLastModified(System.currentTimeMillis())
+                    cacheFile.readBytes()
+                } else null
+                if (bytes == null) {
+                    var connection: HttpURLConnection? = null
+                    try {
+                        connection = (URL(url).openConnection() as HttpURLConnection).apply {
+                            connectTimeout = 10000
+                            readTimeout = 15000
+                            doInput = true
+                        }
+                        if (connection.responseCode !in 200..299) null
+                        else connection.inputStream.use { it.readBytes() }.also { downloaded ->
+                            if (downloaded.size <= 8 * 1024 * 1024) {
+                                val temp = File(cacheFile.parentFile, cacheFile.name + ".tmp")
+                                try {
+                                    temp.writeBytes(downloaded)
+                                    if (!temp.renameTo(cacheFile)) temp.delete()
+                                    trimThumbnailCache()
+                                } catch (_: Exception) { temp.delete() }
+                            }
+                        }
+                    } finally {
+                        connection?.disconnect()
+                    }
                 }
-                if (connection.responseCode in 200..299) connection.inputStream.use { BitmapFactory.decodeStream(it) } else null
+                if (bytes == null) null else BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
             } catch (_: Exception) {
                 null
-            } finally {
-                connection?.disconnect()
             }
             if (!isFinishing && !isDestroyed) runOnUiThread { if (!isFinishing && !isDestroyed) done(bitmap) }
         }
