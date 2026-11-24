@@ -641,9 +641,15 @@ class MainActivity : Activity() {
         val uri: Uri = data?.data ?: return
         Thread {
             val saved = try {
-                contentResolver.openOutputStream(uri)?.use { output ->
-                    FileInputStream(sourceFile).use { input -> input.copyTo(output) }
-                } ?: false
+                val output = contentResolver.openOutputStream(uri)
+                if (output == null) {
+                    false
+                } else {
+                    output.use { stream ->
+                        FileInputStream(sourceFile).use { input -> input.copyTo(stream) }
+                    }
+                    true
+                }
             } catch (_: Exception) { false }
             val librarySaved = saved && saveToDownloadsLibrary(sourceFile, title)
             runOnUiThread {
