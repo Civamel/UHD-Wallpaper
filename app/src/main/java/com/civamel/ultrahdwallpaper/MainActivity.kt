@@ -551,7 +551,16 @@ class MainActivity : Activity() {
             background = rounded(blue, 12)
             setOnClickListener { downloadsSearchQuery = searchBox.text.toString(); showDownloads() }
         }, LinearLayout.LayoutParams(-2, -2).apply { leftMargin = dp(8) })
-        root.addView(searchRow, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
+        root.addView(searchRow, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(4) })
+        if (downloadsSearchQuery.isNotBlank()) {
+            root.addView(text("Hapus pencarian  x", 12, if (darkMode) 0xffaebeff.toInt() else blue, true).apply {
+                gravity = Gravity.END
+                setPadding(dp(8), dp(7), dp(4), dp(10))
+                setOnClickListener { downloadsSearchQuery = ""; showDownloads() }
+            }, LinearLayout.LayoutParams(-1, -2))
+        } else {
+            root.addView(space(8))
+        }
         root.addView(text("Urutkan: $downloadSortMode  ▾", 14, if (darkMode) 0xffc5c9d4.toInt() else 0xff555966.toInt(), true).apply {
             setPadding(0, 0, 0, dp(14))
             setOnClickListener {
