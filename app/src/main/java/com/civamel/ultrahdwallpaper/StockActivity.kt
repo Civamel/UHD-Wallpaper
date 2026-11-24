@@ -77,6 +77,21 @@ class StockActivity : Activity() {
 
     private fun stockManifestCache() = File(filesDir, "stock_catalog_manifest_cache.json")
 
+    private fun cacheStockManifest(body: String) {
+        try {
+            // Persist only a manifest that has already passed validation.
+            CatalogManifest.parse(body)
+            val cache = stockManifestCache()
+            val temp = File(cache.parentFile, cache.name + ".tmp")
+            temp.writeText(body)
+            if (cache.exists()) cache.delete()
+            if (!temp.renameTo(cache)) {
+                temp.copyTo(cache, overwrite = true)
+                temp.delete()
+            }
+        } catch (_: Exception) { }
+    }
+
     private fun stockShardCache(shard: CatalogManifest.Shard): File {
         val digest = java.security.MessageDigest.getInstance("SHA-256").digest(shard.path.toByteArray(Charsets.UTF_8))
         val key = digest.take(12).joinToString("") { "%02x".format(it) }
@@ -86,6 +101,7 @@ class StockActivity : Activity() {
     private fun loadRemoteManifest(firstPageOnly: Boolean) {
         executor.execute {
             var connection: HttpURLConnection? = null
+            var downloadedBody: String? = null
             val result = try {
                 connection = (URL("https://raw.githubusercontent.com/Civamel/UHD-Wallpaper/main/catalog/manifest.json").openConnection() as HttpURLConnection).apply {
                     connectTimeout = 12000
@@ -93,8 +109,8 @@ class StockActivity : Activity() {
                     requestMethod = "GET"
                 }
                 if (connection.responseCode !in 200..299) throw IllegalStateException("Manifest HTTP " + connection.responseCode)
-                val body = connection.inputStream.bufferedReader().use { it.readText() }
-                CatalogManifest.parse(body)
+                downloadedBody = connection.inputStream.bufferedReader().use { it.readText() }
+                CatalogManifest.parse(downloadedBody!!)
             } catch (_: Exception) {
                 null
             } finally {
@@ -108,13 +124,7 @@ class StockActivity : Activity() {
                 if (!firstPageOnly) loadLegacyStockCatalog()
                 return@execute
             }
-            if (result != null) try {
-                val cache = stockManifestCache()
-                val temp = File(cache.parentFile, cache.name + ".tmp")
-                temp.writeText(URL("https://raw.githubusercontent.com/Civamel/UHD-Wallpaper/main/catalog/manifest.json").openConnection().getInputStream().bufferedReader().use { it.readText() })
-                CatalogManifest.parse(temp.readText())
-                if (!temp.renameTo(cache)) temp.delete()
-            } catch (_: Exception) { }
+            if (result != null && downloadedBody != null) cacheStockManifest(downloadedBody!!)
             catalogIndex = index
             loadedShardCount = 0
             loadStockShard(0, replace = true)
@@ -204,13 +214,16 @@ class StockActivity : Activity() {
         Toast.makeText(this, "Memperbarui indeks Stock…", Toast.LENGTH_SHORT).show()
         executor.execute {
             var connection: HttpURLConnection? = null
+            var downloadedBody: String? = null
             val index = try {
                 connection = (URL("https://raw.githubusercontent.com/Civamel/UHD-Wallpaper/main/catalog/manifest.json").openConnection() as HttpURLConnection).apply {
                     connectTimeout = 12000; readTimeout = 18000; requestMethod = "GET"
                 }
                 if (connection.responseCode !in 200..299) throw IllegalStateException("HTTP " + connection.responseCode)
-                CatalogManifest.parse(connection.inputStream.bufferedReader().use { it.readText() })
+                downloadedBody = connection.inputStream.bufferedReader().use { it.readText() }
+                CatalogManifest.parse(downloadedBody!!)
             } catch (_: Exception) { null } finally { connection?.disconnect() }
+            if (index != null && downloadedBody != null) cacheStockManifest(downloadedBody!!)
             if (!isFinishing && !isDestroyed) runOnUiThread {
                 isRefreshingCatalog = false
                 if (index == null) {
