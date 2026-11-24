@@ -112,7 +112,7 @@ class StockActivity : Activity() {
         val search = EditText(this).apply {
             hint = "Cari stock wallpaper"
             textSize = 14f
-            singleLine = true
+            isSingleLine = true
             setText(query)
             setPadding(dp(14), 0, dp(14), 0)
             background = rounded(Color.WHITE, 14)
