@@ -54,6 +54,8 @@ class MainActivity : Activity() {
     private val thumbnailUrls = mutableListOf<String>()
     private val fullUrls = mutableListOf<String>()
     private val imageExecutor = Executors.newFixedThreadPool(4)
+    private val pendingWallpaperFileLock = Any()
+    private val pendingWallpaperFileCallbacks = mutableMapOf<String, MutableList<(File?) -> Unit>>()
     private val imageCache = object : LruCache<String, Bitmap>(24 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount / 1024
     }
@@ -200,6 +202,18 @@ class MainActivity : Activity() {
     }
 
     private fun loadWallpaperFile(url: String, onLoaded: (File?) -> Unit) {
+        val shouldStart = synchronized(pendingWallpaperFileLock) {
+            val existing = pendingWallpaperFileCallbacks[url]
+            if (existing != null) {
+                existing.add(onLoaded)
+                false
+            } else {
+                pendingWallpaperFileCallbacks[url] = mutableListOf(onLoaded)
+                true
+            }
+        }
+        if (!shouldStart) return
+
         imageExecutor.execute {
             var connection: HttpURLConnection? = null
             var result: File? = null
@@ -221,7 +235,7 @@ class MainActivity : Activity() {
                     val contentLength = connection.contentLengthLong
                     val maxBytes = 40L * 1024L * 1024L
                     if (contentLength > maxBytes) throw IllegalStateException("Ukuran gambar melebihi batas")
-                    val temporary = File(target.parentFile, target.name + ".download")
+                    val temporary = File(target.parentFile, target.name + "." + Thread.currentThread().id + ".download")
                     try {
                         connection.inputStream.use { input ->
                             FileOutputStream(temporary).use { output ->
@@ -259,7 +273,14 @@ class MainActivity : Activity() {
                 connection?.disconnect()
             }
             runOnUiThread {
-                if (!isFinishing && !isDestroyed) onLoaded(result)
+                val callbacks = synchronized(pendingWallpaperFileLock) {
+                    pendingWallpaperFileCallbacks.remove(url)?.toList() ?: emptyList()
+                }
+                if (!isFinishing && !isDestroyed) {
+                    callbacks.forEach { callback ->
+                        try { callback(result) } catch (_: Exception) { }
+                    }
+                }
             }
         }
     }
