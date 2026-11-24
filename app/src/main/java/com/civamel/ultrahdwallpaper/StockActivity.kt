@@ -526,7 +526,11 @@ class StockActivity : Activity() {
                     cacheFile.setLastModified(System.currentTimeMillis())
                     cacheFile.readBytes()
                 } else null
-                if (bytes == null) {
+                var decoded = bytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+
+                // Remove a damaged cache entry and retry the source once.
+                if (decoded == null) {
+                    if (cacheFile.exists()) cacheFile.delete()
                     var connection: HttpURLConnection? = null
                     try {
                         connection = (URL(url).openConnection() as HttpURLConnection).apply {
@@ -535,21 +539,41 @@ class StockActivity : Activity() {
                             doInput = true
                         }
                         if (connection.responseCode in 200..299) {
-                            bytes = connection.inputStream.use { it.readBytes() }
-                            if (bytes!!.size <= 8 * 1024 * 1024) {
-                                val temp = File(cacheFile.parentFile, cacheFile.name + ".tmp")
-                                try {
-                                    temp.writeBytes(bytes!!)
-                                    if (!temp.renameTo(cacheFile)) temp.delete()
-                                    trimThumbnailCache()
-                                } catch (_: Exception) { temp.delete() }
+                            val declaredSize = connection.contentLengthLong
+                            if (declaredSize <= 8L * 1024L * 1024L || declaredSize < 0L) {
+                                val downloaded = connection.inputStream.use { input ->
+                                    val output = java.io.ByteArrayOutputStream()
+                                    val buffer = ByteArray(8192)
+                                    var total = 0
+                                    while (true) {
+                                        val count = input.read(buffer)
+                                        if (count < 0) break
+                                        total += count
+                                        if (total > 8 * 1024 * 1024) throw IllegalStateException("Thumbnail exceeds size limit")
+                                        output.write(buffer, 0, count)
+                                    }
+                                    output.toByteArray()
+                                }
+                                bytes = downloaded
+                                decoded = BitmapFactory.decodeByteArray(downloaded, 0, downloaded.size)
+                                if (decoded != null) {
+                                    val temp = File(cacheFile.parentFile, cacheFile.name + ".tmp")
+                                    try {
+                                        temp.writeBytes(downloaded)
+                                        if (!temp.renameTo(cacheFile)) {
+                                            temp.copyTo(cacheFile, overwrite = true)
+                                            temp.delete()
+                                        }
+                                        trimThumbnailCache()
+                                    } catch (_: Exception) { temp.delete() }
+                                }
                             }
                         }
                     } finally {
                         connection?.disconnect()
                     }
                 }
-                if (bytes == null) null else BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                decoded
             } catch (_: Exception) {
                 null
             }
