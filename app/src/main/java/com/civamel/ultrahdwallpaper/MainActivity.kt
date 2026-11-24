@@ -518,6 +518,26 @@ class MainActivity : Activity() {
             .toList().asReversed().filter { record ->
                 File(File(filesDir, "downloads"), record.substringBefore("\t")).isFile
             }
+        if (records.isNotEmpty()) {
+            root.addView(text("Hapus semua unduhan", 14, if (darkMode) 0xffff8b8b.toInt() else 0xffc62828.toInt(), true).apply {
+                gravity = Gravity.END
+                setPadding(0, 0, 0, dp(12))
+                setOnClickListener {
+                    AlertDialog.Builder(this@MainActivity)
+                        .setTitle("Hapus semua unduhan?")
+                        .setMessage("Semua ${records.size} wallpaper yang tersimpan akan dihapus dari pustaka Unduhan.")
+                        .setNegativeButton("Batal", null)
+                        .setPositiveButton("Hapus semua") { _, _ ->
+                            records.forEach { record ->
+                                File(File(filesDir, "downloads"), record.substringBefore("\\t")).delete()
+                            }
+                            preferences.edit().remove("download_records").apply()
+                            showDownloads()
+                        }
+                        .show()
+                }
+            })
+        }
         val downloadBytes = records.sumOf { record ->
             File(File(filesDir, "downloads"), record.substringBefore("\t")).length()
         }
