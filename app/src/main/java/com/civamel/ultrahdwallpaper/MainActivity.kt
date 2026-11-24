@@ -534,19 +534,19 @@ class MainActivity : Activity() {
         val pageBg = if (darkMode) 0xff121318.toInt() else Color.WHITE
         val pageText = if (darkMode) 0xfff2f2f5.toInt() else ink
         val root = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(pageBg) }
-        val header = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(15),dp(12),dp(12),dp(10)) }
-        header.addView(text(if (showOnlyFavorites) "Favorit (${favorites.size})" else "4k Ultra HD Wallpaper",25,pageText,true).apply { if (!showOnlyFavorites) textSize = 16.25f }, LinearLayout.LayoutParams(0,dp(54),1f))
+        val header = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(15),dp(6),dp(12),dp(5)); setBackgroundColor(0xff050608.toInt()) }
+        header.addView(text(if (showOnlyFavorites) "Favorit (${favorites.size})" else "4k Ultra HD Wallpaper",25,0xfff4f7ff.toInt(),true).apply { if (!showOnlyFavorites) textSize = 16.25f }, LinearLayout.LayoutParams(0,dp(38),1f))
         listOf("✦","☾","⌕","⚙").forEachIndexed { i,glyph ->
-            val icon = modernIcon(glyph, 38)
+            val icon = modernIcon(glyph, 34)
             icon.contentDescription = listOf("Premium","Tema","Cari","Pengaturan")[i]
             icon.setOnClickListener {
                 when(i){0->Toast.makeText(this@MainActivity,"Wallpaper Premium",Toast.LENGTH_SHORT).show();1->toggleTheme();2->search();3->showSettings()}
             }
-            header.addView(icon,LinearLayout.LayoutParams(dp(44),dp(48)))
+            header.addView(icon,LinearLayout.LayoutParams(dp(40),dp(36)))
         }
         root.addView(header)
         val tabScroll=HorizontalScrollView(this@MainActivity).apply { isHorizontalScrollBarEnabled=false }
-        val tabRow=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL }
+        val tabRow=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; setBackgroundColor(0xff050608.toInt()) }
         tabs.forEach { tab ->
             val item=LinearLayout(this@MainActivity).apply {
                 orientation = LinearLayout.VERTICAL
@@ -670,7 +670,7 @@ class MainActivity : Activity() {
             })
         }
         scroll.addView(content); root.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
-        val bottom=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER; setPadding(0,dp(8),0,dp(7)); setBackgroundColor(pageBg) }
+        val bottom=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER; setPadding(0,dp(4),0,dp(3)); setBackgroundColor(0xff050608.toInt()) }
         listOf("⌂" to "Wallpaper","▦" to "Category","✦" to "Quotes","▧" to "Stock").forEachIndexed { i,item ->
             val navItem = LinearLayout(this@MainActivity).apply {
                 orientation = LinearLayout.VERTICAL
@@ -694,9 +694,9 @@ class MainActivity : Activity() {
                     }
                 }
             }
-            navItem.addView(modernIcon(item.first, 30), LinearLayout.LayoutParams(dp(38),dp(36)))
+            navItem.addView(modernIcon(item.first, 27), LinearLayout.LayoutParams(dp(34),dp(27)))
             navItem.addView(text(item.second,11,if(i==0) blue else pageText,i==0).apply { gravity=Gravity.CENTER; setPadding(0,dp(2),0,0) })
-            bottom.addView(navItem,LinearLayout.LayoutParams(0,dp(62),1f))
+            bottom.addView(navItem,LinearLayout.LayoutParams(0,dp(43),1f))
         }
         root.addView(bottom)
         val adContainer = FrameLayout(this@MainActivity).apply {
@@ -1669,24 +1669,18 @@ class MainActivity : Activity() {
     }
     private fun toggleTheme(){ darkMode = !darkMode; preferences.edit().putBoolean("dark_mode", darkMode).apply(); buildHome(); Toast.makeText(this@MainActivity,if(darkMode) "Tema gelap aktif" else "Tema terang aktif",Toast.LENGTH_SHORT).show() }
     private fun modernIcon(glyph: String, size: Int): FrameLayout {
-        val tile = FrameLayout(this@MainActivity).apply {
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(0xff00c6ff.toInt(), 0xff176bff.toInt(), 0xff9b35f5.toInt())
-            ).apply {
-                cornerRadius = dp(12).toFloat()
-                setStroke(dp(1), 0x88ffffff.toInt())
-            }
-            elevation = dp(3).toFloat()
-            clipToOutline = true
+        // Glassmorphism icon treatment: transparent surface, luminous cool-toned glyph.
+        val icon = FrameLayout(this@MainActivity).apply {
+            setBackgroundColor(Color.TRANSPARENT)
+            clipToOutline = false
         }
-        val symbol = text(glyph, (size * 0.48f).toInt().coerceAtLeast(14), Color.WHITE, true).apply {
+        val symbol = text(glyph, (size * 0.54f).toInt().coerceAtLeast(14), 0xffb9eaff.toInt(), true).apply {
             gravity = Gravity.CENTER
-            setShadowLayer(dp(3).toFloat(), 0f, dp(1).toFloat(), 0x99001d66.toInt())
+            setShadowLayer(dp(5).toFloat(), 0f, 0f, 0x997c7bff.toInt())
         }
-        tile.addView(symbol, FrameLayout.LayoutParams(-1,-1))
-        tile.contentDescription = glyph
-        return tile
+        icon.addView(symbol, FrameLayout.LayoutParams(-1,-1))
+        icon.contentDescription = glyph
+        return icon
     }
 
     private fun circle(symbol:String, action:()->Unit):View = modernIcon(symbol,48).apply {
