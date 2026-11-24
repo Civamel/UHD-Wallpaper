@@ -308,17 +308,38 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun decodeWallpaperPreview(file: File): Bitmap? {
+        if (!file.isFile || file.length() <= 0L || file.length() > 40L * 1024L * 1024L) return null
+        return try {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(file.absolutePath, bounds)
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+            val maxEdge = 2048
+            var sample = 1
+            while (bounds.outWidth / (sample * 2) >= maxEdge &&
+                bounds.outHeight / (sample * 2) >= maxEdge) {
+                sample *= 2
+            }
+            BitmapFactory.decodeFile(file.absolutePath, BitmapFactory.Options().apply {
+                inSampleSize = sample
+                inPreferredConfig = Bitmap.Config.RGB_565
+                inDither = true
+            })
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     private fun loadImage(url: String, onLoaded: (Bitmap?) -> Unit) {
         val cached = imageCache.get(url)
-        if (cached != null) { onLoaded(cached); return }
+        if (cached != null && !cached.isRecycled) { onLoaded(cached); return }
         imageExecutor.execute {
             var connection: HttpURLConnection? = null
-            var cacheFile: File? = null
             var bitmap: Bitmap? = null
             try {
-                cacheFile = wallpaperDiskCacheFile(url)
+                val cacheFile = wallpaperDiskCacheFile(url)
                 if (cacheFile.isFile) {
-                    bitmap = BitmapFactory.decodeFile(cacheFile.absolutePath)
+                    bitmap = decodeWallpaperPreview(cacheFile)
                     if (bitmap != null) cacheFile.setLastModified(System.currentTimeMillis())
                     else cacheFile.delete()
                 }
@@ -331,15 +352,36 @@ class MainActivity : Activity() {
                         requestMethod = "GET"
                     }
                     if (connection.responseCode !in 200..299) throw IllegalStateException("HTTP " + connection.responseCode)
-                    val temporaryFile = File(cacheFile.parentFile, cacheFile.name + ".tmp")
+                    val maxBytes = 40L * 1024L * 1024L
+                    if (connection.contentLengthLong > maxBytes) throw IllegalStateException("Ukuran gambar melebihi batas")
+                    val temporaryFile = File(cacheFile.parentFile, cacheFile.name + "." + Thread.currentThread().id + ".tmp")
                     try {
                         connection.inputStream.use { input ->
-                            FileOutputStream(temporaryFile).use { output -> input.copyTo(output) }
+                            FileOutputStream(temporaryFile).use { output ->
+                                val buffer = ByteArray(32 * 1024)
+                                var total = 0L
+                                while (true) {
+                                    val count = input.read(buffer)
+                                    if (count < 0) break
+                                    total += count
+                                    if (total > maxBytes) throw IllegalStateException("Ukuran gambar melebihi batas")
+                                    output.write(buffer, 0, count)
+                                }
+                                output.fd.sync()
+                            }
                         }
-                        if (temporaryFile.length() > 0L && temporaryFile.renameTo(cacheFile)) {
-                            bitmap = BitmapFactory.decodeFile(cacheFile.absolutePath)
-                            if (bitmap == null) cacheFile.delete()
-                            else trimWallpaperDiskCache()
+                        bitmap = decodeWallpaperPreview(temporaryFile)
+                        if (bitmap != null) {
+                            if (!temporaryFile.renameTo(cacheFile)) {
+                                temporaryFile.copyTo(cacheFile, overwrite = true)
+                                temporaryFile.delete()
+                            }
+                            if (cacheFile.isFile) {
+                                cacheFile.setLastModified(System.currentTimeMillis())
+                                trimWallpaperDiskCache()
+                            }
+                        } else {
+                            cacheFile.delete()
                         }
                     } finally {
                         if (temporaryFile.exists()) temporaryFile.delete()
@@ -351,7 +393,10 @@ class MainActivity : Activity() {
                 connection?.disconnect()
             }
             if (bitmap != null) imageCache.put(url, bitmap)
-            runOnUiThread { onLoaded(bitmap) }
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed) onLoaded(bitmap)
+                else bitmap?.recycle()
+            }
         }
     }
     private fun buildHome() {
