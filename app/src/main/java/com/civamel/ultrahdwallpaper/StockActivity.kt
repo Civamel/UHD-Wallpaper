@@ -524,6 +524,9 @@ class StockActivity : Activity() {
         } catch (_: Exception) { }
     }
 
+    private val thumbnailCallbackLock = Any()
+    private val pendingThumbnailCallbacks = HashMap<String, MutableList<(Bitmap?) -> Unit>>()
+
     private fun loadThumbnail(url: String, done: (Bitmap?) -> Unit) {
         val memoryCached = thumbnailMemoryCache.get(url)
         if (memoryCached != null) {
@@ -531,6 +534,15 @@ class StockActivity : Activity() {
                 if (!isFinishing && !isDestroyed) done(memoryCached)
             }
             return
+        }
+        // Share one disk/network decode among every view requesting the same URL.
+        synchronized(thumbnailCallbackLock) {
+            val waiting = pendingThumbnailCallbacks[url]
+            if (waiting != null) {
+                waiting.add(done)
+                return
+            }
+            pendingThumbnailCallbacks[url] = mutableListOf(done)
         }
         executor.execute {
             val cacheFile = thumbnailCacheFile(url)
@@ -591,7 +603,12 @@ class StockActivity : Activity() {
             } catch (_: Exception) {
                 null
             }
-            if (!isFinishing && !isDestroyed) runOnUiThread { if (!isFinishing && !isDestroyed) done(bitmap) }
+            val callbacks = synchronized(thumbnailCallbackLock) {
+                pendingThumbnailCallbacks.remove(url)?.toList().orEmpty()
+            }
+            if (!isFinishing && !isDestroyed && callbacks.isNotEmpty()) runOnUiThread {
+                if (!isFinishing && !isDestroyed) callbacks.forEach { callback -> callback(bitmap) }
+            }
         }
     }
 
