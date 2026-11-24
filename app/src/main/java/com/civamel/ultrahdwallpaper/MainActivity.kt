@@ -94,6 +94,9 @@ class MainActivity : Activity() {
         darkMode = preferences.getBoolean("dark_mode", false)
         sortMode = preferences.getString("wallpaper_sort_mode", "Paling populer") ?: "Paling populer"
         downloadSortMode = preferences.getString("download_sort_mode", "Nama A-Z") ?: "Nama A-Z"
+        selectedTab = preferences.getString("selected_wallpaper_tab", "Wallpaper") ?: "Wallpaper"
+        if (selectedTab !in tabs && selectedTab != "Home") selectedTab = "Wallpaper"
+        selectedCategory = preferences.getString("selected_wallpaper_category", "All") ?: "All"
         buildHome()
         loadBundledCatalog()
         loadCachedRemoteCatalog()
@@ -159,6 +162,7 @@ class MainActivity : Activity() {
                 itemIds.clear(); itemIds.addAll(newIds)
                 migrateLegacyFavorites()
                 itemCategories.clear(); itemCategories.addAll(newCategories)
+                if (selectedCategory !in categoryNames) selectedCategory = "All"
                 itemTypes.clear(); itemTypes.addAll(newTypes)
                 itemTags.clear(); itemTags.addAll(newTags)
                 thumbnailUrls.clear(); thumbnailUrls.addAll(newThumbs)
@@ -322,6 +326,7 @@ class MainActivity : Activity() {
             itemIds.clear(); itemIds.addAll(ids)
             migrateLegacyFavorites()
             itemCategories.clear(); itemCategories.addAll(categories)
+            if (selectedCategory !in categoryNames) selectedCategory = "All"
             itemTypes.clear(); itemTypes.addAll(types)
             itemTags.clear(); itemTags.addAll(tags)
             thumbnailUrls.clear(); thumbnailUrls.addAll(thumbs)
@@ -477,7 +482,17 @@ class MainActivity : Activity() {
         val tabScroll=HorizontalScrollView(this@MainActivity).apply { isHorizontalScrollBarEnabled=false }
         val tabRow=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL }
         tabs.forEach { tab ->
-            val item=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER; setOnClickListener { selectedTab=tab; showOnlyFavorites=false; visibleItemLimit=60; buildHome() } }
+            val item=LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                setOnClickListener {
+                    selectedTab = tab
+                    preferences.edit().putString("selected_wallpaper_tab", selectedTab).apply()
+                    showOnlyFavorites = false
+                    visibleItemLimit = 60
+                    buildHome()
+                }
+            }
             item.addView(text(tab,16,if(tab==selectedTab) blue else pageText,true).apply { gravity=Gravity.CENTER; setPadding(dp(15),dp(12),dp(15),dp(12)) })
             item.addView(View(this@MainActivity).apply { setBackgroundColor(if(tab==selectedTab) blue else Color.TRANSPARENT) },LinearLayout.LayoutParams(-1,dp(3)))
             tabRow.addView(item)
@@ -593,7 +608,17 @@ class MainActivity : Activity() {
         listOf("▣\nWallpaper","▦\nCategory","▤\nQuotes","♧\nStock").forEachIndexed { i,label ->
             bottom.addView(text(label,13,if(i==0) blue else pageText,i==0).apply { gravity=Gravity.CENTER; setOnClickListener {
                 when(i) {
-                    0 -> { showOnlyFavorites=false; selectedCategory="All"; visibleItemLimit=60; buildHome() }
+                    0 -> {
+                        showOnlyFavorites = false
+                        selectedCategory = "All"
+                        selectedTab = "Wallpaper"
+                        preferences.edit()
+                            .putString("selected_wallpaper_category", selectedCategory)
+                            .putString("selected_wallpaper_tab", selectedTab)
+                            .apply()
+                        visibleItemLimit = 60
+                        buildHome()
+                    }
                     1 -> showCategories()
                     2 -> showQuotes()
                     3 -> startActivity(Intent(this@MainActivity, StockActivity::class.java))
@@ -1164,7 +1189,18 @@ class MainActivity : Activity() {
             }.start()
         }.show()
     }
-    private fun showFavorites(){ refreshFavoritesFromPreferences(); showOnlyFavorites=true; selectedCategory="All"; selectedTab="Wallpaper"; visibleItemLimit=60; buildHome() }
+    private fun showFavorites(){
+        refreshFavoritesFromPreferences()
+        showOnlyFavorites = true
+        selectedCategory = "All"
+        selectedTab = "Wallpaper"
+        preferences.edit()
+            .putString("selected_wallpaper_category", selectedCategory)
+            .putString("selected_wallpaper_tab", selectedTab)
+            .apply()
+        visibleItemLimit = 60
+        buildHome()
+    }
     private fun showCategories(){
         val root = LinearLayout(this@MainActivity).apply {
             orientation = LinearLayout.VERTICAL
@@ -1196,6 +1232,10 @@ class MainActivity : Activity() {
                 setOnClickListener {
                     selectedCategory = category
                     selectedTab = "Wallpaper"
+                    preferences.edit()
+                        .putString("selected_wallpaper_category", selectedCategory)
+                        .putString("selected_wallpaper_tab", selectedTab)
+                        .apply()
                     visibleItemLimit = 60
                     showOnlyFavorites = false
                     buildHome()
