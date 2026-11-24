@@ -9,6 +9,7 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
+import android.util.LruCache
 import android.view.Gravity
 import android.view.View
 import android.widget.*
@@ -23,6 +24,11 @@ class StockActivity : Activity() {
     private data class StockItem(val id: String, val title: String, val category: String, val thumbnail: String, val image: String, val tags: List<String>)
     private val items = mutableListOf<StockItem>()
     private val executor = Executors.newFixedThreadPool(3)
+    // Keep recently decoded Stock thumbnails in a small memory cache (16 MiB).
+    private val thumbnailMemoryCache = object : LruCache<String, Bitmap>(16 * 1024) {
+        override fun sizeOf(key: String, value: Bitmap): Int =
+            (value.byteCount / 1024).coerceAtLeast(1)
+    }
     private var query = ""
     private var selectedCategory = "All"
     private var selectedSort = "Default"
@@ -519,6 +525,13 @@ class StockActivity : Activity() {
     }
 
     private fun loadThumbnail(url: String, done: (Bitmap?) -> Unit) {
+        val memoryCached = thumbnailMemoryCache.get(url)
+        if (memoryCached != null) {
+            if (!isFinishing && !isDestroyed) runOnUiThread {
+                if (!isFinishing && !isDestroyed) done(memoryCached)
+            }
+            return
+        }
         executor.execute {
             val cacheFile = thumbnailCacheFile(url)
             val bitmap = try {
@@ -573,6 +586,7 @@ class StockActivity : Activity() {
                         connection?.disconnect()
                     }
                 }
+                if (decoded != null) thumbnailMemoryCache.put(url, decoded)
                 decoded
             } catch (_: Exception) {
                 null
