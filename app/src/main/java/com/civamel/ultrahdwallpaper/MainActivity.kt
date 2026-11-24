@@ -529,7 +529,7 @@ class MainActivity : Activity() {
                         .setNegativeButton("Batal", null)
                         .setPositiveButton("Hapus semua") { _, _ ->
                             records.forEach { record ->
-                                File(File(filesDir, "downloads"), record.substringBefore("\\t")).delete()
+                                File(File(filesDir, "downloads"), record.substringBefore("\t")).delete()
                             }
                             preferences.edit().remove("download_records").apply()
                             showDownloads()
@@ -542,12 +542,12 @@ class MainActivity : Activity() {
             File(File(filesDir, "downloads"), record.substringBefore("\t")).length()
         }
         val downloadSize = if (downloadBytes < 1024L * 1024L) {
-            "\${downloadBytes / 1024L} KB"
+            "${downloadBytes / 1024L} KB"
         } else {
             String.format("%.1f MB", downloadBytes / (1024.0 * 1024.0))
         }
         root.addView(text(
-            "\${records.size} wallpaper tersimpan  •  $downloadSize digunakan",
+            "${records.size} wallpaper tersimpan  •  $downloadSize digunakan",
             13,
             if (darkMode) 0xffb9bdc8.toInt() else 0xff666a75.toInt(),
             false
