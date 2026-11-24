@@ -226,7 +226,8 @@ class MainActivity : Activity() {
         val tabRow=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL }
         tabs.forEach { tab ->
             val item=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER; setOnClickListener { selectedTab=tab; showOnlyFavorites=false; visibleItemLimit=60; buildHome() } }
-            item.addView(text(tab,16,if(tab==selectedTab) blue else pageText,true).apply { gravity=Gravity.CENTER; setPadding(dp(15),dp(12),dp(15),dp(12)) })            item.addView(View(this@MainActivity).apply { setBackgroundColor(if(tab==selectedTab) blue else Color.TRANSPARENT) },LinearLayout.LayoutParams(-1,dp(3)))
+            item.addView(text(tab,16,if(tab==selectedTab) blue else pageText,true).apply { gravity=Gravity.CENTER; setPadding(dp(15),dp(12),dp(15),dp(12)) })
+            item.addView(View(this@MainActivity).apply { setBackgroundColor(if(tab==selectedTab) blue else Color.TRANSPARENT) },LinearLayout.LayoutParams(-1,dp(3)))
             tabRow.addView(item)
         }
         tabScroll.addView(tabRow); root.addView(tabScroll)
@@ -581,7 +582,8 @@ class MainActivity : Activity() {
         root.addView(text("Explore wallpapers by category", 14, if(darkMode) 0xffaaaaaa.toInt() else Color.GRAY, false).apply {
             setPadding(dp(4), dp(4), 0, dp(18))
         })
-        val scroll = ScrollView(this@MainActivity)        val list = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
+        val scroll = ScrollView(this@MainActivity)
+        val list = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
         val symbols = listOf("▦", "✦", "🐾", "▶", "🎨", "🚘", "🌿", "🌊", "☄", "⚙")
         categoryNames.forEachIndexed { index, category ->
             val row = LinearLayout(this@MainActivity).apply {
@@ -716,107 +718,3 @@ class MainActivity : Activity() {
                 val imageUri = FileProvider.getUriForFile(this, "com.civamel.ultrahdwallpaper.fileprovider", imageFile)
                 val sendIntent = Intent(Intent.ACTION_SEND).apply {
                     type = "image/jpeg"
-                    putExtra(Intent.EXTRA_STREAM, imageUri)
-                    putExtra(Intent.EXTRA_SUBJECT, names[index])
-                    putExtra(Intent.EXTRA_TEXT, names[index] + " — Ultra HD Wallpaper")
-                    clipData = android.content.ClipData.newUri(contentResolver, names[index], imageUri)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                startActivity(Intent.createChooser(sendIntent, "Bagikan wallpaper"))
-            } catch (e: Exception) {
-                Toast.makeText(this, "Gagal membagikan gambar: " + e.localizedMessage, Toast.LENGTH_LONG).show()
-            }
-        }
-    }
-    private fun applyLiveWallpaper(index: Int) {
-        val liveUrl = fullUrls.getOrNull(index)
-        if (liveUrl.isNullOrBlank()) {
-            Toast.makeText(this@MainActivity, "Gambar live wallpaper belum tersedia", Toast.LENGTH_LONG).show()
-            return
-        }
-        preferences.edit().putString("selected_live_wallpaper_url", liveUrl).putString("selected_live_wallpaper_title", names[index]).apply()
-        try {
-            val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER).apply {
-                putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, ComponentName(this@MainActivity, LiveWallpaperService::class.java))
-            }
-            startActivity(intent)
-        } catch (e: Exception) {
-            Toast.makeText(this@MainActivity,"Pemilih live wallpaper tidak tersedia: "+e.localizedMessage,Toast.LENGTH_LONG).show()
-        }
-    }
-    private fun toggleTheme(){ darkMode = !darkMode; preferences.edit().putBoolean("dark_mode", darkMode).apply(); buildHome(); Toast.makeText(this@MainActivity,if(darkMode) "Tema gelap aktif" else "Tema terang aktif",Toast.LENGTH_SHORT).show() }
-    private fun circle(symbol:String, action:()->Unit):View = TextView(this@MainActivity).apply { text=symbol; textSize=24f; gravity=Gravity.CENTER; setTextColor(Color.BLACK); background=rounded(0xffdddddd.toInt(),50); setOnClickListener{action()} }.also { it.layoutParams=LinearLayout.LayoutParams(dp(48),dp(48)).apply { setMargins(dp(4),0,dp(4),0) } }
-    private fun artDrawable(index:Int):GradientDrawable { val a=palettes[index%palettes.size]; return GradientDrawable(GradientDrawable.Orientation.TL_BR,a).apply { cornerRadius=dp(2).toFloat() } }
-    private fun rounded(color:Int,radius:Int)=GradientDrawable().apply { setColor(color); cornerRadius=dp(radius).toFloat() }
-    private fun text(s:String,size:Int,color:Int,bold:Boolean)=TextView(this@MainActivity).apply { text=s; textSize=size.toFloat(); setTextColor(color); if(bold) typeface=Typeface.DEFAULT_BOLD }
-    private fun space(h:Int)=View(this@MainActivity).apply { layoutParams=LinearLayout.LayoutParams(1,dp(h)) }
-    private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
-
-    // Fetch an updatable catalog without bundling thousands of image files in the APK.
-    private fun refreshRemoteCatalog() {
-        Thread {
-            var connection: HttpURLConnection? = null
-            var validatedCatalogBody: String? = null
-            val parsed = try {
-                val url = URL("https://raw.githubusercontent.com/Civamel/UHD-Wallpaper/main/catalog/wallpapers.json")
-                connection = (url.openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 12000
-                    readTimeout = 18000
-                    requestMethod = "GET"
-                    setRequestProperty("Accept", "application/json")
-                    setRequestProperty("Cache-Control", "no-cache")
-                }
-                if (connection.responseCode !in 200..299) throw IllegalStateException("HTTP " + connection.responseCode)
-                val body = connection.inputStream.bufferedReader().use { it.readText() }
-                val items = JSONObject(body).getJSONArray("wallpapers")
-                val titles = mutableListOf<String>()
-                val categories = mutableListOf<String>()
-                val types = mutableListOf<String>()
-                val thumbs = mutableListOf<String>()
-                val images = mutableListOf<String>()
-                for (i in 0 until items.length()) {
-                    val item = items.optJSONObject(i) ?: continue
-                    val title = item.optString("title").trim()
-                    val thumbnail = item.optString("thumbnail").trim()
-                    val image = item.optString("image").trim()
-                    if (title.isEmpty() || thumbnail.isEmpty() || image.isEmpty()) continue
-                    if (!thumbnail.startsWith("https://") || !image.startsWith("https://")) continue
-                    titles.add(title)
-                    categories.add(item.optString("category", "Abstract").ifBlank { "Abstract" })
-                    types.add(item.optString("type", "wallpaper").lowercase())
-                    thumbs.add(thumbnail)
-                    images.add(image)
-                }
-                if (titles.isEmpty()) throw IllegalStateException("Katalog online kosong atau tidak valid")
-                validatedCatalogBody = body
-                arrayOf(titles, categories, types, thumbs, images)
-            } catch (_: Exception) {
-                null
-            } finally {
-                connection?.disconnect()
-            }
-            if (parsed != null) {
-                try {
-                    val cacheFile = File(filesDir, "catalog_cache.json")
-                    FileOutputStream(cacheFile).use { output -> output.write(validatedCatalogBody.orEmpty().toByteArray(Charsets.UTF_8)) }
-                } catch (_: Exception) {
-                    // The current session can still use the fetched catalog if disk caching fails.
-                }
-                runOnUiThread {
-                    names.clear()
-                    names.addAll(parsed[0])
-                    itemCategories.clear()
-                    itemCategories.addAll(parsed[1])
-                    itemTypes.clear()
-                    itemTypes.addAll(parsed[2])
-                    thumbnailUrls.clear()
-                    thumbnailUrls.addAll(parsed[3])
-                    fullUrls.clear()
-                    fullUrls.addAll(parsed[4])
-                    imageCache.evictAll()
-                    buildHome()
-                }
-            }
-        }.start()
-    }
-}
