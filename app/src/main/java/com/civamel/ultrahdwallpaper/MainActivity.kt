@@ -686,14 +686,56 @@ class MainActivity : Activity() {
         }.setNegativeButton("Batal", null).show()
     }
 
+    private fun cacheDirectories(): List<File> = listOf(
+        File(filesDir, "wallpaper_images"),
+        File(filesDir, "live_wallpaper_cache"),
+        File(cacheDir, "stock_thumbnails"),
+        File(cacheDir, "stock_full_images")
+    )
+
+    private fun directoryBytes(file: File): Long {
+        if (!file.exists()) return 0L
+        if (file.isFile) return file.length()
+        return file.listFiles()?.sumOf { directoryBytes(it) } ?: 0L
+    }
+
+    private fun formatCacheSize(bytes: Long): String {
+        val mb = bytes / (1024.0 * 1024.0)
+        return if (mb >= 1.0) String.format(java.util.Locale.US, "%.1f MB", mb)
+        else String.format(java.util.Locale.US, "%.0f KB", bytes / 1024.0)
+    }
+
+    private fun showCacheManager() {
+        val directories = cacheDirectories()
+        val total = directories.sumOf { directoryBytes(it) }
+        AlertDialog.Builder(this)
+            .setTitle("Kelola Cache")
+            .setMessage("Cache gambar yang digunakan aplikasi: " + formatCacheSize(total) +
+                "\\n\\nMembersihkan cache hanya menghapus salinan sementara. Wallpaper yang sudah disimpan melalui menu Unduh dan katalog tidak akan dihapus.")
+            .setPositiveButton("Bersihkan cache") { _, _ ->
+                var removed = 0L
+                directories.forEach { directory ->
+                    if (directory.exists()) {
+                        removed += directoryBytes(directory)
+                        directory.deleteRecursively()
+                    }
+                }
+                imageCache.evictAll()
+                Toast.makeText(this, "Cache dibersihkan: " + formatCacheSize(removed), Toast.LENGTH_LONG).show()
+                showCacheManager()
+            }
+            .setNegativeButton("Tutup", null)
+            .show()
+    }
+
     private fun showSettings() {
         val settingsBg = if (darkMode) 0xff121318.toInt() else Color.WHITE
         val settingsText = if (darkMode) 0xfff2f2f5.toInt() else ink
         val root=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL; setBackgroundColor(settingsBg); setPadding(dp(22),dp(22),dp(22),dp(12)) }
         root.addView(text("‹   Pengaturan",22,settingsText,true).apply { setOnClickListener { buildHome() } })
         root.addView(space(28)); root.addView(text("Pengaturan",24,settingsText,true)); root.addView(space(12))
-        listOf("♟   Notifikasi","♡   Favorit","文   Bahasa Aplikasi","▧   Pengubah Wallpaper Otomatis","⇩   Unduh","▤   Wallpaper Penerangan Tepi","Bagikan Aplikasi","☆   Nilai kami","♧   Umpan Balik").forEach { item ->
-            val row=text(item+"     ›",17,settingsText,false).apply { setPadding(dp(16),dp(18),dp(10),dp(18)); background=rounded(if(darkMode) 0xff24262d.toInt() else Color.WHITE,16); setOnClickListener { if(item.contains("Favorit")) showFavorites() else if(item.contains("Unduh")) showDownloads() else Toast.makeText(this@MainActivity,item,Toast.LENGTH_SHORT).show() } }
+        listOf("♟   Notifikasi","♡   Favorit","文   Bahasa Aplikasi","▧   Pengubah Wallpaper Otomatis","⇩   Unduh","▤   Wallpaper Penerangan Tepi","Bagikan Aplikasi","☆   Nilai kami","♧   Umpan Balik","▣   Kelola Cache").forEach { item ->
+            val row=text(item+"     ›",17,settingsText,false).apply { setPadding(dp(16),dp(18),dp(10),dp(18)); background=rounded(if(darkMode) 0xff24262d.toInt() else Color.WHITE,16); setOnClickListener { if(item.contains("Favorit")) showFavorites() else if(item.contains("Unduh")) showDownloads() else if(item.contains("Kelola Cache")) showCacheManager() else Toast.makeText(this@MainActivity,item,Toast.LENGTH_SHORT).show() } }
             root.addView(row,LinearLayout.LayoutParams(-1,-2))
         }
         setContentView(ScrollView(this@MainActivity).apply { addView(root) })
