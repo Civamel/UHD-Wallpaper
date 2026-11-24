@@ -12,6 +12,9 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.widget.*
+import androidx.core.content.FileProvider
+import java.io.File
+import java.io.FileOutputStream
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -363,6 +366,7 @@ class StockActivity : Activity() {
         }
         layout.addView(detailInfo, LinearLayout.LayoutParams(-1, -2))
         AlertDialog.Builder(this).setTitle(item.title).setView(layout)
+            .setNeutralButton("Bagikan", null)
             .setNegativeButton("Tutup", null)
             .setPositiveButton("Terapkan", null)
             .create().also { dialog ->
@@ -371,6 +375,9 @@ class StockActivity : Activity() {
                         applyItem(item)
                         dialog.dismiss()
                     }
+                    dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                        shareItem(item)
+                    }
                 }
                 dialog.show()
                 // Use the smaller preview asset here; the full UHD file is only decoded when applying.
@@ -378,6 +385,59 @@ class StockActivity : Activity() {
                     if (bitmap != null && preview.isAttachedToWindow && !isFinishing && !isDestroyed) preview.setImageBitmap(bitmap)
                 }
             }
+    }
+
+    private fun shareItem(item: StockItem) {
+        Toast.makeText(this, "Menyiapkan gambar untuk dibagikan…", Toast.LENGTH_SHORT).show()
+        executor.execute {
+            var connection: HttpURLConnection? = null
+            val bitmap = try {
+                connection = (URL(item.image).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 12000
+                    readTimeout = 20000
+                    doInput = true
+                }
+                if (connection.responseCode in 200..299) connection.inputStream.use { BitmapFactory.decodeStream(it) } else null
+            } catch (_: Exception) {
+                null
+            } finally {
+                connection?.disconnect()
+            }
+            if (!isFinishing && !isDestroyed) runOnUiThread {
+                if (isFinishing || isDestroyed) {
+                    bitmap?.recycle()
+                    return@runOnUiThread
+                }
+                if (bitmap == null) {
+                    Toast.makeText(this, "Gambar gagal dimuat. Periksa koneksi internet.", Toast.LENGTH_LONG).show()
+                    return@runOnUiThread
+                }
+                try {
+                    val shareDir = File(cacheDir, "shared_wallpapers").apply { mkdirs() }
+                    val safeName = item.title.replace(Regex("[^A-Za-z0-9_-]"), "_")
+                    val imageFile = File(shareDir, safeName + ".jpg")
+                    FileOutputStream(imageFile).use { output ->
+                        if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 95, output)) throw IllegalStateException("Gagal menyiapkan JPEG")
+                    }
+                    val imageUri = FileProvider.getUriForFile(this, "com.civamel.ultrahdwallpaper.fileprovider", imageFile)
+                    val sendIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                        type = "image/jpeg"
+                        putExtra(android.content.Intent.EXTRA_STREAM, imageUri)
+                        putExtra(android.content.Intent.EXTRA_SUBJECT, item.title)
+                        putExtra(android.content.Intent.EXTRA_TEXT, item.title + " — Ultra HD Wallpaper")
+                        clipData = android.content.ClipData.newUri(contentResolver, item.title, imageUri)
+                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    startActivity(android.content.Intent.createChooser(sendIntent, "Bagikan wallpaper"))
+                } catch (e: Exception) {
+                    Toast.makeText(this, "Gagal membagikan gambar: " + e.localizedMessage, Toast.LENGTH_LONG).show()
+                } finally {
+                    if (!bitmap.isRecycled) bitmap.recycle()
+                }
+            } else {
+                bitmap?.recycle()
+            }
+        }
     }
 
     private fun applyItem(item: StockItem) {
