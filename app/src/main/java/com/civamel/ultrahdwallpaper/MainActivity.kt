@@ -8,6 +8,8 @@ import android.content.Intent
 import android.graphics.*
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.Bundle
 import android.net.Uri
 import androidx.core.content.FileProvider
@@ -37,7 +39,7 @@ class MainActivity : Activity() {
         val thumbnails: MutableList<String>,
         val images: MutableList<String>
     )
-    private val blue = Color.rgb(0, 119, 255)
+    private val blue = Color.rgb(224, 17, 95)
     private val purple = Color.rgb(158, 67, 238)
     private val ink = Color.rgb(28, 28, 30)
     private val tabs = listOf("Home", "Live", "Parallax", "Wallpaper", "Double", "Charging Live")
@@ -72,7 +74,9 @@ class MainActivity : Activity() {
     private var searchQuery = ""
     private var selectedCategory = "All"
     private var showOnlyFavorites = false
-    private var visibleItemLimit = 60
+    private var visibleItemLimit = 24
+    private val slideHandler = Handler(Looper.getMainLooper())
+    private var categorySlideRunnable: Runnable? = null
     private var downloadSortMode = "Nama A-Z"
     private var downloadsSearchQuery = ""
     private var downloadSelectionMode = false
@@ -526,6 +530,8 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
+        categorySlideRunnable?.let { slideHandler.removeCallbacks(it) }
+        categorySlideRunnable = null
         releaseBannerAd()
         super.onDestroy()
     }
@@ -538,12 +544,12 @@ class MainActivity : Activity() {
         val header = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(15),dp(6),dp(12),dp(5)); setBackgroundColor(panelSurface) }
         header.addView(text(if (showOnlyFavorites) "Favorit (${favorites.size})" else "4k Ultra HD Wallpaper",25,0xfff4f7ff.toInt(),true).apply { if (!showOnlyFavorites) textSize = 16.25f }, LinearLayout.LayoutParams(0,dp(38),1f))
         listOf("✦","☾","⌕","⚙").forEachIndexed { i,glyph ->
-            val icon = modernIcon(glyph, 34)
+            val icon = modernIcon(glyph, 44)
             icon.contentDescription = listOf("Premium","Tema","Cari","Pengaturan")[i]
             icon.setOnClickListener {
                 when(i){0->Toast.makeText(this@MainActivity,"Wallpaper Premium",Toast.LENGTH_SHORT).show();1->toggleTheme();2->search();3->showSettings()}
             }
-            header.addView(icon,LinearLayout.LayoutParams(dp(40),dp(36)))
+            header.addView(icon,LinearLayout.LayoutParams(dp(44),dp(40)))
         }
         root.addView(header)
         val tabScroll=HorizontalScrollView(this@MainActivity).apply { isHorizontalScrollBarEnabled=false }
@@ -556,7 +562,7 @@ class MainActivity : Activity() {
                     selectedTab = tab
                     preferences.edit().putString("selected_wallpaper_tab", selectedTab).apply()
                     showOnlyFavorites = false
-                    visibleItemLimit = 60
+                    visibleItemLimit = 24
                     buildHome()
                 }
             }
@@ -575,36 +581,100 @@ class MainActivity : Activity() {
         }
         val showDiscoverHeader = !showOnlyFavorites && (selectedTab == "Home" || selectedTab == "Wallpaper") && searchQuery.isBlank() && selectedCategory == "All"
         if (showDiscoverHeader && names.isNotEmpty()) {
-            val slideScroll = HorizontalScrollView(this@MainActivity).apply { isHorizontalScrollBarEnabled = false; clipToPadding = false; setPadding(dp(10), dp(2), dp(10), dp(2)) }
+            categorySlideRunnable?.let { slideHandler.removeCallbacks(it) }
+            val categorySlides = categoryNames.filter { it != "All" }.mapNotNull { category ->
+                val index = itemCategories.indexOf(category)
+                if (index >= 0) category to index else null
+            }
+            val slideScroll = HorizontalScrollView(this@MainActivity).apply {
+                isHorizontalScrollBarEnabled = false
+                isFillViewport = false
+                clipToPadding = true
+                overScrollMode = View.OVER_SCROLL_NEVER
+            }
             val slideRow = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL }
-            (0 until minOf(8, names.size)).forEach { slideIndex ->
-                val slide = FrameLayout(this@MainActivity).apply { background = rounded(if (darkMode) 0xff303238.toInt() else 0xffe9e9ed.toInt(), 12); clipToOutline = true; setOnClickListener { showPreview(slideIndex) } }
-                val image = ImageView(this@MainActivity).apply { scaleType = ImageView.ScaleType.CENTER_CROP; setImageDrawable(artDrawable(slideIndex)) }
+            val slideWidth = resources.displayMetrics.widthPixels
+            categorySlides.forEach { pair ->
+                val category = pair.first
+                val wallpaperIndex = pair.second
+                val slide = FrameLayout(this@MainActivity).apply {
+                    background = rounded(if (darkMode) 0xff77736e.toInt() else 0xffe9e9ed.toInt(), 0)
+                    clipToOutline = true
+                    setOnClickListener {
+                        selectedCategory = category
+                        selectedTab = "Wallpaper"
+                        searchQuery = ""
+                        showOnlyFavorites = false
+                        preferences.edit().putString("selected_wallpaper_category", category).putString("selected_wallpaper_tab", selectedTab).apply()
+                        visibleItemLimit = 24
+                        buildHome()
+                    }
+                }
+                val image = ImageView(this@MainActivity).apply {
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    setImageDrawable(artDrawable(wallpaperIndex))
+                }
                 slide.addView(image, FrameLayout.LayoutParams(-1, -1))
-                slide.addView(View(this@MainActivity).apply { background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(Color.TRANSPARENT, 0xdd000000.toInt())) }, FrameLayout.LayoutParams(-1, dp(42), Gravity.BOTTOM))
-                slide.addView(text(names[slideIndex], 14, Color.WHITE, true).apply { gravity = Gravity.BOTTOM; setPadding(dp(10), 0, dp(8), dp(8)); maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }, FrameLayout.LayoutParams(-1, dp(40), Gravity.BOTTOM))
-                slideRow.addView(slide, LinearLayout.LayoutParams(dp(214), dp(108)).apply { setMargins(dp(3), dp(3), dp(7), dp(3)) })
-                thumbnailUrls.getOrNull(slideIndex)?.let { imageUrl -> loadImage(imageUrl) { bitmap -> if (bitmap != null && image.isAttachedToWindow) image.setImageBitmap(bitmap) } }
+                slide.addView(View(this@MainActivity).apply {
+                    background = android.graphics.drawable.GradientDrawable(
+                        android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                        intArrayOf(0x11000000, 0xdd000000.toInt())
+                    )
+                }, FrameLayout.LayoutParams(-1, dp(68), Gravity.BOTTOM))
+                slide.addView(text(category, 21, Color.WHITE, true).apply {
+                    gravity = Gravity.BOTTOM or Gravity.START
+                    setPadding(dp(18), 0, dp(16), dp(14))
+                    maxLines = 1
+                }, FrameLayout.LayoutParams(-1, dp(58), Gravity.BOTTOM))
+                slideRow.addView(slide, LinearLayout.LayoutParams(slideWidth, dp(158)))
+                thumbnailUrls.getOrNull(wallpaperIndex)?.let { imageUrl ->
+                    loadImage(imageUrl) { bitmap ->
+                        if (bitmap != null && image.isAttachedToWindow) image.setImageBitmap(bitmap)
+                    }
+                }
             }
             slideScroll.addView(slideRow)
-            content.addView(slideScroll, LinearLayout.LayoutParams(-1, dp(116)))
-            val popularPanel = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(10), dp(4), dp(10), dp(4)); background = rounded(0xff733044.toInt(), 10) }
+            content.addView(slideScroll, LinearLayout.LayoutParams(-1, dp(158)))
+            if (categorySlides.size > 1) {
+                var slidePosition = 0
+                val autoAdvance = object : Runnable {
+                    override fun run() {
+                        if (isFinishing || isDestroyed || !slideScroll.isAttachedToWindow) return
+                        slidePosition = (slidePosition + 1) % categorySlides.size
+                        slideScroll.smoothScrollTo(slidePosition * slideWidth, 0)
+                        slideHandler.postDelayed(this, 4000L)
+                    }
+                }
+                categorySlideRunnable = autoAdvance
+                slideHandler.postDelayed(autoAdvance, 4000L)
+            }
+            val popularPanel = LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(10), dp(4), dp(10), dp(4))
+                background = rounded(0xff733044.toInt(), 10)
+            }
             popularPanel.addView(text("Popular Tags", 11, Color.WHITE, true).apply { setPadding(dp(2), 0, 0, dp(2)) })
             val tagScroll = HorizontalScrollView(this@MainActivity).apply { isHorizontalScrollBarEnabled = false; clipToPadding = false }
             val tagRow = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
             listOf("Anime", "Cartoon", "Girl", "Nature", "Neon & Fireworks", "Tourism", "Vehicles", "Fantasy", "AI Generated").forEach { tag ->
-                tagRow.addView(text(tag, 10, 0xff542332.toInt(), true).apply { gravity = Gravity.CENTER; setPadding(dp(10), dp(3), dp(10), dp(3)); background = rounded(0xffffe8ee.toInt(), 16); setOnClickListener { searchQuery = tag; showOnlyFavorites = false; visibleItemLimit = 60; buildHome() } }, LinearLayout.LayoutParams(-2, dp(23)).apply { setMargins(dp(2), 0, dp(5), 0) })
+                tagRow.addView(text(tag, 10, 0xff542332.toInt(), true).apply {
+                    gravity = Gravity.CENTER
+                    setPadding(dp(10), dp(3), dp(10), dp(3))
+                    background = rounded(0xffffe8ee.toInt(), 16)
+                    setOnClickListener { searchQuery = tag; showOnlyFavorites = false; visibleItemLimit = 24; buildHome() }
+                }, LinearLayout.LayoutParams(-2, dp(23)).apply { setMargins(dp(2), 0, dp(5), 0) })
             }
             tagScroll.addView(tagRow)
             popularPanel.addView(tagScroll, LinearLayout.LayoutParams(-1, dp(25)))
             content.addView(popularPanel, LinearLayout.LayoutParams(-1, dp(56)).apply { setMargins(dp(12), dp(1), dp(12), dp(5)) })
         }
-        val sort=TextView(this@MainActivity).apply { text="Filter : "+sortMode+"   ▾"; textSize=13f; setTextColor(if(darkMode) 0xff9bbcff.toInt() else blue); setPadding(dp(18),dp(2),dp(12),dp(6)); setOnClickListener {
+        val sort=TextView(this@MainActivity).apply { text="Filter : "+sortMode+"   ▾"; textSize=13f; setTextColor(if(darkMode) 0xffe0115f.toInt() else blue); setPadding(dp(18),dp(2),dp(12),dp(6)); setOnClickListener {
             val options = arrayOf("Paling populer", "Terbaru", "A-Z", "Acak")
             AlertDialog.Builder(this@MainActivity).setTitle("Urutkan berdasarkan").setItems(options) { _, w ->
                 sortMode = options[w]
                 preferences.edit().putString("wallpaper_sort_mode", sortMode).apply()
-                visibleItemLimit = 60
+                visibleItemLimit = 24
                 buildHome()
             }.show()
         }}
@@ -652,7 +722,7 @@ class MainActivity : Activity() {
                 setOnClickListener { showPreview(index) }
             }
             cell.addView(art,FrameLayout.LayoutParams(-1,dp(148)))
-            cell.addView(text(if ((itemIds.getOrNull(index) ?: names[index]) in favorites) "♥" else "♡", 18, Color.WHITE, true).apply {
+            cell.addView(text(if ((itemIds.getOrNull(index) ?: names[index]) in favorites) "♥" else "♡", 21, 0xffe0115f.toInt(), true).apply {
                 gravity = Gravity.CENTER
                 background = rounded(0xcc000000.toInt(), 18)
                 setOnClickListener {
@@ -685,7 +755,7 @@ class MainActivity : Activity() {
                 background = rounded(0xffe0115f.toInt(), 28)
                 setOnClickListener {
                     if (visibleIndexes.size > visibleItemLimit) {
-                        visibleItemLimit += 60
+                        visibleItemLimit += 24
                         buildHome()
                     } else {
                         loadNextCatalogShard()
@@ -697,7 +767,7 @@ class MainActivity : Activity() {
             })
         }
         scroll.addView(content); root.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
-        val bottom=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER; setPadding(0,dp(4),0,dp(3)); setBackgroundColor(0xff050608.toInt()) }
+        val bottom=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER; setPadding(0,dp(4),0,dp(3)); setBackgroundColor(panelSurface) }
         listOf("⌂" to "Wallpaper","▦" to "Category","✦" to "Quotes","▧" to "Stock").forEachIndexed { i,item ->
             val navItem = LinearLayout(this@MainActivity).apply {
                 orientation = LinearLayout.VERTICAL
@@ -712,7 +782,7 @@ class MainActivity : Activity() {
                                 .putString("selected_wallpaper_category", selectedCategory)
                                 .putString("selected_wallpaper_tab", selectedTab)
                                 .apply()
-                            visibleItemLimit = 60
+                            visibleItemLimit = 24
                             buildHome()
                         }
                         1 -> showCategories()
@@ -721,9 +791,9 @@ class MainActivity : Activity() {
                     }
                 }
             }
-            navItem.addView(modernIcon(item.first, 27), LinearLayout.LayoutParams(dp(34),dp(27)))
+            navItem.addView(modernIcon(item.first, 34), LinearLayout.LayoutParams(dp(42),dp(32)))
             navItem.addView(text(item.second,11,if(i==0) blue else pageText,i==0).apply { gravity=Gravity.CENTER; setPadding(0,dp(2),0,0) })
-            bottom.addView(navItem,LinearLayout.LayoutParams(0,dp(43),1f))
+            bottom.addView(navItem,LinearLayout.LayoutParams(0,dp(48),1f))
         }
         root.addView(bottom)
         val adContainer = FrameLayout(this@MainActivity).apply {
@@ -1416,7 +1486,7 @@ class MainActivity : Activity() {
             .putString("selected_wallpaper_category", selectedCategory)
             .putString("selected_wallpaper_tab", selectedTab)
             .apply()
-        visibleItemLimit = 60
+        visibleItemLimit = 24
         buildHome()
     }
     private fun showCategories(){
@@ -1454,7 +1524,7 @@ class MainActivity : Activity() {
                         .putString("selected_wallpaper_category", selectedCategory)
                         .putString("selected_wallpaper_tab", selectedTab)
                         .apply()
-                    visibleItemLimit = 60
+                    visibleItemLimit = 24
                     showOnlyFavorites = false
                     buildHome()
                 }
@@ -1696,17 +1766,38 @@ class MainActivity : Activity() {
     }
     private fun toggleTheme(){ darkMode = !darkMode; preferences.edit().putBoolean("dark_mode", darkMode).apply(); buildHome(); Toast.makeText(this@MainActivity,if(darkMode) "Tema gelap aktif" else "Tema terang aktif",Toast.LENGTH_SHORT).show() }
     private fun modernIcon(glyph: String, size: Int): FrameLayout {
-        // Glassmorphism icon treatment: transparent surface, luminous cool-toned glyph.
+        val rubyRed = 0xffe0115f.toInt()
         val icon = FrameLayout(this@MainActivity).apply {
             setBackgroundColor(Color.TRANSPARENT)
             clipToOutline = false
+            contentDescription = glyph
         }
-        val symbol = text(glyph, (size * 0.54f).toInt().coerceAtLeast(14), 0xffb9eaff.toInt(), true).apply {
-            gravity = Gravity.CENTER
-            setShadowLayer(dp(5).toFloat(), 0f, 0f, 0x997c7bff.toInt())
+        val resource = when (glyph) {
+            "⌕" -> android.R.drawable.ic_menu_search
+            "⚙" -> android.R.drawable.ic_menu_preferences
+            "▦", "▧" -> android.R.drawable.ic_menu_gallery
+            "⇩" -> android.R.drawable.ic_menu_save
+            "↗" -> android.R.drawable.ic_menu_share
+            "ⓘ" -> android.R.drawable.ic_menu_info_details
+            "‹", "›" -> android.R.drawable.ic_media_previous
+            "✦", "💎" -> android.R.drawable.btn_star_big_on
+            "⌂" -> android.R.drawable.ic_menu_view
+            else -> 0
         }
-        icon.addView(symbol, FrameLayout.LayoutParams(-1,-1))
-        icon.contentDescription = glyph
+        if (resource != 0) {
+            val standardIcon = ImageView(this@MainActivity).apply {
+                setImageResource(resource)
+                setColorFilter(rubyRed)
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                contentDescription = glyph
+                setPadding(dp(5), dp(5), dp(5), dp(5))
+            }
+            icon.addView(standardIcon, FrameLayout.LayoutParams(-1, -1))
+        } else {
+            icon.addView(text(glyph, (size * 0.72f).toInt().coerceAtLeast(20), rubyRed, true).apply {
+                gravity = Gravity.CENTER
+            }, FrameLayout.LayoutParams(-1, -1))
+        }
         return icon
     }
 
@@ -1761,7 +1852,7 @@ class MainActivity : Activity() {
             appendCatalogItems(cachedItems)
             remoteCatalogIndex = index
             loadedShardCount = loaded
-            visibleItemLimit = maxOf(60, names.size)
+            visibleItemLimit = 24
             buildHome()
         } catch (_: Exception) {
             // Keep the previously loaded bundled or legacy cache when sharded cache is invalid.
@@ -1868,7 +1959,7 @@ class MainActivity : Activity() {
                 loadedShardCount = 0
                 appendCatalogItems(firstPage.second)
                 loadedShardCount = 1
-                visibleItemLimit = maxOf(60, names.size)
+                visibleItemLimit = 24
                 buildHome()
             }
         }.start()
