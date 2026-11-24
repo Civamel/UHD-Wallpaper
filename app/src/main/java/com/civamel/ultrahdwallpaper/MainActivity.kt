@@ -19,7 +19,6 @@ import android.view.View
 import android.widget.*
 import android.graphics.Typeface
 import android.util.LruCache
-import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.Executors
@@ -101,15 +100,15 @@ class MainActivity : Activity() {
     private fun loadBundledCatalog() {
         try {
             val body = assets.open("wallpapers.json").bufferedReader().use { it.readText() }
-            val items = JSONObject(body).getJSONArray("wallpapers")
+            val items = CatalogValidator.parse(body)
             val newNames = mutableListOf<String>()
             val newCategories = mutableListOf<String>()
             val newTypes = mutableListOf<String>()
             val newTags = mutableListOf<List<String>>()
             val newThumbs = mutableListOf<String>()
             val newFull = mutableListOf<String>()
-            for (i in 0 until items.length()) {
-                val item = items.getJSONObject(i)
+            for (i in items.indices) {
+                val item = items[i]
                 newNames.add(item.getString("title"))
                 newCategories.add(item.optString("category", "Abstract").ifBlank { "Abstract" })
                 newTypes.add(item.optString("type", "wallpaper").lowercase())
@@ -159,7 +158,7 @@ class MainActivity : Activity() {
         try {
             val cacheFile = File(filesDir, "catalog_cache.json")
             if (!cacheFile.isFile || cacheFile.length() <= 0L) return
-            val items = JSONObject(cacheFile.readText()).getJSONArray("wallpapers")
+            val items = CatalogValidator.parse(cacheFile.readText())
             val titles = mutableListOf<String>()
             val categories = mutableListOf<String>()
             val types = mutableListOf<String>()
@@ -167,7 +166,7 @@ class MainActivity : Activity() {
             val thumbs = mutableListOf<String>()
             val images = mutableListOf<String>()
             for (i in 0 until items.length()) {
-                val item = items.optJSONObject(i) ?: continue
+                val item = items[i]
                 val title = item.optString("title").trim()
                 val thumbnail = item.optString("thumbnail").trim()
                 val image = item.optString("image").trim()

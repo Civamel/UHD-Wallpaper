@@ -15,7 +15,6 @@ import android.widget.*
 import androidx.core.content.FileProvider
 import java.io.File
 import java.io.FileOutputStream
-import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.Executors
@@ -142,9 +141,8 @@ class StockActivity : Activity() {
 
     private fun parseItems(body: String): List<StockItem> {
         val result = mutableListOf<StockItem>()
-        val array = JSONObject(body).optJSONArray("wallpapers") ?: return result
-        for (i in 0 until array.length()) {
-            val item = array.optJSONObject(i) ?: continue
+        val array = CatalogValidator.parse(body)
+        for (item in array) {
             val title = item.optString("title").trim()
             val category = item.optString("category", "Stock").ifBlank { "Stock" }
             val thumbnail = item.optString("thumbnail").trim()
