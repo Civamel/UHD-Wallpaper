@@ -75,7 +75,13 @@ class StockActivity : Activity() {
         loadRemoteManifest(firstPageOnly = true)
     }
 
-    private fun stockShardCache(index: Int) = File(filesDir, "stock_catalog_page_${index + 1}.json")
+    private fun stockManifestCache() = File(filesDir, "stock_catalog_manifest_cache.json")
+
+    private fun stockShardCache(shard: CatalogManifest.Shard): File {
+        val digest = java.security.MessageDigest.getInstance("SHA-256").digest(shard.path.toByteArray(Charsets.UTF_8))
+        val key = digest.take(12).joinToString("") { "%02x".format(it) }
+        return File(filesDir, "stock_catalog_page_${key}.json")
+    }
 
     private fun loadRemoteManifest(firstPageOnly: Boolean) {
         executor.execute {
@@ -94,12 +100,22 @@ class StockActivity : Activity() {
             } finally {
                 connection?.disconnect()
             }
-            if (result == null) {
-                // Compatibility path for older repositories with one catalog file.
+            val index = result ?: try {
+                val cached = stockManifestCache()
+                if (cached.isFile) CatalogManifest.parse(cached.readText()) else null
+            } catch (_: Exception) { null }
+            if (index == null) {
                 if (!firstPageOnly) loadLegacyStockCatalog()
                 return@execute
             }
-            catalogIndex = result
+            if (result != null) try {
+                val cache = stockManifestCache()
+                val temp = File(cache.parentFile, cache.name + ".tmp")
+                temp.writeText(URL("https://raw.githubusercontent.com/Civamel/UHD-Wallpaper/main/catalog/manifest.json").openConnection().getInputStream().bufferedReader().use { it.readText() })
+                CatalogManifest.parse(temp.readText())
+                if (!temp.renameTo(cache)) temp.delete()
+            } catch (_: Exception) { }
+            catalogIndex = index
             loadedShardCount = 0
             loadStockShard(0, replace = true)
         }
@@ -131,6 +147,7 @@ class StockActivity : Activity() {
         val shard = index.shards[position]
         executor.execute {
             var connection: HttpURLConnection? = null
+            var downloadedBody: String? = null
             val parsed = try {
                 connection = (URL("https://raw.githubusercontent.com/Civamel/UHD-Wallpaper/main/catalog/" + shard.path).openConnection() as HttpURLConnection).apply {
                     connectTimeout = 12000
@@ -138,12 +155,22 @@ class StockActivity : Activity() {
                     requestMethod = "GET"
                 }
                 if (connection.responseCode !in 200..299) throw IllegalStateException("Shard HTTP " + connection.responseCode)
-                CatalogManifest.parseShard(connection.inputStream.bufferedReader().use { it.readText() }, shard).let { parseItemsFromObjects(it) }
+                downloadedBody = connection.inputStream.bufferedReader().use { it.readText() }
+                CatalogManifest.parseShard(downloadedBody!!, shard).let { parseItemsFromObjects(it) }
             } catch (_: Exception) {
-                null
+                try {
+                    val cachedBody = stockShardCache(shard).takeIf { it.isFile }?.readText()
+                    if (cachedBody != null) CatalogManifest.parseShard(cachedBody, shard).let { parseItemsFromObjects(it) } else null
+                } catch (_: Exception) { null }
             } finally {
                 connection?.disconnect()
             }
+            if (parsed != null && downloadedBody != null) try {
+                val cache = stockShardCache(shard)
+                val temp = File(cache.parentFile, cache.name + ".tmp")
+                temp.writeText(downloadedBody!!)
+                if (!temp.renameTo(cache)) temp.delete()
+            } catch (_: Exception) { }
             if (!isFinishing && !isDestroyed) runOnUiThread {
                 isLoadingShard = false
                 if (isFinishing || isDestroyed) return@runOnUiThread
