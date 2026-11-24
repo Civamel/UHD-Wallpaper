@@ -1,0 +1,108 @@
+{
+  "version": 2,
+  "wallpapers": [
+    {
+      "title": "Ocean Glass",
+      "category": "Ocean",
+      "thumbnail": "https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=3840&q=95",
+      "type": "wallpaper",
+      "id": "ocean-glass",
+      "tags": [
+        "ocean",
+        "sea",
+        "water",
+        "blue",
+        "nature"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    },
+    {
+      "title": "Red Horizon",
+      "category": "Nature",
+      "thumbnail": "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=3840&q=95",
+      "type": "wallpaper",
+      "id": "red-horizon",
+      "tags": [
+        "sunset",
+        "horizon",
+        "sky",
+        "nature",
+        "warm"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    },
+    {
+      "title": "Smoke Art",
+      "category": "Art",
+      "thumbnail": "https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=3840&q=95",
+      "type": "wallpaper",
+      "id": "smoke-art",
+      "tags": [
+        "smoke",
+        "abstract",
+        "art",
+        "texture",
+        "soft"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    },
+    {
+      "title": "Stone Texture",
+      "category": "Art",
+      "thumbnail": "https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=3840&q=95",
+      "type": "wallpaper",
+      "id": "stone-texture",
+      "tags": [
+        "texture",
+        "stone",
+        "abstract",
+        "pattern",
+        "dark"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    },
+    {
+      "title": "Tropical Beach",
+      "category": "Nature",
+      "thumbnail": "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=3840&q=95",
+      "type": "wallpaper",
+      "id": "tropical-beach",
+      "tags": [
+        "beach",
+        "tropical",
+        "ocean",
+        "summer",
+        "nature"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    },
+    {
+      "title": "White Wings",
+      "category": "Animals",
+      "thumbnail": "https://images.unsplash.com/photo-1552728089-57bdde30beb3?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1552728089-57bdde30beb3?auto=format&fit=crop&w=3840&q=95",
+      "type": "wallpaper",
+      "id": "white-wings",
+      "tags": [
+        "bird",
+        "wildlife",
+        "white",
+        "animal",
+        "nature"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    }
+  ],
+  "updatedAt": "2026-11-24"
+}

@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "catalogVersion": 2,
+  "totalCount": 18,
+  "pageSize": 6,
+  "shards": [
+    {
+      "path": "pages/page-001.json",
+      "count": 6
+    },
+    {
+      "path": "pages/page-002.json",
+      "count": 6
+    },
+    {
+      "path": "pages/page-003.json",
+      "count": 6
+    }
+  ],
+  "updatedAt": "2026-11-24"
+}

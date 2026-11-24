@@ -1,0 +1,108 @@
+{
+  "version": 2,
+  "wallpapers": [
+    {
+      "title": "Alpine Lake",
+      "category": "Nature",
+      "thumbnail": "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=3840&q=95",
+      "type": "wallpaper",
+      "id": "alpine-lake",
+      "tags": [
+        "alpine",
+        "mountain",
+        "lake",
+        "landscape",
+        "nature"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    },
+    {
+      "title": "Blue Eyes",
+      "category": "Animals",
+      "thumbnail": "https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=3840&q=95",
+      "type": "wallpaper",
+      "id": "blue-eyes",
+      "tags": [
+        "animal",
+        "portrait",
+        "eyes",
+        "wildlife",
+        "blue"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    },
+    {
+      "title": "Color Splash",
+      "category": "Art",
+      "thumbnail": "https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=3840&q=95",
+      "type": "wallpaper",
+      "id": "color-splash",
+      "tags": [
+        "color",
+        "fluid",
+        "abstract",
+        "art",
+        "vibrant"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    },
+    {
+      "title": "Crystal Lights",
+      "category": "Abstract",
+      "thumbnail": "https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=3840&q=95",
+      "type": "live",
+      "id": "crystal-lights",
+      "tags": [
+        "crystal",
+        "light",
+        "abstract",
+        "glow",
+        "colorful"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    },
+    {
+      "title": "Dark Bubbles",
+      "category": "Abstract",
+      "thumbnail": "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=3840&q=95",
+      "type": "live",
+      "id": "dark-bubbles",
+      "tags": [
+        "dark",
+        "bubbles",
+        "abstract",
+        "blue",
+        "minimal"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    },
+    {
+      "title": "Fire Glow",
+      "category": "Abstract",
+      "thumbnail": "https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=480&h=720&q=78",
+      "image": "https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=3840&q=95",
+      "type": "wallpaper",
+      "id": "fire-glow",
+      "tags": [
+        "fire",
+        "glow",
+        "abstract",
+        "warm",
+        "light"
+      ],
+      "provider": "Unsplash",
+      "license": "Unsplash License"
+    }
+  ],
+  "updatedAt": "2026-11-24"
+}
