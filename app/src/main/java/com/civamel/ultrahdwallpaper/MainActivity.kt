@@ -57,6 +57,8 @@ class MainActivity : Activity() {
     private var visibleItemLimit = 60
     private var downloadSortMode = "Nama A-Z"
     private var downloadsSearchQuery = ""
+    private var downloadSelectionMode = false
+    private val selectedDownloadRecords = mutableSetOf<String>()
     private var darkMode = false
     private val categoryNames: List<String>
         get() = listOf("All") + itemCategories.map { it.trim() }.filter { it.isNotEmpty() }.distinct().sorted()
@@ -599,6 +601,26 @@ class MainActivity : Activity() {
                 }
             })
         }
+        selectedDownloadRecords.retainAll(allRecords.toSet())
+        if (selectedDownloadRecords.isEmpty()) downloadSelectionMode = false
+        if (records.isNotEmpty()) {
+            val bar = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(10), dp(6), dp(10), dp(6)); background = rounded(if (darkMode) 0xff242f42.toInt() else 0xffe8f1ff.toInt(), 12) }
+            bar.addView(text(if (downloadSelectionMode) selectedDownloadRecords.size.toString() + " dipilih" else "Pilih beberapa", 13, pageText, true), LinearLayout.LayoutParams(0, -2, 1f))
+            bar.addView(text("Pilih semua", 12, blue, true).apply { setPadding(dp(8), dp(8), dp(8), dp(8)); setOnClickListener { downloadSelectionMode = true; selectedDownloadRecords.addAll(records); showDownloads() } })
+            bar.addView(text("Batal", 12, pageText, true).apply { setPadding(dp(8), dp(8), dp(4), dp(8)); setOnClickListener { selectedDownloadRecords.clear(); downloadSelectionMode = false; showDownloads() } })
+            root.addView(bar, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
+            if (downloadSelectionMode && selectedDownloadRecords.isNotEmpty()) {
+                root.addView(text("Hapus seleksi", 14, 0xffc62828.toInt(), true).apply { gravity = Gravity.END; setPadding(0, dp(5), 0, dp(10)); setOnClickListener {
+                    val targets = selectedDownloadRecords.toSet()
+                    AlertDialog.Builder(this@MainActivity).setTitle("Hapus wallpaper terpilih?").setMessage(targets.size.toString() + " file akan dihapus.")
+                        .setNegativeButton("Batal", null).setPositiveButton("Hapus") { _, _ ->
+                            val updated = (preferences.getStringSet("download_records", emptySet()) ?: emptySet()).toMutableSet()
+                            targets.forEach { record -> val file = File(File(filesDir, "downloads"), record.substringBefore("\\t")); if (!file.exists() || file.delete()) updated.remove(record) }
+                            preferences.edit().putStringSet("download_records", updated).apply(); selectedDownloadRecords.clear(); downloadSelectionMode = false; showDownloads()
+                        }.show()
+                } })
+            }
+        }
         val downloadBytes = records.sumOf { record ->
             File(File(filesDir, "downloads"), record.substringBefore("\t")).length()
         }
@@ -639,12 +661,15 @@ class MainActivity : Activity() {
                 val fileName = record.substringBefore("\t")
                 val title = record.substringAfter("\t", "Wallpaper")
                 val imageFile = File(File(filesDir, "downloads"), fileName)
+                val selected = selectedDownloadRecords.contains(record)
                 val row = LinearLayout(this@MainActivity).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
                     setPadding(dp(9), dp(9), dp(9), dp(9))
-                    background = rounded(if (darkMode) 0xff24262d.toInt() else Color.WHITE, 14)
+                    background = rounded(if (selected) 0xffdceaff.toInt() else if (darkMode) 0xff24262d.toInt() else Color.WHITE, 14)
+                    setOnLongClickListener { downloadSelectionMode = true; selectedDownloadRecords.add(record); showDownloads(); true }
                 }
+                if (downloadSelectionMode) row.addView(text(if (selected) "✓" else "○", 21, blue, true).apply { gravity = Gravity.CENTER; setOnClickListener { if (selected) selectedDownloadRecords.remove(record) else selectedDownloadRecords.add(record); showDownloads() } }, LinearLayout.LayoutParams(dp(32), dp(48)))
                 val thumb = ImageView(this@MainActivity).apply {
                     scaleType = ImageView.ScaleType.CENTER_CROP
                     setImageDrawable(rounded(if (darkMode) 0xff343741.toInt() else 0xffe4e6eb.toInt(), 8))
@@ -722,6 +747,8 @@ class MainActivity : Activity() {
                         setImageBitmap(BitmapFactory.decodeFile(imageFile.absolutePath))
                     }
                     AlertDialog.Builder(this@MainActivity).setTitle(title).setView(preview)
+                        .setNegativeButton("Info") { _, _ -> showDownloadedImageInfo(imageFile, title) }
+                        .setNeutralButton("Terapkan") { _, _ -> showDownloadedApplyOptions(imageFile, title) }
                         .setPositiveButton("Tutup", null).show()
                 }
                 list.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
@@ -731,6 +758,33 @@ class MainActivity : Activity() {
         setContentView(root)
     }
 
+    private fun showDownloadedImageInfo(file: File, title: String) {
+        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.absolutePath, options)
+        val size = String.format(java.util.Locale.getDefault(), "%.2f MB", file.length() / (1024.0 * 1024.0))
+        val format = file.extension.uppercase().ifBlank { "Tidak diketahui" }
+        val date = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.getDefault()).format(java.util.Date(file.lastModified()))
+        val message = "Nama: " + title + "\\nResolusi: " + options.outWidth + " x " + options.outHeight + "\\nFormat: " + format + "\\nUkuran: " + size + "\\nTanggal: " + date
+        AlertDialog.Builder(this@MainActivity).setTitle("Informasi wallpaper").setMessage(message).setPositiveButton("Tutup", null).show()
+    }
+
+    private fun showDownloadedApplyOptions(file: File, title: String) {
+        val choices = arrayOf("Layar utama", "Layar kunci", "Keduanya")
+        AlertDialog.Builder(this@MainActivity).setTitle("Terapkan " + title).setItems(choices) { _, which ->
+            if (Build.VERSION.SDK_INT < 24 && which != 0) { Toast.makeText(this@MainActivity, "Pilihan ini memerlukan Android 7.0 atau lebih baru", Toast.LENGTH_LONG).show(); return@setItems }
+            val flags = when (which) { 1 -> WallpaperManager.FLAG_LOCK; 2 -> WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK; else -> WallpaperManager.FLAG_SYSTEM }
+            Thread {
+                var bitmap: Bitmap? = null
+                try {
+                    bitmap = BitmapFactory.decodeFile(file.absolutePath) ?: throw IllegalStateException("File gambar tidak dapat dibaca")
+                    WallpaperManager.getInstance(this@MainActivity).setBitmap(bitmap, null, true, flags)
+                    runOnUiThread { Toast.makeText(this@MainActivity, "Wallpaper berhasil diterapkan", Toast.LENGTH_LONG).show() }
+                } catch (e: Exception) {
+                    runOnUiThread { Toast.makeText(this@MainActivity, "Gagal menerapkan wallpaper: " + (e.localizedMessage ?: "kesalahan"), Toast.LENGTH_LONG).show() }
+                } finally { bitmap?.recycle() }
+            }.start()
+        }.show()
+    }
     private fun showFavorites(){ refreshFavoritesFromPreferences(); showOnlyFavorites=true; selectedCategory="All"; selectedTab="Wallpaper"; visibleItemLimit=60; buildHome() }
     private fun showCategories(){
         val root = LinearLayout(this@MainActivity).apply {
