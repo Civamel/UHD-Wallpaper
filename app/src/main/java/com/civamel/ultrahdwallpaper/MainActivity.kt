@@ -316,8 +316,7 @@ class MainActivity : Activity() {
             if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
             val maxEdge = 2048
             var sample = 1
-            while (bounds.outWidth / (sample * 2) >= maxEdge &&
-                bounds.outHeight / (sample * 2) >= maxEdge) {
+            while (maxOf(bounds.outWidth / (sample * 2), bounds.outHeight / (sample * 2)) >= maxEdge) {
                 sample *= 2
             }
             BitmapFactory.decodeFile(file.absolutePath, BitmapFactory.Options().apply {
