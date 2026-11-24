@@ -49,8 +49,10 @@ class MainActivity : Activity() {
     private var selectedCategory = "All"
     private var showOnlyFavorites = false
     private var darkMode = false
-    private val categoryNames = listOf("All", "Abstract", "Animals", "Anime", "Art", "Cars", "Nature", "Ocean", "Space", "Technology")
+    private val categoryNames: List<String>
+        get() = listOf("All") + itemCategories.map { it.trim() }.filter { it.isNotEmpty() }.distinct().sorted()
     private val itemCategories = mutableListOf("Abstract","Art","Abstract","Animals","Ocean","Abstract","Nature","Animals","Space","Nature","Nature","Art","Technology","Art","Abstract","Space","Technology","Nature")
+    private val itemTypes = mutableListOf<String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,18 +72,21 @@ class MainActivity : Activity() {
             val items = JSONObject(body).getJSONArray("wallpapers")
             val newNames = mutableListOf<String>()
             val newCategories = mutableListOf<String>()
+            val newTypes = mutableListOf<String>()
             val newThumbs = mutableListOf<String>()
             val newFull = mutableListOf<String>()
             for (i in 0 until items.length()) {
                 val item = items.getJSONObject(i)
                 newNames.add(item.getString("title"))
-                newCategories.add(item.optString("category", "Abstract"))
+                newCategories.add(item.optString("category", "Abstract").ifBlank { "Abstract" })
+                newTypes.add(item.optString("type", "wallpaper").lowercase())
                 newThumbs.add(item.getString("thumbnail"))
                 newFull.add(item.getString("image"))
             }
             if (newNames.isNotEmpty()) {
                 names.clear(); names.addAll(newNames)
                 itemCategories.clear(); itemCategories.addAll(newCategories)
+                itemTypes.clear(); itemTypes.addAll(newTypes)
                 thumbnailUrls.clear(); thumbnailUrls.addAll(newThumbs)
                 fullUrls.clear(); fullUrls.addAll(newFull)
                 buildHome()
@@ -112,7 +117,7 @@ class MainActivity : Activity() {
         val header = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(15),dp(12),dp(12),dp(10)) }
         header.addView(text("4k Wallpaper",25,pageText,true), LinearLayout.LayoutParams(0,dp(54),1f))
         listOf("💎","☾","⌕","⚙").forEachIndexed { i,s ->
-            val v=text(s, if (i == 0 && s == "💎") 25 else 32,ink,false).apply { gravity=Gravity.CENTER; setOnClickListener {
+            val v=text(s, if (i == 0 && s == "💎") 25 else 32,pageText,false).apply { gravity=Gravity.CENTER; setOnClickListener {
                 when(i){0->Toast.makeText(this@MainActivity,"Wallpaper Premium",Toast.LENGTH_SHORT).show();1->toggleTheme();2->search();3->showSettings()}
             }}
             header.addView(v,LinearLayout.LayoutParams(dp(48),dp(54)))
@@ -148,11 +153,12 @@ class MainActivity : Activity() {
             val categoryMatch = selectedCategory == "All" || itemCategories[index] == selectedCategory
             val searchMatch = searchQuery.isBlank() || names[index].contains(searchQuery, true) || itemCategories[index].contains(searchQuery, true)
             val favoriteMatch = !showOnlyFavorites || favorites.contains(names[index])
+            val type = itemTypes.getOrNull(index) ?: "wallpaper"
             val tabMatch = when (selectedTab) {
-                "Live" -> index % 3 == 0
-                "Parallax" -> index % 3 == 1
-                "Double" -> index % 3 == 2
-                "Charging Live" -> index % 4 == 0
+                "Live" -> type == "live"
+                "Parallax" -> type == "parallax"
+                "Double" -> type == "double"
+                "Charging Live" -> type == "charging"
                 else -> true
             }
             categoryMatch && searchMatch && favoriteMatch && tabMatch
@@ -162,6 +168,18 @@ class MainActivity : Activity() {
             "A-Z" -> filteredIndexes.sortedBy { names[it].lowercase() }
             "Acak" -> filteredIndexes.shuffled()
             else -> filteredIndexes
+        }
+        if (visibleIndexes.isEmpty()) {
+            val emptyTitle = if (selectedTab == "Wallpaper" || selectedTab == "Home") "Belum ada wallpaper" else "Konten belum tersedia"
+            val emptyMessage = if (selectedTab == "Wallpaper" || selectedTab == "Home") "Coba ubah kategori atau kata pencarian." else "Koleksi untuk tab ini akan muncul setelah katalog menyediakan jenis kontennya."
+            val emptyState = LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                setPadding(dp(28), dp(54), dp(28), dp(54))
+                addView(text(emptyTitle, 18, pageText, true).apply { gravity = Gravity.CENTER })
+                addView(text(emptyMessage, 13, if (darkMode) 0xffaaaaaa.toInt() else Color.GRAY, false).apply { gravity = Gravity.CENTER; setPadding(0, dp(8), 0, 0) })
+            }
+            content.addView(emptyState, LinearLayout.LayoutParams(-1, -2))
         }
         visibleIndexes.forEach { index ->
             val name = names[index]
@@ -357,9 +375,11 @@ class MainActivity : Activity() {
                     buildHome()
                 }
             }
-            row.addView(text(symbols[index], 23, purple, false).apply { gravity = Gravity.CENTER },
+            row.addView(text(symbols.getOrElse(index) { "✧" }, 23, purple, false).apply { gravity = Gravity.CENTER },
                 LinearLayout.LayoutParams(dp(48), dp(48)))
             row.addView(text(category, 16, if(darkMode) 0xfff2f2f5.toInt() else ink, true), LinearLayout.LayoutParams(0, -2, 1f))
+            val count = if (category == "All") names.size else itemCategories.count { it == category }
+            row.addView(text(count.toString(), 13, if(darkMode) 0xffaaaaaa.toInt() else Color.GRAY, false))
             row.addView(text("›", 25, if(darkMode) 0xfff2f2f5.toInt() else ink, false))
             val params = LinearLayout.LayoutParams(-1, dp(64))
             params.bottomMargin = dp(9)
@@ -495,6 +515,7 @@ class MainActivity : Activity() {
                 val items = JSONObject(body).getJSONArray("wallpapers")
                 val titles = mutableListOf<String>()
                 val categories = mutableListOf<String>()
+                val types = mutableListOf<String>()
                 val thumbs = mutableListOf<String>()
                 val images = mutableListOf<String>()
                 for (i in 0 until items.length()) {
@@ -506,11 +527,12 @@ class MainActivity : Activity() {
                     if (!thumbnail.startsWith("https://") || !image.startsWith("https://")) continue
                     titles.add(title)
                     categories.add(item.optString("category", "Abstract").ifBlank { "Abstract" })
+                    types.add(item.optString("type", "wallpaper").lowercase())
                     thumbs.add(thumbnail)
                     images.add(image)
                 }
                 if (titles.isEmpty()) throw IllegalStateException("Katalog online kosong atau tidak valid")
-                arrayOf(titles, categories, thumbs, images)
+                arrayOf(titles, categories, types, thumbs, images)
             } catch (_: Exception) {
                 null
             } finally {
@@ -522,10 +544,12 @@ class MainActivity : Activity() {
                     names.addAll(parsed[0])
                     itemCategories.clear()
                     itemCategories.addAll(parsed[1])
+                    itemTypes.clear()
+                    itemTypes.addAll(parsed[2])
                     thumbnailUrls.clear()
-                    thumbnailUrls.addAll(parsed[2])
+                    thumbnailUrls.addAll(parsed[3])
                     fullUrls.clear()
-                    fullUrls.addAll(parsed[3])
+                    fullUrls.addAll(parsed[4])
                     imageCache.evictAll()
                     buildHome()
                 }
