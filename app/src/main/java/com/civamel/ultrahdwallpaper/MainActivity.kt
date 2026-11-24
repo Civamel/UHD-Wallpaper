@@ -74,6 +74,17 @@ class MainActivity : Activity() {
         refreshRemoteCatalog()
     }
 
+    override fun onResume() {
+        super.onResume()
+        refreshFavoritesFromPreferences()
+        if (showOnlyFavorites) buildHome()
+    }
+
+    private fun refreshFavoritesFromPreferences() {
+        favorites.clear()
+        favorites.addAll(preferences.getStringSet("favorite_titles", emptySet()) ?: emptySet())
+    }
+
     private fun loadBundledCatalog() {
         try {
             val body = assets.open("wallpapers.json").bufferedReader().use { it.readText() }
@@ -551,7 +562,7 @@ class MainActivity : Activity() {
         setContentView(root)
     }
 
-    private fun showFavorites(){ showOnlyFavorites=true; selectedCategory="All"; selectedTab="Wallpaper"; visibleItemLimit=60; buildHome() }
+    private fun showFavorites(){ refreshFavoritesFromPreferences(); showOnlyFavorites=true; selectedCategory="All"; selectedTab="Wallpaper"; visibleItemLimit=60; buildHome() }
     private fun showCategories(){
         val root = LinearLayout(this@MainActivity).apply {
             orientation = LinearLayout.VERTICAL
