@@ -159,7 +159,7 @@ class StockActivity : Activity() {
         if (legacyFavoriteTitles.isNotEmpty()) {
             result.filter { it.title in legacyFavoriteTitles }.forEach { favorites.add(it.id) }
             legacyFavoriteTitles.clear()
-            getSharedPreferences("wallpaper_preferences", MODE_PRIVATE).edit().putStringSet("favorite_ids", favorites.toSet()).apply()
+            getSharedPreferences("wallpaper_preferences", MODE_PRIVATE).edit().putStringSet("favorite_ids", favorites.toSet()).putStringSet("favorite_titles", emptySet()).apply()
         }
         return result
     }
@@ -340,7 +340,7 @@ class StockActivity : Activity() {
                     setOnClickListener {
                         if (!favorites.add(item.id)) favorites.remove(item.id)
                         getSharedPreferences("wallpaper_preferences", MODE_PRIVATE).edit()
-                            .putStringSet("favorite_ids", favorites.toSet()).apply()
+                            .putStringSet("favorite_ids", favorites.toSet()).putStringSet("favorite_titles", emptySet()).apply()
                         showGallery()
                     }
                 }, FrameLayout.LayoutParams(dp(32), dp(32), Gravity.TOP or Gravity.START).apply {
@@ -411,7 +411,7 @@ class StockActivity : Activity() {
             setOnClickListener {
                 if (!favorites.add(item.id)) favorites.remove(item.id)
                 getSharedPreferences("wallpaper_preferences", MODE_PRIVATE).edit()
-                    .putStringSet("favorite_ids", favorites.toSet()).apply()
+                    .putStringSet("favorite_ids", favorites.toSet()).putStringSet("favorite_titles", emptySet()).apply()
                 text = if (item.id in favorites) "♥  Hapus dari favorit" else "♡  Tambahkan ke favorit"
                 renderGrid()
             }

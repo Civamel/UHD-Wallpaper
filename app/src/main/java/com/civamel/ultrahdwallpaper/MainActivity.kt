@@ -118,7 +118,7 @@ class MainActivity : Activity() {
             if (title in legacyFavoriteTitles) itemIds.getOrNull(index)?.let { favorites.add(it) }
         }
         legacyFavoriteTitles.clear()
-        preferences.edit().putStringSet("favorite_ids", favorites.toSet()).apply()
+        preferences.edit().putStringSet("favorite_ids", favorites.toSet()).putStringSet("favorite_titles", emptySet()).apply()
     }
 
     private fun loadBundledCatalog() {
@@ -360,7 +360,7 @@ class MainActivity : Activity() {
                 setOnClickListener {
                     val favoriteId = itemIds.getOrNull(index) ?: names[index]
                     if (!favorites.add(favoriteId)) favorites.remove(favoriteId)
-                    preferences.edit().putStringSet("favorite_ids", favorites.toSet()).putStringSet("favorite_titles", names.filterIndexed { i, _ -> itemIds.getOrNull(i) in favorites }.toSet()).apply()
+                    preferences.edit().putStringSet("favorite_ids", favorites.toSet()).putStringSet("favorite_titles", emptySet()).apply()
                     buildHome()
                 }
             }, FrameLayout.LayoutParams(dp(32), dp(32), Gravity.TOP or Gravity.START).apply {
@@ -423,7 +423,7 @@ class MainActivity : Activity() {
         details.addView(text(names[index],15,Color.WHITE,true))
         details.addView(text(itemCategories.getOrNull(index).orEmpty(),12,0xffcccccc.toInt(),false))
         bottom.addView(details,LinearLayout.LayoutParams(0,dp(54),1f))
-        bottom.addView(circle(if((itemIds.getOrNull(index) ?: names[index]) in favorites) "♥" else "♡"){ val favoriteId = itemIds.getOrNull(index) ?: names[index]; if(!favorites.add(favoriteId)) favorites.remove(favoriteId); preferences.edit().putStringSet("favorite_ids", favorites.toSet()).putStringSet("favorite_titles", names.filterIndexed { i, _ -> itemIds.getOrNull(i) in favorites }.toSet()).apply(); showPreview(index) })
+        bottom.addView(circle(if((itemIds.getOrNull(index) ?: names[index]) in favorites) "♥" else "♡"){ val favoriteId = itemIds.getOrNull(index) ?: names[index]; if(!favorites.add(favoriteId)) favorites.remove(favoriteId); preferences.edit().putStringSet("favorite_ids", favorites.toSet()).putStringSet("favorite_titles", emptySet()).apply(); showPreview(index) })
         bottom.addView(View(this@MainActivity),LinearLayout.LayoutParams(0,1,1f))
         val apply=Button(this@MainActivity).apply { text="Terapkan"; isAllCaps=false; textSize=16f; setTextColor(Color.WHITE); background=rounded(blue,32); setOnClickListener { if(itemTypes.getOrNull(index) == "live") applyLiveWallpaper(index) else applyWallpaper(index) } }
         bottom.addView(apply,LinearLayout.LayoutParams(dp(150),dp(54)))
