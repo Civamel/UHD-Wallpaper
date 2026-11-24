@@ -534,12 +534,12 @@ class StockActivity : Activity() {
                             readTimeout = 15000
                             doInput = true
                         }
-                        if (connection.responseCode !in 200..299) null
-                        else connection.inputStream.use { it.readBytes() }.also { downloaded ->
-                            if (downloaded.size <= 8 * 1024 * 1024) {
+                        if (connection.responseCode in 200..299) {
+                            bytes = connection.inputStream.use { it.readBytes() }
+                            if (bytes!!.size <= 8 * 1024 * 1024) {
                                 val temp = File(cacheFile.parentFile, cacheFile.name + ".tmp")
                                 try {
-                                    temp.writeBytes(downloaded)
+                                    temp.writeBytes(bytes!!)
                                     if (!temp.renameTo(cacheFile)) temp.delete()
                                     trimThumbnailCache()
                                 } catch (_: Exception) { temp.delete() }
