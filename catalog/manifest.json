@@ -1,21 +1,8 @@
 {
   "version": 1,
-  "catalogVersion": 3,
-  "totalCount": 18,
+  "catalogVersion": 4,
+  "totalCount": 0,
   "pageSize": 24,
-  "shards": [
-    {
-      "path": "pages/page-001.json",
-      "count": 6
-    },
-    {
-      "path": "pages/page-002.json",
-      "count": 6
-    },
-    {
-      "path": "pages/page-003.json",
-      "count": 6
-    }
-  ],
-  "updatedAt": "2026-11-24"
+  "shards": [],
+  "updatedAt": "2026-11-25"
 }
