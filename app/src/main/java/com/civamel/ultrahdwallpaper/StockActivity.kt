@@ -26,11 +26,20 @@ class StockActivity : Activity() {
     private var gridHostView: LinearLayout? = null
     private val blue = Color.rgb(0, 119, 255)
     private val ink = Color.rgb(28, 28, 30)
+    private var darkMode = false
+    private val pageBg get() = if (darkMode) 0xff121318.toInt() else Color.rgb(248, 248, 250)
+    private val cardBg get() = if (darkMode) 0xff24262d.toInt() else Color.WHITE
+    private val primaryText get() = if (darkMode) 0xfff2f2f5.toInt() else ink
+    private val secondaryText get() = if (darkMode) 0xffaaaaaa.toInt() else Color.GRAY
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.statusBarColor = Color.WHITE
-        window.navigationBarColor = Color.WHITE
+        darkMode = getSharedPreferences("wallpaper_preferences", MODE_PRIVATE).getBoolean("dark_mode", false)
+        window.statusBarColor = pageBg
+        window.navigationBarColor = pageBg
+        if (Build.VERSION.SDK_INT >= 23) {
+            window.decorView.systemUiVisibility = if (darkMode) 0 else View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+        }
         loadCatalog()
     }
 
@@ -101,30 +110,32 @@ class StockActivity : Activity() {
     private fun showGallery() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.rgb(248, 248, 250))
+            setBackgroundColor(pageBg)
         }
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(12), dp(10), dp(16), dp(4))
         }
-        header.addView(label("‹", 32, ink, false).apply {
+        header.addView(label("‹", 32, primaryText, false).apply {
             gravity = Gravity.CENTER
             setOnClickListener { finish() }
         }, LinearLayout.LayoutParams(dp(48), dp(52)))
-        header.addView(label("Stock", 24, ink, true), LinearLayout.LayoutParams(0, dp(52), 1f))
+        header.addView(label("Stock", 24, primaryText, true), LinearLayout.LayoutParams(0, dp(52), 1f))
         header.addView(label(items.size.toString() + " foto", 13, Color.GRAY, false))
         root.addView(header)
-        root.addView(label("Koleksi wallpaper pilihan untuk layar perangkat", 13, Color.GRAY, false).apply {
+        root.addView(label("Koleksi wallpaper pilihan untuk layar perangkat", 13, secondaryText, false).apply {
             setPadding(dp(18), 0, dp(18), dp(12))
         })
         val search = EditText(this).apply {
             hint = "Cari stock wallpaper"
             textSize = 14f
+            setTextColor(primaryText)
+            setHintTextColor(secondaryText)
             isSingleLine = true
             setText(query)
             setPadding(dp(14), 0, dp(14), 0)
-            background = rounded(Color.WHITE, 14)
+            background = rounded(cardBg, 14)
             addTextChangedListener(object : android.text.TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
@@ -144,10 +155,10 @@ class StockActivity : Activity() {
             val chip = TextView(this).apply {
                 text = category
                 textSize = 13f
-                setTextColor(if (selectedCategory == category) Color.WHITE else ink)
+                setTextColor(if (selectedCategory == category) Color.WHITE else primaryText)
                 gravity = Gravity.CENTER
                 setPadding(dp(15), dp(9), dp(15), dp(9))
-                background = rounded(if (selectedCategory == category) blue else Color.WHITE, 22)
+                background = rounded(if (selectedCategory == category) blue else cardBg, 22)
                 setOnClickListener {
                     selectedCategory = category
                     showGallery()
@@ -164,7 +175,8 @@ class StockActivity : Activity() {
         root.addView(gridScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         val ad = label("ADVERTISEMENT  •  Ultra HD Wallpaper", 10, Color.DKGRAY, false).apply {
             gravity = Gravity.CENTER
-            setBackgroundColor(Color.rgb(240, 240, 242))
+            setTextColor(if (darkMode) 0xffcccccc.toInt() else Color.DKGRAY)
+            setBackgroundColor(if (darkMode) 0xff202127.toInt() else Color.rgb(240, 240, 242))
         }
         root.addView(ad, LinearLayout.LayoutParams(-1, dp(40)))
         setContentView(root)
@@ -182,7 +194,7 @@ class StockActivity : Activity() {
                 (query.isBlank() || it.title.contains(query, true) || it.category.contains(query, true))
         }
         if (matches.isEmpty()) {
-            host.addView(label("Tidak ada wallpaper yang cocok.", 14, Color.GRAY, false).apply {
+            host.addView(label("Tidak ada wallpaper yang cocok.", 14, secondaryText, false).apply {
                 gravity = Gravity.CENTER
                 setPadding(dp(24), dp(48), dp(24), dp(48))
             })
@@ -204,8 +216,8 @@ class StockActivity : Activity() {
             loadThumbnail(item.thumbnail) { bitmap ->
                 if (bitmap != null && image.isAttachedToWindow && !isFinishing && !isDestroyed) image.setImageBitmap(bitmap)
             }
-            cell.addView(label(item.title, 14, ink, true).apply { setPadding(dp(5), dp(7), dp(5), 0); maxLines = 1 })
-            cell.addView(label(item.category, 12, Color.GRAY, false).apply { setPadding(dp(5), dp(2), dp(5), 0) })
+            cell.addView(label(item.title, 14, primaryText, true).apply { setPadding(dp(5), dp(7), dp(5), 0); maxLines = 1 })
+            cell.addView(label(item.category, 12, secondaryText, false).apply { setPadding(dp(5), dp(2), dp(5), 0) })
             val params = GridLayout.LayoutParams().apply {
                 width = 0
                 height = -2
@@ -237,7 +249,7 @@ class StockActivity : Activity() {
     }
 
     private fun openItem(item: StockItem) {
-        val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(12), dp(8), dp(12), dp(8)) }
+        val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(12), dp(8), dp(12), dp(8)); setBackgroundColor(pageBg) }
         val preview = ImageView(this).apply {
             adjustViewBounds = true
             scaleType = ImageView.ScaleType.FIT_CENTER
