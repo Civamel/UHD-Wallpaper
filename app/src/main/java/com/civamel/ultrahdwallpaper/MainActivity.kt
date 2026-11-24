@@ -13,6 +13,7 @@ import android.os.Looper
 import android.os.Bundle
 import android.net.Uri
 import androidx.core.content.FileProvider
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import java.io.File
 import java.io.FileOutputStream
 import java.io.FileInputStream
@@ -773,7 +774,15 @@ class MainActivity : Activity() {
                 setMargins(dp(18), dp(14), dp(18), dp(18))
             })
         }
-        scroll.addView(content); root.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
+        scroll.addView(content)
+        val swipeRefresh = SwipeRefreshLayout(this@MainActivity).apply {
+            setColorSchemeColors(0xff8f3048.toInt(), 0xffe0115f.toInt())
+            setOnRefreshListener {
+                loadFirestoreWallpapers { isRefreshing = false }
+            }
+        }
+        swipeRefresh.addView(scroll, SwipeRefreshLayout.LayoutParams(-1, -1))
+        root.addView(swipeRefresh, LinearLayout.LayoutParams(-1, 0, 1f))
         val bottom=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER; setPadding(0,dp(4),0,dp(3)); setBackgroundColor(panelSurface) }
         listOf("⌂" to "Wallpaper","▦" to "Category","✦" to "Quotes","▧" to "Stock").forEachIndexed { i,item ->
             val navItem = LinearLayout(this@MainActivity).apply {
@@ -1119,10 +1128,11 @@ class MainActivity : Activity() {
         setContentView(ScrollView(this).apply { addView(root) })
     }
 
-    private fun loadFirestoreWallpapers() {
+    private fun loadFirestoreWallpapers(onComplete: (() -> Unit)? = null) {
         FirebaseFirestore.getInstance().collection("wallpapers").get()
             .addOnSuccessListener { snapshot ->
-                if (isFinishing || isDestroyed || snapshot.isEmpty) return@addOnSuccessListener
+                if (isFinishing || isDestroyed) { onComplete?.invoke(); return@addOnSuccessListener }
+                if (snapshot.isEmpty) { onComplete?.invoke(); return@addOnSuccessListener }
                 var changed = false
                 for (doc in snapshot.documents) {
                     val id = doc.getString("id") ?: doc.id
@@ -1143,8 +1153,12 @@ class MainActivity : Activity() {
                     imageCache.evictAll()
                     buildHome()
                 }
+                onComplete?.invoke()
             }
-            .addOnFailureListener { /* GitHub catalog remains available if Firestore is not configured yet. */ }
+            .addOnFailureListener {
+                onComplete?.invoke()
+                Toast.makeText(this, "Gagal memuat ulang wallpaper. Periksa koneksi internet.", Toast.LENGTH_SHORT).show()
+            }
     }
 
     private fun shareApplication() {
