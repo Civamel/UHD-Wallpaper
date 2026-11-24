@@ -319,7 +319,18 @@ class StockActivity : Activity() {
                 background = rounded(0xffdddddd.toInt(), 10)
                 setImageDrawable(GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(0xff303746.toInt(), 0xff8996aa.toInt())))
             }
-            cell.addView(image, LinearLayout.LayoutParams(-1, dp(210)))
+            val imageFrame = FrameLayout(this).apply {
+                addView(image, FrameLayout.LayoutParams(-1, dp(210)))
+                if (item.title in favorites) {
+                    addView(label("♥", 16, Color.WHITE, true).apply {
+                        gravity = Gravity.CENTER
+                        background = rounded(0xcc000000.toInt(), 18)
+                    }, FrameLayout.LayoutParams(dp(30), dp(30), Gravity.TOP or Gravity.END).apply {
+                        setMargins(0, dp(7), dp(7), 0)
+                    })
+                }
+            }
+            cell.addView(imageFrame, LinearLayout.LayoutParams(-1, dp(210)))
             loadThumbnail(item.thumbnail) { bitmap ->
                 if (bitmap != null && image.isAttachedToWindow && !isFinishing && !isDestroyed) image.setImageBitmap(bitmap)
             }
