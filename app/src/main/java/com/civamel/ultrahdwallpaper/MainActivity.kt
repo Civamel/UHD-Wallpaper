@@ -524,13 +524,15 @@ class MainActivity : Activity() {
                     "Ukuran terbesar" -> saved.sortedByDescending {
                         File(File(filesDir, "downloads"), it.substringBefore("\t")).length()
                     }
+                    "Terlama" -> saved.sortedBy { File(File(filesDir, "downloads"), it.substringBefore("\t")).lastModified() }
+                    "Terbaru" -> saved.sortedByDescending { File(File(filesDir, "downloads"), it.substringBefore("\t")).lastModified() }
                     else -> saved.sortedBy { it.substringAfter("\t", "Wallpaper").lowercase() }
                 }
             }
         root.addView(text("Urutkan: $downloadSortMode  ▾", 14, if (darkMode) 0xffc5c9d4.toInt() else 0xff555966.toInt(), true).apply {
             setPadding(0, 0, 0, dp(14))
             setOnClickListener {
-                val modes = arrayOf("Nama A-Z", "Nama Z-A", "Ukuran terbesar")
+                val modes = arrayOf("Terbaru", "Terlama", "Nama A-Z", "Nama Z-A", "Ukuran terbesar")
                 AlertDialog.Builder(this@MainActivity)
                     .setTitle("Urutkan unduhan")
                     .setItems(modes) { _, which ->
