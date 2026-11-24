@@ -549,11 +549,18 @@ class MainActivity : Activity() {
                 val delete = text("✕", 21, if (darkMode) 0xffff8b8b.toInt() else 0xffc62828.toInt(), true).apply {
                     gravity = Gravity.CENTER
                     setOnClickListener {
-                        imageFile.delete()
-                        val updated = (preferences.getStringSet("download_records", emptySet()) ?: emptySet()).toMutableSet()
-                        updated.remove(record)
-                        preferences.edit().putStringSet("download_records", updated).apply()
-                        showDownloads()
+                        AlertDialog.Builder(this@MainActivity)
+                            .setTitle("Hapus unduhan?")
+                            .setMessage("Wallpaper \"$title\" akan dihapus dari pustaka Unduhan.")
+                            .setNegativeButton("Batal", null)
+                            .setPositiveButton("Hapus") { _, _ ->
+                                imageFile.delete()
+                                val updated = (preferences.getStringSet("download_records", emptySet()) ?: emptySet()).toMutableSet()
+                                updated.remove(record)
+                                preferences.edit().putStringSet("download_records", updated).apply()
+                                showDownloads()
+                            }
+                            .show()
                     }
                 }
                 row.addView(delete, LinearLayout.LayoutParams(dp(42), dp(48)))
