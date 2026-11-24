@@ -321,14 +321,18 @@ class StockActivity : Activity() {
             }
             val imageFrame = FrameLayout(this).apply {
                 addView(image, FrameLayout.LayoutParams(-1, dp(210)))
-                if (item.title in favorites) {
-                    addView(label("♥", 16, Color.WHITE, true).apply {
-                        gravity = Gravity.CENTER
-                        background = rounded(0xcc000000.toInt(), 18)
-                    }, FrameLayout.LayoutParams(dp(30), dp(30), Gravity.TOP or Gravity.END).apply {
-                        setMargins(0, dp(7), dp(7), 0)
-                    })
-                }
+                addView(label(if (item.title in favorites) "♥" else "♡", 18, Color.WHITE, true).apply {
+                    gravity = Gravity.CENTER
+                    background = rounded(0xcc000000.toInt(), 18)
+                    setOnClickListener {
+                        if (!favorites.add(item.title)) favorites.remove(item.title)
+                        getSharedPreferences("wallpaper_preferences", MODE_PRIVATE).edit()
+                            .putStringSet("favorite_titles", favorites.toSet()).apply()
+                        showGallery()
+                    }
+                }, FrameLayout.LayoutParams(dp(32), dp(32), Gravity.TOP or Gravity.START).apply {
+                    setMargins(dp(7), dp(7), 0, 0)
+                })
             }
             cell.addView(imageFrame, LinearLayout.LayoutParams(-1, dp(210)))
             loadThumbnail(item.thumbnail) { bitmap ->
