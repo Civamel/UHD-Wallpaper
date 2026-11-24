@@ -13,6 +13,7 @@ import android.net.Uri
 import androidx.core.content.FileProvider
 import java.io.File
 import java.io.FileOutputStream
+import java.security.MessageDigest
 import android.view.Gravity
 import android.view.View
 import android.widget.*
@@ -102,21 +103,68 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun wallpaperDiskCacheFile(url: String): File {
+        val digest = MessageDigest.getInstance("SHA-256").digest(url.toByteArray(Charsets.UTF_8))
+        val key = digest.joinToString("") { byte -> "%02x".format(byte) }
+        val directory = File(filesDir, "wallpaper_images").apply { if (!exists()) mkdirs() }
+        return File(directory, key + ".img")
+    }
+
+    private fun trimWallpaperDiskCache(maxBytes: Long = 180L * 1024L * 1024L) {
+        try {
+            val directory = File(filesDir, "wallpaper_images")
+            val files = directory.listFiles()?.filter { it.isFile && it.extension == "img" } ?: return
+            var total = files.sumOf { it.length() }
+            if (total <= maxBytes) return
+            for (file in files.sortedBy { it.lastModified() }) {
+                if (total <= maxBytes) break
+                val size = file.length()
+                if (file.delete()) total -= size
+            }
+        } catch (_: Exception) {
+            // Cache cleanup is best-effort; it must never interrupt wallpaper loading.
+        }
+    }
+
     private fun loadImage(url: String, onLoaded: (Bitmap?) -> Unit) {
         val cached = imageCache.get(url)
         if (cached != null) { onLoaded(cached); return }
         imageExecutor.execute {
             var connection: HttpURLConnection? = null
-            val bitmap = try {
-                connection = (URL(url).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 15000
-                    readTimeout = 20000
-                    doInput = true
-                    instanceFollowRedirects = true
+            var cacheFile: File? = null
+            var bitmap: Bitmap? = null
+            try {
+                cacheFile = wallpaperDiskCacheFile(url)
+                if (cacheFile.isFile) {
+                    bitmap = BitmapFactory.decodeFile(cacheFile.absolutePath)
+                    if (bitmap != null) cacheFile.setLastModified(System.currentTimeMillis())
+                    else cacheFile.delete()
                 }
-                connection.inputStream.use { BitmapFactory.decodeStream(it) }
+                if (bitmap == null) {
+                    connection = (URL(url).openConnection() as HttpURLConnection).apply {
+                        connectTimeout = 15000
+                        readTimeout = 20000
+                        doInput = true
+                        instanceFollowRedirects = true
+                        requestMethod = "GET"
+                    }
+                    if (connection.responseCode !in 200..299) throw IllegalStateException("HTTP " + connection.responseCode)
+                    val temporaryFile = File(cacheFile.parentFile, cacheFile.name + ".tmp")
+                    try {
+                        connection.inputStream.use { input ->
+                            FileOutputStream(temporaryFile).use { output -> input.copyTo(output) }
+                        }
+                        if (temporaryFile.length() > 0L && temporaryFile.renameTo(cacheFile)) {
+                            bitmap = BitmapFactory.decodeFile(cacheFile.absolutePath)
+                            if (bitmap == null) cacheFile.delete()
+                            else trimWallpaperDiskCache()
+                        }
+                    } finally {
+                        if (temporaryFile.exists()) temporaryFile.delete()
+                    }
+                }
             } catch (_: Exception) {
-                null
+                bitmap = null
             } finally {
                 connection?.disconnect()
             }
@@ -124,7 +172,6 @@ class MainActivity : Activity() {
             runOnUiThread { onLoaded(bitmap) }
         }
     }
-
     private fun buildHome() {
         val pageBg = if (darkMode) 0xff121318.toInt() else Color.WHITE
         val pageText = if (darkMode) 0xfff2f2f5.toInt() else ink
