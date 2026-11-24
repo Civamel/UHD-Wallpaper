@@ -21,7 +21,7 @@ import java.net.URL
 import java.util.concurrent.Executors
 
 class StockActivity : Activity() {
-    private data class StockItem(val title: String, val category: String, val thumbnail: String, val image: String)
+    private data class StockItem(val title: String, val category: String, val thumbnail: String, val image: String, val tags: List<String>)
     private val items = mutableListOf<StockItem>()
     private val executor = Executors.newFixedThreadPool(3)
     private var query = ""
@@ -149,8 +149,10 @@ class StockActivity : Activity() {
             val category = item.optString("category", "Stock").ifBlank { "Stock" }
             val thumbnail = item.optString("thumbnail").trim()
             val image = item.optString("image").trim()
+            val tagsArray = item.optJSONArray("tags")
+            val tags = (0 until (tagsArray?.length() ?: 0)).map { tagsArray!!.optString(it).trim() }.filter { it.isNotEmpty() }
             if (title.isNotEmpty() && thumbnail.startsWith("https://") && image.startsWith("https://")) {
-                result.add(StockItem(title, category, thumbnail, image))
+                result.add(StockItem(title, category, thumbnail, image, tags))
             }
         }
         return result
@@ -273,7 +275,7 @@ class StockActivity : Activity() {
         val filtered = items.filter {
             (selectedCategory == "All" || it.category == selectedCategory) &&
                 (!showOnlyFavorites || favorites.contains(it.title)) &&
-                (query.isBlank() || it.title.contains(query, true) || it.category.contains(query, true))
+                (query.isBlank() || it.title.contains(query, true) || it.category.contains(query, true) || it.tags.any { tag -> tag.contains(query, true) })
         }
         val matches = when (selectedSort) {
             "Nama A–Z" -> filtered.sortedBy { it.title.lowercase() }

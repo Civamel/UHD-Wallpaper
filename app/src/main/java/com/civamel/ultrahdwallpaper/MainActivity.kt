@@ -64,6 +64,7 @@ class MainActivity : Activity() {
         get() = listOf("All") + itemCategories.map { it.trim() }.filter { it.isNotEmpty() }.distinct().sorted()
     private val itemCategories = mutableListOf("Abstract","Art","Abstract","Animals","Ocean","Abstract","Nature","Animals","Space","Nature","Nature","Art","Technology","Art","Abstract","Space","Technology","Nature")
     private val itemTypes = mutableListOf<String>()
+    private val itemTags = mutableListOf<List<String>>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -96,6 +97,7 @@ class MainActivity : Activity() {
             val newNames = mutableListOf<String>()
             val newCategories = mutableListOf<String>()
             val newTypes = mutableListOf<String>()
+            val newTags = mutableListOf<List<String>>()
             val newThumbs = mutableListOf<String>()
             val newFull = mutableListOf<String>()
             for (i in 0 until items.length()) {
@@ -103,6 +105,8 @@ class MainActivity : Activity() {
                 newNames.add(item.getString("title"))
                 newCategories.add(item.optString("category", "Abstract").ifBlank { "Abstract" })
                 newTypes.add(item.optString("type", "wallpaper").lowercase())
+                val tagsArray = item.optJSONArray("tags")
+                newTags.add((0 until (tagsArray?.length() ?: 0)).map { tagsArray!!.optString(it).trim() }.filter { it.isNotEmpty() })
                 newThumbs.add(item.getString("thumbnail"))
                 newFull.add(item.getString("image"))
             }
@@ -110,6 +114,7 @@ class MainActivity : Activity() {
                 names.clear(); names.addAll(newNames)
                 itemCategories.clear(); itemCategories.addAll(newCategories)
                 itemTypes.clear(); itemTypes.addAll(newTypes)
+                itemTags.clear(); itemTags.addAll(newTags)
                 thumbnailUrls.clear(); thumbnailUrls.addAll(newThumbs)
                 fullUrls.clear(); fullUrls.addAll(newFull)
                 buildHome()
@@ -150,6 +155,7 @@ class MainActivity : Activity() {
             val titles = mutableListOf<String>()
             val categories = mutableListOf<String>()
             val types = mutableListOf<String>()
+            val tags = mutableListOf<List<String>>()
             val thumbs = mutableListOf<String>()
             val images = mutableListOf<String>()
             for (i in 0 until items.length()) {
@@ -162,6 +168,8 @@ class MainActivity : Activity() {
                 titles.add(title)
                 categories.add(item.optString("category", "Abstract").ifBlank { "Abstract" })
                 types.add(item.optString("type", "wallpaper").lowercase())
+                val tagsArray = item.optJSONArray("tags")
+                tags.add((0 until (tagsArray?.length() ?: 0)).map { tagsArray!!.optString(it).trim() }.filter { it.isNotEmpty() })
                 thumbs.add(thumbnail)
                 images.add(image)
             }
@@ -169,6 +177,7 @@ class MainActivity : Activity() {
             names.clear(); names.addAll(titles)
             itemCategories.clear(); itemCategories.addAll(categories)
             itemTypes.clear(); itemTypes.addAll(types)
+            itemTags.clear(); itemTags.addAll(tags)
             thumbnailUrls.clear(); thumbnailUrls.addAll(thumbs)
             fullUrls.clear(); fullUrls.addAll(images)
             imageCache.evictAll()
@@ -266,7 +275,7 @@ class MainActivity : Activity() {
         val grid=GridLayout(this@MainActivity).apply { columnCount=3; useDefaultMargins=false }
         val filteredIndexes = names.indices.filter { index ->
             val categoryMatch = selectedCategory == "All" || itemCategories[index] == selectedCategory
-            val searchMatch = searchQuery.isBlank() || names[index].contains(searchQuery, true) || itemCategories[index].contains(searchQuery, true)
+            val searchMatch = searchQuery.isBlank() || names[index].contains(searchQuery, true) || itemCategories[index].contains(searchQuery, true) || itemTags.getOrNull(index).orEmpty().any { it.contains(searchQuery, true) }
             val favoriteMatch = !showOnlyFavorites || favorites.contains(names[index])
             val type = itemTypes.getOrNull(index) ?: "wallpaper"
             val tabMatch = when (selectedTab) {
@@ -997,6 +1006,7 @@ class MainActivity : Activity() {
                 val titles = mutableListOf<String>()
                 val categories = mutableListOf<String>()
                 val types = mutableListOf<String>()
+                val tags = mutableListOf<List<String>>()
                 val thumbs = mutableListOf<String>()
                 val images = mutableListOf<String>()
                 for (i in 0 until items.length()) {
@@ -1009,12 +1019,14 @@ class MainActivity : Activity() {
                     titles.add(title)
                     categories.add(item.optString("category", "Abstract").ifBlank { "Abstract" })
                     types.add(item.optString("type", "wallpaper").lowercase())
+                    val tagsArray = item.optJSONArray("tags")
+                    tags.add((0 until (tagsArray?.length() ?: 0)).map { tagsArray!!.optString(it).trim() }.filter { it.isNotEmpty() })
                     thumbs.add(thumbnail)
                     images.add(image)
                 }
                 if (titles.isEmpty()) throw IllegalStateException("Katalog online kosong atau tidak valid")
                 validatedCatalogBody = body
-                arrayOf(titles, categories, types, thumbs, images)
+                arrayOf(titles, categories, types, tags, thumbs, images)
             } catch (_: Exception) {
                 null
             } finally {
@@ -1034,10 +1046,12 @@ class MainActivity : Activity() {
                     itemCategories.addAll(parsed[1])
                     itemTypes.clear()
                     itemTypes.addAll(parsed[2])
+                    itemTags.clear()
+                    itemTags.addAll(parsed[3])
                     thumbnailUrls.clear()
-                    thumbnailUrls.addAll(parsed[3])
+                    thumbnailUrls.addAll(parsed[4])
                     fullUrls.clear()
-                    fullUrls.addAll(parsed[4])
+                    fullUrls.addAll(parsed[5])
                     imageCache.evictAll()
                     buildHome()
                 }
