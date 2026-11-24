@@ -302,15 +302,17 @@ class MainActivity : Activity() {
                 setOnClickListener { showPreview(index) }
             }
             cell.addView(art,FrameLayout.LayoutParams(-1,dp(148)))
-            if (names[index] in favorites) {
-                cell.addView(text("♥",16,Color.WHITE,true).apply {
-                    gravity = Gravity.TOP or Gravity.END
-                    setGravity(Gravity.CENTER)
-                    background = rounded(0xcc000000.toInt(), 18)
-                }, FrameLayout.LayoutParams(dp(30), dp(30), Gravity.TOP or Gravity.END).apply {
-                    setMargins(0, dp(7), dp(7), 0)
-                })
-            }
+            cell.addView(text(if (names[index] in favorites) "♥" else "♡", 18, Color.WHITE, true).apply {
+                gravity = Gravity.CENTER
+                background = rounded(0xcc000000.toInt(), 18)
+                setOnClickListener {
+                    if (!favorites.add(names[index])) favorites.remove(names[index])
+                    preferences.edit().putStringSet("favorite_titles", favorites.toSet()).apply()
+                    buildHome()
+                }
+            }, FrameLayout.LayoutParams(dp(32), dp(32), Gravity.TOP or Gravity.START).apply {
+                setMargins(dp(7), dp(7), 0, 0)
+            })
             if (index < thumbnailUrls.size) loadImage(thumbnailUrls[index]) { bitmap -> if (bitmap != null && art.isAttachedToWindow) art.setImageBitmap(bitmap) }
             if(index%5==1) cell.addView(text("♛",20,Color.WHITE,true).apply { gravity=Gravity.TOP or Gravity.END; setPadding(dp(5),dp(4),dp(8),0) })
             val params=GridLayout.LayoutParams().apply { width=0; height=dp(148); columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); setMargins(dp(1),dp(1),dp(1),dp(1)) }
