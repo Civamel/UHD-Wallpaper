@@ -567,15 +567,16 @@ class MainActivity : Activity() {
                 val modes = arrayOf("Terbaru", "Terlama", "Nama A-Z", "Nama Z-A", "Ukuran terbesar")
                 AlertDialog.Builder(this@MainActivity)
                     .setTitle("Urutkan unduhan")
-                    .setItems(modes) { _, which ->
+                     .setSingleChoiceItems(modes, modes.indexOf(downloadSortMode).coerceAtLeast(0)) { dialog, which ->
                         downloadSortMode = modes[which]
+                        dialog.dismiss()
                         showDownloads()
                     }
                     .show()
             }
         })
         if (records.isNotEmpty()) {
-            root.addView(text("Hapus semua unduhan", 14, if (darkMode) 0xffff8b8b.toInt() else 0xffc62828.toInt(), true).apply {
+            root.addView(text(if (query.isBlank()) "Hapus semua unduhan" else "Hapus hasil pencarian (" + records.size + ")", 14, if (darkMode) 0xffff8b8b.toInt() else 0xffc62828.toInt(), true).apply {
                 gravity = Gravity.END
                 setPadding(0, 0, 0, dp(12))
                 setOnClickListener {
@@ -584,10 +585,14 @@ class MainActivity : Activity() {
                         .setMessage("Semua ${records.size} wallpaper yang tersimpan akan dihapus dari pustaka Unduhan.")
                         .setNegativeButton("Batal", null)
                         .setPositiveButton("Hapus semua") { _, _ ->
+                            val updated = (preferences.getStringSet("download_records", emptySet()) ?: emptySet()).toMutableSet()
                             records.forEach { record ->
-                                File(File(filesDir, "downloads"), record.substringBefore("\t")).delete()
+                                val file = File(File(filesDir, "downloads"), record.substringBefore("\t"))
+                                if (file.exists() && !file.delete()) {
+                                    Toast.makeText(this@MainActivity, "Sebagian file tidak dapat dihapus", Toast.LENGTH_LONG).show()
+                                } else updated.remove(record)
                             }
-                            preferences.edit().remove("download_records").apply()
+                            preferences.edit().putStringSet("download_records", updated).apply()
                             showDownloads()
                         }
                         .show()
@@ -602,18 +607,32 @@ class MainActivity : Activity() {
         } else {
             String.format("%.1f MB", downloadBytes / (1024.0 * 1024.0))
         }
-        root.addView(text(
-            "${records.size} wallpaper tersimpan  •  $downloadSize digunakan",
-            13,
-            if (darkMode) 0xffb9bdc8.toInt() else 0xff666a75.toInt(),
-            false
-        ).apply { setPadding(0, 0, 0, dp(14)) })
+        val summary = if (query.isBlank()) {
+            "${records.size} wallpaper tersimpan  •  $downloadSize digunakan"
+        } else {
+            "${records.size} dari ${allRecords.size} wallpaper cocok  •  $downloadSize ditampilkan"
+        }
+        root.addView(text(summary, 13, if (darkMode) 0xffb9bdc8.toInt() else 0xff666a75.toInt(), false)
+            .apply { setPadding(0, 0, 0, dp(14)) })
         if (records.isEmpty()) {
-            val empty = text("Belum ada wallpaper yang diunduh.\n\nBuka wallpaper, tekan ikon unduh, lalu simpan gambarnya untuk melihatnya di sini.", 15, pageText, false).apply {
+            val noDownloads = allRecords.isEmpty()
+            val emptyColumn = LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                setPadding(dp(24), dp(36), dp(24), dp(36))
+                setPadding(dp(24), dp(30), dp(24), dp(30))
+                addView(text(if (noDownloads) "Belum ada wallpaper yang diunduh" else "Wallpaper tidak ditemukan", 17, pageText, true).apply { gravity = Gravity.CENTER })
+                addView(text(if (noDownloads) "Unduh wallpaper terlebih dahulu. File yang disimpan akan muncul di sini." else "Coba kata kunci lain atau hapus pencarian untuk melihat semua unduhan.", 13, if (darkMode) 0xffaeb3bf.toInt() else 0xff777b86.toInt(), false).apply {
+                    gravity = Gravity.CENTER
+                    setPadding(0, dp(9), 0, dp(18))
+                })
+                if (!noDownloads) addView(text("Hapus pencarian", 14, if (darkMode) 0xff9bbcff.toInt() else blue, true).apply {
+                    gravity = Gravity.CENTER
+                    setPadding(dp(16), dp(10), dp(16), dp(10))
+                    background = rounded(if (darkMode) 0xff242f42.toInt() else 0xffe8f1ff.toInt(), 12)
+                    setOnClickListener { downloadsSearchQuery = ""; showDownloads() }
+                })
             }
-            root.addView(empty, LinearLayout.LayoutParams(-1, 0, 1f))
+            root.addView(emptyColumn, LinearLayout.LayoutParams(-1, 0, 1f))
         } else {
             val list = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
             records.forEach { record ->
@@ -628,7 +647,10 @@ class MainActivity : Activity() {
                 }
                 val thumb = ImageView(this@MainActivity).apply {
                     scaleType = ImageView.ScaleType.CENTER_CROP
-                    setImageBitmap(BitmapFactory.decodeFile(imageFile.absolutePath))
+                    setImageDrawable(rounded(if (darkMode) 0xff343741.toInt() else 0xffe4e6eb.toInt(), 8))
+                    val decoded = BitmapFactory.decodeFile(imageFile.absolutePath)
+                    if (decoded != null) setImageBitmap(decoded)
+                    contentDescription = "Pratinjau $title"
                 }
                 row.addView(thumb, LinearLayout.LayoutParams(dp(72), dp(88)))
                 val labelColumn = LinearLayout(this@MainActivity).apply {
@@ -661,6 +683,8 @@ class MainActivity : Activity() {
                             val intent = Intent(Intent.ACTION_SEND).apply {
                                 type = "image/jpeg"
                                 putExtra(Intent.EXTRA_STREAM, uri)
+                                putExtra(Intent.EXTRA_TITLE, title)
+                                clipData = android.content.ClipData.newUri(contentResolver, title, uri)
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             }
                             startActivity(Intent.createChooser(intent, "Bagikan wallpaper"))
@@ -678,11 +702,14 @@ class MainActivity : Activity() {
                             .setMessage("Wallpaper \"$title\" akan dihapus dari pustaka Unduhan.")
                             .setNegativeButton("Batal", null)
                             .setPositiveButton("Hapus") { _, _ ->
-                                imageFile.delete()
-                                val updated = (preferences.getStringSet("download_records", emptySet()) ?: emptySet()).toMutableSet()
-                                updated.remove(record)
-                                preferences.edit().putStringSet("download_records", updated).apply()
-                                showDownloads()
+                                if (imageFile.exists() && !imageFile.delete()) {
+                                    Toast.makeText(this@MainActivity, "File tidak dapat dihapus. Coba lagi.", Toast.LENGTH_LONG).show()
+                                } else {
+                                    val updated = (preferences.getStringSet("download_records", emptySet()) ?: emptySet()).toMutableSet()
+                                    updated.remove(record)
+                                    preferences.edit().putStringSet("download_records", updated).apply()
+                                    showDownloads()
+                                }
                             }
                             .show()
                     }
