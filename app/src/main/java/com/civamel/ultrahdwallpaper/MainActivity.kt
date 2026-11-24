@@ -532,6 +532,7 @@ class MainActivity : Activity() {
                 else -> saved.sortedBy { it.substringAfter("\t", "Wallpaper").lowercase() }
             }
         }
+        val searchRow = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         val searchBox = EditText(this@MainActivity).apply {
             setSingleLine(true)
             hint = "Cari wallpaper yang diunduh..."
@@ -541,16 +542,16 @@ class MainActivity : Activity() {
             setPadding(dp(14), dp(11), dp(14), dp(11))
             background = rounded(if (darkMode) 0xff24262d.toInt() else Color.WHITE, 12)
             setText(downloadsSearchQuery)
-            addTextChangedListener(object : android.text.TextWatcher {
-                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                    val next = s?.toString() ?: ""
-                    if (downloadsSearchQuery != next) { downloadsSearchQuery = next; showDownloads() }
-                }
-                override fun afterTextChanged(s: android.text.Editable?) {}
-            })
+            setOnEditorActionListener { _, _, _ -> downloadsSearchQuery = text.toString(); showDownloads(); true }
         }
-        root.addView(searchBox, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
+        searchRow.addView(searchBox, LinearLayout.LayoutParams(0, -2, 1f))
+        searchRow.addView(text("Cari", 14, Color.WHITE, true).apply {
+            gravity = Gravity.CENTER
+            setPadding(dp(16), dp(13), dp(16), dp(13))
+            background = rounded(blue, 12)
+            setOnClickListener { downloadsSearchQuery = searchBox.text.toString(); showDownloads() }
+        }, LinearLayout.LayoutParams(-2, -2).apply { leftMargin = dp(8) })
+        root.addView(searchRow, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
         root.addView(text("Urutkan: $downloadSortMode  ▾", 14, if (darkMode) 0xffc5c9d4.toInt() else 0xff555966.toInt(), true).apply {
             setPadding(0, 0, 0, dp(14))
             setOnClickListener {
