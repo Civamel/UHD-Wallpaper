@@ -687,17 +687,31 @@ class StockActivity : Activity() {
         } catch (_: Exception) { }
     }
 
+    private val fullImageCallbackLock = Any()
+    private val pendingFullImageCallbacks = HashMap<String, MutableList<(Bitmap?) -> Unit>>()
+
     private fun loadFullImage(item: StockItem, done: (Bitmap?) -> Unit) {
+        // Only one network transfer writes a given UHD cache file at a time.
+        synchronized(fullImageCallbackLock) {
+            val waiting = pendingFullImageCallbacks[item.image]
+            if (waiting != null) {
+                waiting.add(done)
+                return
+            }
+            pendingFullImageCallbacks[item.image] = mutableListOf(done)
+        }
         executor.execute {
             val cacheFile = stockFullImageCacheFile(item.image)
-            var bitmap: Bitmap? = null
+            var ready = false
             try {
-                if (cacheFile.isFile) {
-                    bitmap = BitmapFactory.decodeFile(cacheFile.absolutePath)
-                    if (bitmap != null) cacheFile.setLastModified(System.currentTimeMillis())
+                if (cacheFile.isFile && cacheFile.length() > 0L) {
+                    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    BitmapFactory.decodeFile(cacheFile.absolutePath, bounds)
+                    ready = bounds.outWidth > 0 && bounds.outHeight > 0
+                    if (ready) cacheFile.setLastModified(System.currentTimeMillis())
                     else cacheFile.delete()
                 }
-                if (bitmap == null) {
+                if (!ready) {
                     var connection: HttpURLConnection? = null
                     try {
                         connection = (URL(item.image).openConnection() as HttpURLConnection).apply {
@@ -734,8 +748,10 @@ class StockActivity : Activity() {
                                     false
                                 }
                                 if (stored) {
-                                    bitmap = BitmapFactory.decodeFile(cacheFile.absolutePath)
-                                    if (bitmap == null) cacheFile.delete() else trimStockFullImageCache()
+                                    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                                    BitmapFactory.decodeFile(cacheFile.absolutePath, bounds)
+                                    ready = bounds.outWidth > 0 && bounds.outHeight > 0
+                                    if (ready) trimStockFullImageCache() else cacheFile.delete()
                                 }
                             }
                         } finally {
@@ -746,13 +762,23 @@ class StockActivity : Activity() {
                     }
                 }
             } catch (_: Exception) {
-                bitmap = null
+                ready = false
             }
-            val result = bitmap
-            if (!isFinishing && !isDestroyed) runOnUiThread {
-                if (!isFinishing && !isDestroyed) done(result)
-                else result?.recycle()
-            } else result?.recycle()
+            val callbacks = synchronized(fullImageCallbackLock) {
+                pendingFullImageCallbacks.remove(item.image)?.toList().orEmpty()
+            }
+            // Decode a separate Bitmap for each consumer so one caller cannot recycle
+            // the image while another caller is sharing or applying it.
+            callbacks.forEach { callback ->
+                executor.execute {
+                    val bitmap = if (ready && cacheFile.isFile) {
+                        try { BitmapFactory.decodeFile(cacheFile.absolutePath) } catch (_: Exception) { null }
+                    } else null
+                    if (!isFinishing && !isDestroyed) runOnUiThread {
+                        if (!isFinishing && !isDestroyed) callback(bitmap) else bitmap?.recycle()
+                    } else bitmap?.recycle()
+                }
+            }
         }
     }
 
