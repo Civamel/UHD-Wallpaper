@@ -271,14 +271,46 @@ class StockActivity : Activity() {
                     Toast.makeText(this, "Gambar gagal dimuat. Periksa koneksi internet.", Toast.LENGTH_LONG).show()
                     return@runOnUiThread
                 }
-                try {
-                    WallpaperManager.getInstance(this).setBitmap(bitmap)
-                    Toast.makeText(this, "Wallpaper layar utama berhasil diterapkan", Toast.LENGTH_LONG).show()
-                } catch (e: Exception) {
-                    Toast.makeText(this, "Gagal menerapkan wallpaper: " + e.localizedMessage, Toast.LENGTH_LONG).show()
-                }
+                showApplyDestinationDialog(item, bitmap)
             }
         }
+    }
+
+    private fun showApplyDestinationDialog(item: StockItem, bitmap: Bitmap) {
+        val destinations = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            arrayOf("Layar utama", "Layar kunci", "Keduanya")
+        } else {
+            arrayOf("Layar utama")
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Terapkan wallpaper")
+            .setItems(destinations) { _, which ->
+                try {
+                    val manager = WallpaperManager.getInstance(this)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        val flags = when (which) {
+                            1 -> WallpaperManager.FLAG_LOCK
+                            2 -> WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK
+                            else -> WallpaperManager.FLAG_SYSTEM
+                        }
+                        manager.setBitmap(bitmap, null, true, flags)
+                    } else {
+                        manager.setBitmap(bitmap)
+                    }
+                    Toast.makeText(this, "Wallpaper " + item.title + " diterapkan ke " + destinations[which], Toast.LENGTH_LONG).show()
+                } catch (e: Exception) {
+                    Toast.makeText(this, "Gagal menerapkan wallpaper: " + e.localizedMessage, Toast.LENGTH_LONG).show()
+                } finally {
+                    if (!bitmap.isRecycled) bitmap.recycle()
+                }
+            }
+            .setNegativeButton("Batal") { _, _ ->
+                if (!bitmap.isRecycled) bitmap.recycle()
+            }
+            .setOnCancelListener {
+                if (!bitmap.isRecycled) bitmap.recycle()
+            }
+            .show()
     }
 
     private fun showError(message: String) {
