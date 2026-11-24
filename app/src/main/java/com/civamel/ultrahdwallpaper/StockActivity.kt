@@ -27,6 +27,10 @@ class StockActivity : Activity() {
     private var selectedCategory = "All"
     private var selectedSort = "Default"
     private var isRefreshingCatalog = false
+    private var catalogIndex: CatalogManifest.Index? = null
+    private var loadedShardCount = 0
+    private var isLoadingShard = false
+    private var visibleStockLimit = 60
     private var showOnlyFavorites = false
     private val favorites = mutableSetOf<String>()
     private val legacyFavoriteTitles = mutableSetOf<String>()
@@ -68,31 +72,100 @@ class StockActivity : Activity() {
             return
         }
         showGallery()
+        loadRemoteManifest(firstPageOnly = true)
+    }
+
+    private fun stockShardCache(index: Int) = File(filesDir, "stock_catalog_page_${index + 1}.json")
+
+    private fun loadRemoteManifest(firstPageOnly: Boolean) {
         executor.execute {
             var connection: HttpURLConnection? = null
-            try {
-                connection = (URL("https://raw.githubusercontent.com/Civamel/UHD-Wallpaper/main/catalog/wallpapers.json").openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 10000
-                    readTimeout = 15000
+            val result = try {
+                connection = (URL("https://raw.githubusercontent.com/Civamel/UHD-Wallpaper/main/catalog/manifest.json").openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 12000
+                    readTimeout = 18000
                     requestMethod = "GET"
                 }
-                if (connection.responseCode in 200..299) {
-                    val body = connection.inputStream.bufferedReader().use { it.readText() }
-                    val parsed = parseItems(body)
-                    if (parsed.isNotEmpty()) runOnUiThread {
-                        if (!isFinishing && !isDestroyed) {
-                            items.clear()
-                            items.addAll(parsed)
-                            showGallery()
-                        }
-                    }
-                }
+                if (connection.responseCode !in 200..299) throw IllegalStateException("Manifest HTTP " + connection.responseCode)
+                val body = connection.inputStream.bufferedReader().use { it.readText() }
+                CatalogManifest.parse(body)
             } catch (_: Exception) {
-                // Keep the bundled stock catalog available offline.
+                null
             } finally {
                 connection?.disconnect()
             }
+            if (result == null) {
+                // Compatibility path for older repositories with one catalog file.
+                if (!firstPageOnly) loadLegacyStockCatalog()
+                return@execute
+            }
+            catalogIndex = result
+            loadedShardCount = 0
+            loadStockShard(0, replace = true)
         }
+    }
+
+    private fun loadLegacyStockCatalog() {
+        var connection: HttpURLConnection? = null
+        val parsed = try {
+            connection = (URL("https://raw.githubusercontent.com/Civamel/UHD-Wallpaper/main/catalog/wallpapers.json").openConnection() as HttpURLConnection).apply {
+                connectTimeout = 10000
+                readTimeout = 15000
+                requestMethod = "GET"
+            }
+            if (connection.responseCode in 200..299) parseItems(connection.inputStream.bufferedReader().use { it.readText() }) else emptyList()
+        } catch (_: Exception) {
+            emptyList()
+        } finally {
+            connection?.disconnect()
+        }
+        if (parsed.isNotEmpty() && !isFinishing && !isDestroyed) runOnUiThread {
+            items.clear(); items.addAll(parsed); visibleStockLimit = maxOf(60, items.size); showGallery()
+        }
+    }
+
+    private fun loadStockShard(position: Int, replace: Boolean = false) {
+        val index = catalogIndex ?: return
+        if (isLoadingShard || position !in index.shards.indices) return
+        isLoadingShard = true
+        val shard = index.shards[position]
+        executor.execute {
+            var connection: HttpURLConnection? = null
+            val parsed = try {
+                connection = (URL("https://raw.githubusercontent.com/Civamel/UHD-Wallpaper/main/catalog/" + shard.path).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 12000
+                    readTimeout = 18000
+                    requestMethod = "GET"
+                }
+                if (connection.responseCode !in 200..299) throw IllegalStateException("Shard HTTP " + connection.responseCode)
+                CatalogManifest.parseShard(connection.inputStream.bufferedReader().use { it.readText() }, shard).let { parseItemsFromObjects(it) }
+            } catch (_: Exception) {
+                null
+            } finally {
+                connection?.disconnect()
+            }
+            if (!isFinishing && !isDestroyed) runOnUiThread {
+                isLoadingShard = false
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                if (parsed == null) {
+                    Toast.makeText(this, "Halaman Stock gagal dimuat. Coba lagi.", Toast.LENGTH_LONG).show()
+                    renderGrid()
+                    return@runOnUiThread
+                }
+                if (replace) items.clear()
+                val known = items.mapTo(HashSet()) { it.id }
+                items.addAll(parsed.filter { known.add(it.id) })
+                loadedShardCount = position + 1
+                visibleStockLimit = maxOf(visibleStockLimit, items.size)
+                showGallery()
+            }
+        }
+    }
+
+    private fun loadNextStockShard() {
+        val next = loadedShardCount
+        if (isLoadingShard) return
+        if (next < (catalogIndex?.shards?.size ?: 0)) loadStockShard(next)
     }
 
     private fun refreshCatalogManually() {
@@ -101,35 +174,25 @@ class StockActivity : Activity() {
             return
         }
         isRefreshingCatalog = true
-        Toast.makeText(this, "Memperbarui koleksi Stock…", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Memperbarui indeks Stock…", Toast.LENGTH_SHORT).show()
         executor.execute {
             var connection: HttpURLConnection? = null
-            val parsed = try {
-                connection = (URL("https://raw.githubusercontent.com/Civamel/UHD-Wallpaper/main/catalog/wallpapers.json").openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 10000
-                    readTimeout = 15000
-                    requestMethod = "GET"
+            val index = try {
+                connection = (URL("https://raw.githubusercontent.com/Civamel/UHD-Wallpaper/main/catalog/manifest.json").openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 12000; readTimeout = 18000; requestMethod = "GET"
                 }
-                if (connection.responseCode in 200..299) {
-                    val body = connection.inputStream.bufferedReader().use { it.readText() }
-                    parseItems(body)
-                } else emptyList()
-            } catch (_: Exception) {
-                emptyList()
-            } finally {
-                connection?.disconnect()
-            }
+                if (connection.responseCode !in 200..299) throw IllegalStateException("HTTP " + connection.responseCode)
+                CatalogManifest.parse(connection.inputStream.bufferedReader().use { it.readText() })
+            } catch (_: Exception) { null } finally { connection?.disconnect() }
             if (!isFinishing && !isDestroyed) runOnUiThread {
                 isRefreshingCatalog = false
-                if (isFinishing || isDestroyed) return@runOnUiThread
-                if (parsed.isNotEmpty()) {
-                    items.clear()
-                    items.addAll(parsed)
-                    if (selectedCategory != "All" && items.none { it.category == selectedCategory }) selectedCategory = "All"
-                    showGallery()
-                    Toast.makeText(this, "Koleksi berhasil diperbarui.", Toast.LENGTH_SHORT).show()
+                if (index == null) {
+                    Toast.makeText(this, "Indeks katalog belum dapat diperbarui.", Toast.LENGTH_LONG).show()
                 } else {
-                    Toast.makeText(this, "Belum dapat memperbarui katalog. Coba lagi nanti.", Toast.LENGTH_LONG).show()
+                    catalogIndex = index
+                    loadedShardCount = 0
+                    loadStockShard(0, replace = true)
+                    Toast.makeText(this, "Indeks diperbarui. Memuat halaman pertama…", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -139,6 +202,21 @@ class StockActivity : Activity() {
         val parsed = parseItems(body)
         items.clear()
         items.addAll(parsed)
+    }
+
+    private fun parseItemsFromObjects(array: List<org.json.JSONObject>): List<StockItem> {
+        val result = mutableListOf<StockItem>()
+        for (item in array) {
+            val title = item.optString("title").trim()
+            val id = item.optString("id").trim().ifBlank { stableStockId(item.optString("image").ifBlank { title }) }
+            val category = item.optString("category", "Stock").ifBlank { "Stock" }
+            val thumbnail = item.optString("thumbnail").trim()
+            val image = item.optString("image").trim()
+            val tagsArray = item.optJSONArray("tags")
+            val tags = (0 until (tagsArray?.length() ?: 0)).map { tagsArray!!.optString(it).trim() }.filter { it.isNotEmpty() }
+            if (title.isNotEmpty() && thumbnail.startsWith("https://") && image.startsWith("https://")) result.add(StockItem(id, title, category, thumbnail, image, tags))
+        }
+        return result
     }
 
     private fun parseItems(body: String): List<StockItem> {
@@ -362,6 +440,23 @@ class StockActivity : Activity() {
             grid.addView(cell, params)
         }
         host.addView(grid)
+        val hasMore = loadedShardCount < (catalogIndex?.shards?.size ?: 0)
+        if (matches.size > visibleStockLimit || hasMore || isLoadingShard) {
+            host.addView(Button(this).apply {
+                text = when {
+                    isLoadingShard -> "Memuat halaman katalog…"
+                    matches.size > visibleStockLimit -> "Muat lebih banyak"
+                    else -> "Muat halaman berikutnya"
+                }
+                isEnabled = !isLoadingShard
+                setOnClickListener {
+                    if (matches.size > visibleStockLimit) {
+                        visibleStockLimit += 60
+                        renderGrid()
+                    } else loadNextStockShard()
+                }
+            }, LinearLayout.LayoutParams(-1, dp(48)).apply { setMargins(dp(18), dp(14), dp(18), dp(18)) })
+        }
     }
 
     private fun loadThumbnail(url: String, done: (Bitmap?) -> Unit) {
