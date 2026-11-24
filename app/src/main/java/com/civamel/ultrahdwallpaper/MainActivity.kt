@@ -75,6 +75,9 @@ class MainActivity : Activity() {
     private val itemCategories = mutableListOf("Abstract","Art","Abstract","Animals","Ocean","Abstract","Nature","Animals","Space","Nature","Nature","Art","Technology","Art","Abstract","Space","Technology","Nature")
     private val itemTypes = mutableListOf<String>()
     private val itemTags = mutableListOf<List<String>>()
+    private var remoteCatalogIndex: CatalogManifest.Index? = null
+    private var loadedShardCount = 0
+    private var shardLoading = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -87,6 +90,7 @@ class MainActivity : Activity() {
         buildHome()
         loadBundledCatalog()
         loadCachedRemoteCatalog()
+        loadCachedShardedCatalog()
         refreshRemoteCatalog()
     }
 
@@ -372,16 +376,26 @@ class MainActivity : Activity() {
             grid.addView(cell,params)
         }
         content.addView(grid)
-        if (visibleIndexes.size > visibleItemLimit) {
-            val remaining = visibleIndexes.size - visibleItemLimit
+        if (visibleIndexes.size > visibleItemLimit || hasMoreCatalogShards()) {
+            val hasVisibleRemainder = visibleIndexes.size > visibleItemLimit
+            val remaining = (visibleIndexes.size - visibleItemLimit).coerceAtLeast(0)
             val moreButton = Button(this@MainActivity).apply {
-                text = "Muat lebih banyak ($remaining tersisa)"
+                text = when {
+                    shardLoading -> "Memuat halaman katalog…"
+                    hasVisibleRemainder -> "Muat lebih banyak ($remaining tersisa)"
+                    else -> "Muat halaman katalog berikutnya"
+                }
                 isAllCaps = false
+                isEnabled = !shardLoading
                 setTextColor(Color.WHITE)
                 background = rounded(blue, 28)
                 setOnClickListener {
-                    visibleItemLimit += 60
-                    buildHome()
+                    if (visibleIndexes.size > visibleItemLimit) {
+                        visibleItemLimit += 60
+                        buildHome()
+                    } else {
+                        loadNextCatalogShard()
+                    }
                 }
             }
             content.addView(moreButton, LinearLayout.LayoutParams(-1, dp(50)).apply {
@@ -1026,8 +1040,163 @@ class MainActivity : Activity() {
     private fun space(h:Int)=View(this@MainActivity).apply { layoutParams=LinearLayout.LayoutParams(1,dp(h)) }
     private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
 
-    // Fetch an updatable catalog without bundling thousands of image files in the APK.
+    private fun appendCatalogItems(items: List<org.json.JSONObject>) {
+        for (item in items) {
+            val title = item.optString("title").trim()
+            val thumbnail = item.optString("thumbnail").trim()
+            val image = item.optString("image").trim()
+            val id = stableWallpaperId(item)
+            if (title.isEmpty() || !thumbnail.startsWith("https://") || !image.startsWith("https://")) continue
+            if (itemIds.contains(id)) continue
+            names.add(title)
+            itemIds.add(id)
+            itemCategories.add(item.optString("category", "Abstract").ifBlank { "Abstract" })
+            itemTypes.add(item.optString("type", "wallpaper").lowercase())
+            val tagArray = item.optJSONArray("tags")
+            itemTags.add((0 until (tagArray?.length() ?: 0)).map { tagArray!!.optString(it).trim() }.filter { it.isNotEmpty() })
+            thumbnailUrls.add(thumbnail)
+            fullUrls.add(image)
+        }
+        migrateLegacyFavorites()
+        imageCache.evictAll()
+    }
+
+    private fun cachedShardFile(index: Int): File = File(filesDir, "catalog_page_${index + 1}.json")
+
+    private fun loadCachedShardedCatalog() {
+        try {
+            val manifestFile = File(filesDir, "catalog_manifest_cache.json")
+            if (!manifestFile.isFile || manifestFile.length() <= 0L) return
+            val index = CatalogManifest.parse(manifestFile.readText())
+            var loaded = 0
+            val cachedItems = mutableListOf<org.json.JSONObject>()
+            for ((position, shard) in index.shards.withIndex()) {
+                val pageFile = cachedShardFile(position)
+                if (!pageFile.isFile || pageFile.length() <= 0L) break
+                cachedItems.addAll(CatalogManifest.parseShard(pageFile.readText(), shard))
+                loaded++
+            }
+            if (cachedItems.isEmpty()) return
+            names.clear(); itemIds.clear(); itemCategories.clear(); itemTypes.clear()
+            itemTags.clear(); thumbnailUrls.clear(); fullUrls.clear()
+            appendCatalogItems(cachedItems)
+            remoteCatalogIndex = index
+            loadedShardCount = loaded
+            visibleItemLimit = maxOf(60, names.size)
+            buildHome()
+        } catch (_: Exception) {
+            // Keep the previously loaded bundled or legacy cache when sharded cache is invalid.
+        }
+    }
+
+    private fun hasMoreCatalogShards(): Boolean =
+        (remoteCatalogIndex?.shards?.size ?: 0) > loadedShardCount
+
+    private fun loadNextCatalogShard() {
+        val index = remoteCatalogIndex
+        if (index == null || shardLoading || loadedShardCount >= index.shards.size) return
+        val shardPosition = loadedShardCount
+        val shard = index.shards[shardPosition]
+        shardLoading = true
+        buildHome()
+        Thread {
+            var connection: HttpURLConnection? = null
+            val result = try {
+                val url = URL("https://raw.githubusercontent.com/Civamel/UHD-Wallpaper/main/catalog/" + shard.path)
+                connection = (url.openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 12000
+                    readTimeout = 18000
+                    requestMethod = "GET"
+                    setRequestProperty("Accept", "application/json")
+                }
+                if (connection.responseCode !in 200..299) throw IllegalStateException("HTTP " + connection.responseCode)
+                val body = connection.inputStream.bufferedReader().use { it.readText() }
+                CatalogManifest.parseShard(body, shard) to body
+            } catch (_: Exception) {
+                null
+            } finally {
+                connection?.disconnect()
+            }
+            runOnUiThread {
+                shardLoading = false
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                if (result == null) {
+                    Toast.makeText(this, "Halaman katalog gagal dimuat. Periksa koneksi lalu coba lagi.", Toast.LENGTH_LONG).show()
+                    buildHome()
+                    return@runOnUiThread
+                }
+                try {
+                    cachedShardFile(shardPosition).writeText(result.second)
+                    appendCatalogItems(result.first)
+                    loadedShardCount = shardPosition + 1
+                    visibleItemLimit = maxOf(visibleItemLimit, names.size)
+                    buildHome()
+                } catch (_: Exception) {
+                    Toast.makeText(this, "Data halaman katalog tidak dapat disimpan.", Toast.LENGTH_LONG).show()
+                    buildHome()
+                }
+            }
+        }.start()
+    }
+
+    // Load only the first shard at startup; remaining pages are fetched on demand.
     private fun refreshRemoteCatalog() {
+        Thread {
+            var connection: HttpURLConnection? = null
+            val firstPage = try {
+                connection = (URL("https://raw.githubusercontent.com/Civamel/UHD-Wallpaper/main/catalog/manifest.json").openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 12000
+                    readTimeout = 18000
+                    requestMethod = "GET"
+                    setRequestProperty("Accept", "application/json")
+                    setRequestProperty("Cache-Control", "no-cache")
+                }
+                if (connection.responseCode !in 200..299) throw IllegalStateException("Manifest HTTP " + connection.responseCode)
+                val manifestBody = connection.inputStream.bufferedReader().use { it.readText() }
+                val index = CatalogManifest.parse(manifestBody)
+                connection.disconnect()
+                connection = null
+                val firstShard = index.shards.first()
+                connection = (URL("https://raw.githubusercontent.com/Civamel/UHD-Wallpaper/main/catalog/" + firstShard.path).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 12000
+                    readTimeout = 18000
+                    requestMethod = "GET"
+                    setRequestProperty("Accept", "application/json")
+                }
+                if (connection.responseCode !in 200..299) throw IllegalStateException("Shard HTTP " + connection.responseCode)
+                val pageBody = connection.inputStream.bufferedReader().use { it.readText() }
+                Triple(index, CatalogManifest.parseShard(pageBody, firstShard), Pair(manifestBody, pageBody))
+            } catch (_: Exception) {
+                null
+            } finally {
+                connection?.disconnect()
+            }
+            if (firstPage == null) {
+                refreshLegacyRemoteCatalog()
+                return@Thread
+            }
+            try {
+                File(filesDir, "catalog_manifest_cache.json").writeText(firstPage.third.first)
+                cachedShardFile(0).writeText(firstPage.third.second)
+            } catch (_: Exception) {
+                // The online catalog remains usable if caching is unavailable.
+            }
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                names.clear(); itemIds.clear(); itemCategories.clear(); itemTypes.clear()
+                itemTags.clear(); thumbnailUrls.clear(); fullUrls.clear()
+                remoteCatalogIndex = firstPage.first
+                loadedShardCount = 0
+                appendCatalogItems(firstPage.second)
+                loadedShardCount = 1
+                visibleItemLimit = maxOf(60, names.size)
+                buildHome()
+            }
+        }.start()
+    }
+
+    // Backward-compatible fallback for repositories that still publish one catalog JSON.
+    private fun refreshLegacyRemoteCatalog() {
         Thread {
             var connection: HttpURLConnection? = null
             var validatedCatalogBody: String? = null
