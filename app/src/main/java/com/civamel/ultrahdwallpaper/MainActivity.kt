@@ -226,8 +226,7 @@ class MainActivity : Activity() {
         val tabRow=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL }
         tabs.forEach { tab ->
             val item=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER; setOnClickListener { selectedTab=tab; showOnlyFavorites=false; visibleItemLimit=60; buildHome() } }
-            item.addView(text(tab,16,if(tab==selectedTab) blue else pageText,true).apply { gravity=Gravity.CENTER; setPadding(dp(15),dp(12),dp(15),dp(12)) })
-            item.addView(View(this@MainActivity).apply { setBackgroundColor(if(tab==selectedTab) blue else Color.TRANSPARENT) },LinearLayout.LayoutParams(-1,dp(3)))
+            item.addView(text(tab,16,if(tab==selectedTab) blue else pageText,true).apply { gravity=Gravity.CENTER; setPadding(dp(15),dp(12),dp(15),dp(12)) })            item.addView(View(this@MainActivity).apply { setBackgroundColor(if(tab==selectedTab) blue else Color.TRANSPARENT) },LinearLayout.LayoutParams(-1,dp(3)))
             tabRow.addView(item)
         }
         tabScroll.addView(tabRow); root.addView(tabScroll)
@@ -399,7 +398,7 @@ class MainActivity : Activity() {
         root.addView(text("‹   Pengaturan",22,settingsText,true).apply { setOnClickListener { buildHome() } })
         root.addView(space(28)); root.addView(text("Pengaturan",24,settingsText,true)); root.addView(space(12))
         listOf("♟   Notifikasi","♡   Favorit","文   Bahasa Aplikasi","▧   Pengubah Wallpaper Otomatis","⇩   Unduh","▤   Wallpaper Penerangan Tepi","Bagikan Aplikasi","☆   Nilai kami","♧   Umpan Balik").forEach { item ->
-            val row=text(item+"     ›",17,settingsText,false).apply { setPadding(dp(16),dp(18),dp(10),dp(18)); background=rounded(if(darkMode) 0xff24262d.toInt() else Color.WHITE,16); setOnClickListener { if(item.contains("Favorit")) showFavorites() else Toast.makeText(this@MainActivity,item,Toast.LENGTH_SHORT).show() } }
+            val row=text(item+"     ›",17,settingsText,false).apply { setPadding(dp(16),dp(18),dp(10),dp(18)); background=rounded(if(darkMode) 0xff24262d.toInt() else Color.WHITE,16); setOnClickListener { when { item.contains("Favorit") -> showFavorites(); item.contains("Unduh") -> showDownloads(); else -> Toast.makeText(this@MainActivity,item,Toast.LENGTH_SHORT).show() } } }
             root.addView(row,LinearLayout.LayoutParams(-1,-2))
         }
         setContentView(ScrollView(this@MainActivity).apply { addView(root) })
@@ -450,10 +449,116 @@ class MainActivity : Activity() {
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 95, output)
                 } ?: false
             } catch (_: Exception) { false }
+            var archived = false
+            if (saved) {
+                try {
+                    val directory = File(filesDir, "downloads").apply { if (!exists()) mkdirs() }
+                    val title = uri.lastPathSegment?.substringAfterLast('/')?.substringBeforeLast('.')?.ifBlank { "Wallpaper" } ?: "Wallpaper"
+                    val safeName = title.replace(Regex("[^A-Za-z0-9_-]"), "_").take(48)
+                    val archiveFile = File(directory, safeName + "_" + System.currentTimeMillis() + ".jpg")
+                    FileOutputStream(archiveFile).use { output ->
+                        archived = bitmap.compress(Bitmap.CompressFormat.JPEG, 95, output)
+                    }
+                    if (archived) {
+                        val records = preferences.getStringSet("download_records", emptySet())?.toMutableSet() ?: mutableSetOf()
+                        records.add(title + "||" + archiveFile.name)
+                        preferences.edit().putStringSet("download_records", records).apply()
+                    }
+                } catch (_: Exception) { archived = false }
+            }
             runOnUiThread {
-                Toast.makeText(this, if (saved) "Wallpaper berhasil disimpan" else "Gagal menyimpan wallpaper", Toast.LENGTH_LONG).show()
+                val message = when {
+                    saved && archived -> "Wallpaper disimpan dan tersedia di menu Unduh"
+                    saved -> "Wallpaper berhasil disimpan ke lokasi pilihan"
+                    else -> "Gagal menyimpan wallpaper"
+                }
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show()
             }
         }.start()
+    }
+
+    private fun showDownloads() {
+        val bg = if (darkMode) 0xff121318.toInt() else Color.WHITE
+        val fg = if (darkMode) 0xfff2f2f5.toInt() else ink
+        val root = LinearLayout(this@MainActivity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(18), dp(18), dp(12))
+            setBackgroundColor(bg)
+        }
+        val header = LinearLayout(this@MainActivity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        header.addView(text("‹", 30, fg, false).apply {
+            gravity = Gravity.CENTER
+            setOnClickListener { showSettings() }
+        }, LinearLayout.LayoutParams(dp(48), dp(52)))
+        header.addView(text("Unduhan", 23, fg, true))
+        root.addView(header)
+        root.addView(text("Wallpaper yang tersimpan di aplikasi ini", 14, if (darkMode) 0xffaaaaaa.toInt() else Color.GRAY, false).apply {
+            setPadding(dp(4), dp(4), 0, dp(18))
+        })
+        val list = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
+        val records = preferences.getStringSet("download_records", emptySet())?.toList().orEmpty()
+            .mapNotNull { record ->
+                val split = record.split("||", limit = 2)
+                if (split.size != 2) null else Pair(split[0], split[1])
+            }
+            .sortedByDescending { File(File(filesDir, "downloads"), it.second).lastModified() }
+        val existing = records.filter { File(File(filesDir, "downloads"), it.second).isFile }
+        if (existing.isEmpty()) {
+            list.addView(text("Belum ada wallpaper yang diunduh.", 15, if (darkMode) 0xffaaaaaa.toInt() else Color.GRAY, false).apply {
+                gravity = Gravity.CENTER
+                setPadding(dp(18), dp(55), dp(18), dp(55))
+            })
+        }
+        existing.forEach { entry ->
+            val imageFile = File(File(filesDir, "downloads"), entry.second)
+            val row = LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(8), dp(8), dp(8), dp(8))
+                background = rounded(if (darkMode) 0xff24262d.toInt() else 0xfff4f4f7.toInt(), 14)
+            }
+            val thumb = ImageView(this@MainActivity).apply {
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                setImageBitmap(BitmapFactory.decodeFile(imageFile.absolutePath))
+                setOnClickListener {
+                    val preview = ImageView(this@MainActivity).apply {
+                        setImageBitmap(BitmapFactory.decodeFile(imageFile.absolutePath))
+                        adjustViewBounds = true
+                        scaleType = ImageView.ScaleType.FIT_CENTER
+                    }
+                    AlertDialog.Builder(this@MainActivity).setTitle(entry.first).setView(preview)
+                        .setPositiveButton("Tutup", null).show()
+                }
+            }
+            row.addView(thumb, LinearLayout.LayoutParams(dp(76), dp(76)))
+            row.addView(text(entry.first, 15, fg, true).apply {
+                setPadding(dp(12), 0, dp(6), 0)
+                setOnClickListener { thumb.performClick() }
+            }, LinearLayout.LayoutParams(0, -2, 1f))
+            row.addView(text("×", 25, if (darkMode) 0xffff8a8a.toInt() else Color.RED, false).apply {
+                gravity = Gravity.CENTER
+                setPadding(dp(12), dp(8), dp(12), dp(8))
+                setOnClickListener {
+                    AlertDialog.Builder(this@MainActivity).setTitle("Hapus unduhan?")
+                        .setMessage("File ini akan dihapus dari penyimpanan aplikasi.")
+                        .setNegativeButton("Batal", null)
+                        .setPositiveButton("Hapus") { _, _ ->
+                            imageFile.delete()
+                            val updated = preferences.getStringSet("download_records", emptySet())?.toMutableSet() ?: mutableSetOf()
+                            updated.remove(entry.first + "||" + entry.second)
+                            preferences.edit().putStringSet("download_records", updated).apply()
+                            showDownloads()
+                        }.show()
+                }
+            })
+            list.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(9) })
+        }
+        val scroll = ScrollView(this@MainActivity).apply { addView(list) }
+        root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        setContentView(root)
     }
 
     private fun showFavorites(){ showOnlyFavorites=true; selectedCategory="All"; selectedTab="Wallpaper"; visibleItemLimit=60; buildHome() }
@@ -476,8 +581,7 @@ class MainActivity : Activity() {
         root.addView(text("Explore wallpapers by category", 14, if(darkMode) 0xffaaaaaa.toInt() else Color.GRAY, false).apply {
             setPadding(dp(4), dp(4), 0, dp(18))
         })
-        val scroll = ScrollView(this@MainActivity)
-        val list = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
+        val scroll = ScrollView(this@MainActivity)        val list = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
         val symbols = listOf("▦", "✦", "🐾", "▶", "🎨", "🚘", "🌿", "🌊", "☄", "⚙")
         categoryNames.forEachIndexed { index, category ->
             val row = LinearLayout(this@MainActivity).apply {
