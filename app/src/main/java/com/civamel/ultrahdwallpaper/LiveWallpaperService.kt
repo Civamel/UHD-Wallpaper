@@ -48,6 +48,28 @@ class LiveWallpaperService : WallpaperService() {
             return File(File(filesDir, "live_wallpaper_cache").apply { mkdirs() }, "$key.img")
         }
 
+        private fun trimLiveWallpaperCache(keep: File) {
+            try {
+                val directory = keep.parentFile ?: return
+                val files = directory.listFiles()?.filter { it.isFile } ?: return
+                // Remove interrupted downloads before accounting for the image cache.
+                files.filter { it.name.endsWith(".tmp") }.forEach { it.delete() }
+                val cachedImages = directory.listFiles()
+                    ?.filter { it.isFile && it.extension == "img" } ?: return
+                var totalBytes = cachedImages.sumOf { it.length() }
+                val maxBytes = 120L * 1024L * 1024L
+                if (totalBytes <= maxBytes) return
+                for (file in cachedImages.filter { it.absolutePath != keep.absolutePath }
+                    .sortedBy { it.lastModified() }) {
+                    if (totalBytes <= maxBytes) break
+                    val size = file.length()
+                    if (file.delete()) totalBytes -= size
+                }
+            } catch (_: Exception) {
+                // Cache trimming is best-effort and must not interrupt wallpaper display.
+            }
+        }
+
         private fun decodeForDisplay(file: File): Bitmap? {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeFile(file.absolutePath, bounds)
@@ -135,6 +157,7 @@ class LiveWallpaperService : WallpaperService() {
                     bitmap?.recycle()
                     bitmap = null
                 }
+                trimLiveWallpaperCache(cacheFile)
                 val loaded = bitmap
                 if (loaded != null) {
                     if (destroyed) {
