@@ -746,12 +746,51 @@ class MainActivity : Activity() {
         root.addView(text("‹   Pengaturan",22,settingsText,true).apply { setOnClickListener { buildHome() } })
         root.addView(space(28)); root.addView(text("Pengaturan",24,settingsText,true)); root.addView(space(12))
         listOf("♟   Notifikasi","♡   Favorit","文   Bahasa Aplikasi","▧   Pengubah Wallpaper Otomatis","⇩   Unduh","▤   Wallpaper Penerangan Tepi","Bagikan Aplikasi","☆   Nilai kami","♧   Umpan Balik","▣   Kelola Cache").forEach { item ->
-            val row=text(item+"     ›",17,settingsText,false).apply { setPadding(dp(16),dp(18),dp(10),dp(18)); background=rounded(if(darkMode) 0xff24262d.toInt() else Color.WHITE,16); setOnClickListener { if(item.contains("Favorit")) showFavorites() else if(item.contains("Unduh")) showDownloads() else if(item.contains("Kelola Cache")) showCacheManager() else Toast.makeText(this@MainActivity,item,Toast.LENGTH_SHORT).show() } }
+            val row=text(item+"     ›",17,settingsText,false).apply {
+                setPadding(dp(16),dp(18),dp(10),dp(18))
+                background=rounded(if(darkMode) 0xff24262d.toInt() else Color.WHITE,16)
+                setOnClickListener {
+                    when {
+                        item.contains("Favorit") -> showFavorites()
+                        item.contains("Unduh") -> showDownloads()
+                        item.contains("Kelola Cache") -> showCacheManager()
+                        item.contains("Bagikan Aplikasi") -> shareApplication()
+                        item.contains("Umpan Balik") -> sendFeedback()
+                        else -> Toast.makeText(this@MainActivity,item,Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
             root.addView(row,LinearLayout.LayoutParams(-1,-2))
         }
         setContentView(ScrollView(this@MainActivity).apply { addView(root) })
     }
 
+    private fun shareApplication() {
+        val appLink = "https://play.google.com/store/apps/details?id=" + packageName
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "Ultra HD Wallpaper")
+            putExtra(Intent.EXTRA_TEXT, "Coba aplikasi Ultra HD Wallpaper: " + appLink)
+        }
+        try {
+            startActivity(Intent.createChooser(sendIntent, "Bagikan Ultra HD Wallpaper"))
+        } catch (e: Exception) {
+            Toast.makeText(this, "Fitur berbagi tidak tersedia", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun sendFeedback() {
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "message/rfc822"
+            putExtra(Intent.EXTRA_SUBJECT, "Masukan untuk Ultra HD Wallpaper")
+            putExtra(Intent.EXTRA_TEXT, "Halo, saya ingin memberikan masukan tentang aplikasi Ultra HD Wallpaper:")
+        }
+        try {
+            startActivity(Intent.createChooser(sendIntent, "Kirim Umpan Balik"))
+        } catch (e: Exception) {
+            Toast.makeText(this, "Tidak ada aplikasi email yang tersedia", Toast.LENGTH_LONG).show()
+        }
+    }
 
     private var pendingDownloadFile: File? = null
     private var pendingDownloadTitle: String = ""
