@@ -1354,6 +1354,25 @@ class MainActivity : Activity() {
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         setContentView(root)
     }
+    private fun savedQuotes(): List<Pair<String, String>> {
+        return try {
+            val array = org.json.JSONArray(preferences.getString("saved_quotes", "[]") ?: "[]")
+            (0 until array.length()).mapNotNull { index ->
+                val item = array.optJSONObject(index) ?: return@mapNotNull null
+                val quote = item.optString("quote").trim()
+                if (quote.isBlank()) null else quote to item.optString("category")
+            }
+        } catch (_: Exception) { emptyList() }
+    }
+
+    private fun persistSavedQuotes(quotes: List<Pair<String, String>>) {
+        val array = org.json.JSONArray()
+        quotes.distinctBy { it.first }.forEach { (quote, category) ->
+            array.put(org.json.JSONObject().put("quote", quote).put("category", category))
+        }
+        preferences.edit().putString("saved_quotes", array.toString()).apply()
+    }
+
     private fun showQuotes() {
         val quotes = listOf(
             "The best view comes after the hardest climb." to "Motivation",
@@ -1366,32 +1385,35 @@ class MainActivity : Activity() {
             "A calm mind brings a clearer perspective." to "Mindfulness"
         )
         var currentIndex = 0
-        val root = LinearLayout(this@MainActivity).apply {
+        val foreground = if (darkMode) 0xfff2f2f5.toInt() else ink
+        val muted = if (darkMode) 0xffaaaaaa.toInt() else Color.GRAY
+        val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(if(darkMode) 0xff121318.toInt() else Color.rgb(248, 248, 251))
+            setBackgroundColor(if (darkMode) 0xff121318.toInt() else Color.rgb(248, 248, 251))
             setPadding(dp(20), dp(18), dp(20), dp(18))
         }
-        val header = LinearLayout(this@MainActivity).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        header.addView(text("‹", 30, if(darkMode) 0xfff2f2f5.toInt() else ink, false).apply {
+        val header = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        header.addView(text("‹", 30, foreground, false).apply {
             gravity = Gravity.CENTER
             setOnClickListener { buildHome() }
         }, LinearLayout.LayoutParams(dp(48), dp(52)))
-        header.addView(text("Quotes", 23, if(darkMode) 0xfff2f2f5.toInt() else ink, true))
+        header.addView(text("Quotes", 23, foreground, true), LinearLayout.LayoutParams(0, -2, 1f))
+        header.addView(text("♡ Tersimpan", 13, blue, true).apply {
+            gravity = Gravity.CENTER
+            setOnClickListener { showSavedQuotes() }
+        })
         root.addView(header)
-        root.addView(text("Words to inspire your day", 14, if(darkMode) 0xffaaaaaa.toInt() else Color.GRAY, false).apply {
+        root.addView(text("Words to inspire your day", 14, muted, false).apply {
             setPadding(dp(4), dp(2), 0, dp(20))
         })
-        val card = LinearLayout(this@MainActivity).apply {
+        val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(dp(24), dp(34), dp(24), dp(34))
-            background = rounded(if(darkMode) 0xff24262d.toInt() else Color.WHITE, 22)
+            background = rounded(if (darkMode) 0xff24262d.toInt() else Color.WHITE, 22)
             elevation = dp(3).toFloat()
         }
-        val quoteText = text("", 23, if(darkMode) 0xfff2f2f5.toInt() else ink, true).apply {
+        val quoteText = text("", 23, foreground, true).apply {
             gravity = Gravity.CENTER
             setLineSpacing(dp(5).toFloat(), 1f)
         }
@@ -1403,37 +1425,108 @@ class MainActivity : Activity() {
         card.addView(quoteText)
         card.addView(categoryText)
         root.addView(card, LinearLayout.LayoutParams(-1, 0, 1f).apply {
-            setMargins(0, dp(12), 0, dp(22))
+            setMargins(0, dp(12), 0, dp(18))
         })
-        fun updateQuote() {
-            quoteText.text = quotes[currentIndex].first
-            categoryText.text = quotes[currentIndex].second.uppercase()
+        val saveButton = Button(this).apply {
+            isAllCaps = false
+            setOnClickListener {
+                val current = quotes[currentIndex]
+                val saved = savedQuotes().toMutableList()
+                if (saved.any { it.first == current.first }) {
+                    persistSavedQuotes(saved.filterNot { it.first == current.first })
+                    Toast.makeText(this@MainActivity, "Kutipan dihapus dari tersimpan", Toast.LENGTH_SHORT).show()
+                } else {
+                    saved.add(0, current)
+                    persistSavedQuotes(saved)
+                    Toast.makeText(this@MainActivity, "Kutipan berhasil disimpan", Toast.LENGTH_SHORT).show()
+                }
+                updateQuote()
+            }
         }
-        val nextButton = Button(this@MainActivity).apply {
+        fun updateQuote() {
+            val current = quotes[currentIndex]
+            quoteText.text = current.first
+            categoryText.text = current.second.uppercase()
+            saveButton.text = if (savedQuotes().any { it.first == current.first }) "♥ Hapus dari tersimpan" else "♡ Simpan kutipan"
+        }
+        root.addView(saveButton, LinearLayout.LayoutParams(-1, dp(48)))
+        root.addView(Button(this).apply {
             text = "Kutipan berikutnya"
             isAllCaps = false
             setTextColor(Color.WHITE)
             background = rounded(blue, 28)
-            setOnClickListener {
-                currentIndex = (currentIndex + 1) % quotes.size
-                updateQuote()
-            }
-        }
-        root.addView(nextButton, LinearLayout.LayoutParams(-1, dp(52)))
-        val shareButton = Button(this@MainActivity).apply {
+            setOnClickListener { currentIndex = (currentIndex + 1) % quotes.size; updateQuote() }
+        }, LinearLayout.LayoutParams(-1, dp(52)).apply { topMargin = dp(8) })
+        root.addView(Button(this).apply {
             text = "Bagikan kutipan"
             isAllCaps = false
             setOnClickListener {
-                val quote = quotes[currentIndex].first
-                val intent = Intent(Intent.ACTION_SEND).setType("text/plain")
-                    .putExtra(Intent.EXTRA_TEXT, quote + "\\n\\n— Ultra HD Wallpaper")
-                startActivity(Intent.createChooser(intent, "Bagikan kutipan"))
+                val send = Intent(Intent.ACTION_SEND).setType("text/plain")
+                    .putExtra(Intent.EXTRA_TEXT, quotes[currentIndex].first + "\n\n— Ultra HD Wallpaper")
+                startActivity(Intent.createChooser(send, "Bagikan kutipan"))
             }
-        }
-        root.addView(shareButton, LinearLayout.LayoutParams(-1, dp(50)).apply {
-            topMargin = dp(8)
-        })
+        }, LinearLayout.LayoutParams(-1, dp(48)).apply { topMargin = dp(6) })
         updateQuote()
+        setContentView(root)
+    }
+
+    private fun showSavedQuotes() {
+        val saved = savedQuotes()
+        val foreground = if (darkMode) 0xfff2f2f5.toInt() else ink
+        val muted = if (darkMode) 0xffaaaaaa.toInt() else Color.GRAY
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(18), dp(18), dp(12))
+            setBackgroundColor(if (darkMode) 0xff121318.toInt() else Color.WHITE)
+        }
+        val header = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        header.addView(text("‹", 30, foreground, false).apply {
+            gravity = Gravity.CENTER
+            setOnClickListener { showQuotes() }
+        }, LinearLayout.LayoutParams(dp(48), dp(52)))
+        header.addView(text("Kutipan tersimpan", 21, foreground, true))
+        root.addView(header)
+        root.addView(text("${saved.size} kutipan disimpan di perangkat ini", 13, muted, false).apply {
+            setPadding(dp(4), dp(4), 0, dp(14))
+        })
+        if (saved.isEmpty()) {
+            root.addView(text("Belum ada kutipan tersimpan.", 15, muted, false).apply {
+                gravity = Gravity.CENTER
+                setPadding(0, dp(48), 0, dp(48))
+            })
+        } else {
+            val scroll = ScrollView(this)
+            val list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            saved.forEach { (quote, category) ->
+                val card = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(dp(16), dp(14), dp(16), dp(12))
+                    background = rounded(if (darkMode) 0xff24262d.toInt() else 0xfff4f4f7.toInt(), 14)
+                }
+                card.addView(text("“$quote”", 16, foreground, true))
+                card.addView(text(category.uppercase(), 11, purple, true).apply { setPadding(0, dp(8), 0, dp(8)) })
+                val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END }
+                actions.addView(text("Bagikan", 13, blue, true).apply {
+                    setPadding(dp(12), dp(8), dp(12), dp(8))
+                    setOnClickListener {
+                        val send = Intent(Intent.ACTION_SEND).setType("text/plain")
+                            .putExtra(Intent.EXTRA_TEXT, quote + "\n\n— Ultra HD Wallpaper")
+                        startActivity(Intent.createChooser(send, "Bagikan kutipan"))
+                    }
+                })
+                actions.addView(text("Hapus", 13, Color.RED, true).apply {
+                    setPadding(dp(12), dp(8), dp(4), dp(8))
+                    setOnClickListener {
+                        persistSavedQuotes(savedQuotes().filterNot { it.first == quote })
+                        showSavedQuotes()
+                    }
+                })
+                card.addView(actions)
+                list.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+            }
+            scroll.addView(list)
+            root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        }
         setContentView(root)
     }
     private fun search(){ val input=EditText(this@MainActivity).apply { hint="Cari wallpaper"; setText(searchQuery) }; AlertDialog.Builder(this@MainActivity).setTitle("Search").setView(input).setPositiveButton("Cari"){_,_-> searchQuery=input.text.toString().trim(); showOnlyFavorites=false; visibleItemLimit=60; buildHome() }.setNeutralButton("Hapus"){_,_-> searchQuery=""; visibleItemLimit=60; buildHome() }.setNegativeButton("Batal",null).show() }
