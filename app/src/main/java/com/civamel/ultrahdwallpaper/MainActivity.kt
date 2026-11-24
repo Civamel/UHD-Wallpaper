@@ -570,9 +570,9 @@ class MainActivity : Activity() {
             val promo=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(dp(14),0,dp(12),0); background=rounded(0xffe0115f.toInt(),28) }
             promo.addView(text("♛   Get All Wallpaper Pro!",17,Color.WHITE,true),LinearLayout.LayoutParams(0,dp(36),1f))
             promo.addView(text("×",25,Color.WHITE,false).apply { gravity=Gravity.CENTER; setOnClickListener { promoVisible=false; buildHome() } },LinearLayout.LayoutParams(dp(30),dp(34)))
-            val pp=LinearLayout.LayoutParams(-1,dp(38)); pp.setMargins(dp(12),dp(8),dp(12),dp(12)); content.addView(promo,pp)
+            val pp=LinearLayout.LayoutParams(-1,dp(38)); pp.setMargins(dp(12),dp(8),dp(12),dp(3)); content.addView(promo,pp)
         }
-        val sort=TextView(this@MainActivity).apply { text="Urutkan berdasarkan: "+sortMode.uppercase()+"   ▾"; textSize=14f; setTextColor(if(darkMode) 0xff9bbcff.toInt() else blue); setPadding(dp(18),dp(12),dp(12),dp(18)); setOnClickListener {
+        val sort=TextView(this@MainActivity).apply { text="Filter : "+sortMode+"   ▾"; textSize=13f; setTextColor(if(darkMode) 0xff9bbcff.toInt() else blue); setPadding(dp(18),dp(2),dp(12),dp(6)); setOnClickListener {
             val options = arrayOf("Paling populer", "Terbaru", "A-Z", "Acak")
             AlertDialog.Builder(this@MainActivity).setTitle("Urutkan berdasarkan").setItems(options) { _, w ->
                 sortMode = options[w]
