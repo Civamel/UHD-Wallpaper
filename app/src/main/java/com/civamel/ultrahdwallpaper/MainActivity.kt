@@ -70,6 +70,7 @@ class MainActivity : Activity() {
         darkMode = preferences.getBoolean("dark_mode", false)
         buildHome()
         loadBundledCatalog()
+        loadCachedRemoteCatalog()
         refreshRemoteCatalog()
     }
 
@@ -123,6 +124,42 @@ class MainActivity : Activity() {
             }
         } catch (_: Exception) {
             // Cache cleanup is best-effort; it must never interrupt wallpaper loading.
+        }
+    }
+
+    private fun loadCachedRemoteCatalog() {
+        try {
+            val cacheFile = File(filesDir, "catalog_cache.json")
+            if (!cacheFile.isFile || cacheFile.length() <= 0L) return
+            val items = JSONObject(cacheFile.readText()).getJSONArray("wallpapers")
+            val titles = mutableListOf<String>()
+            val categories = mutableListOf<String>()
+            val types = mutableListOf<String>()
+            val thumbs = mutableListOf<String>()
+            val images = mutableListOf<String>()
+            for (i in 0 until items.length()) {
+                val item = items.optJSONObject(i) ?: continue
+                val title = item.optString("title").trim()
+                val thumbnail = item.optString("thumbnail").trim()
+                val image = item.optString("image").trim()
+                if (title.isEmpty() || thumbnail.isEmpty() || image.isEmpty()) continue
+                if (!thumbnail.startsWith("https://") || !image.startsWith("https://")) continue
+                titles.add(title)
+                categories.add(item.optString("category", "Abstract").ifBlank { "Abstract" })
+                types.add(item.optString("type", "wallpaper").lowercase())
+                thumbs.add(thumbnail)
+                images.add(image)
+            }
+            if (titles.isEmpty()) return
+            names.clear(); names.addAll(titles)
+            itemCategories.clear(); itemCategories.addAll(categories)
+            itemTypes.clear(); itemTypes.addAll(types)
+            thumbnailUrls.clear(); thumbnailUrls.addAll(thumbs)
+            fullUrls.clear(); fullUrls.addAll(images)
+            imageCache.evictAll()
+            buildHome()
+        } catch (_: Exception) {
+            // Keep the bundled catalog if the saved online catalog is invalid.
         }
     }
 
@@ -615,6 +652,7 @@ class MainActivity : Activity() {
     private fun refreshRemoteCatalog() {
         Thread {
             var connection: HttpURLConnection? = null
+            var validatedCatalogBody: String? = null
             val parsed = try {
                 val url = URL("https://raw.githubusercontent.com/Civamel/UHD-Wallpaper/main/catalog/wallpapers.json")
                 connection = (url.openConnection() as HttpURLConnection).apply {
@@ -646,6 +684,7 @@ class MainActivity : Activity() {
                     images.add(image)
                 }
                 if (titles.isEmpty()) throw IllegalStateException("Katalog online kosong atau tidak valid")
+                validatedCatalogBody = body
                 arrayOf(titles, categories, types, thumbs, images)
             } catch (_: Exception) {
                 null
@@ -653,6 +692,12 @@ class MainActivity : Activity() {
                 connection?.disconnect()
             }
             if (parsed != null) {
+                try {
+                    val cacheFile = File(filesDir, "catalog_cache.json")
+                    FileOutputStream(cacheFile).use { output -> output.write(validatedCatalogBody.orEmpty().toByteArray(Charsets.UTF_8)) }
+                } catch (_: Exception) {
+                    // The current session can still use the fetched catalog if disk caching fails.
+                }
                 runOnUiThread {
                     names.clear()
                     names.addAll(parsed[0])
