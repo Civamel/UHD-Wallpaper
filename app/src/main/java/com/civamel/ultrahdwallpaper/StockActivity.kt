@@ -15,6 +15,7 @@ import android.view.View
 import android.widget.*
 import androidx.core.content.FileProvider
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
@@ -688,10 +689,10 @@ class StockActivity : Activity() {
     }
 
     private val fullImageCallbackLock = Any()
-    private val pendingFullImageCallbacks = HashMap<String, MutableList<(Bitmap?) -> Unit>>()
+    private val pendingFullImageCallbacks = HashMap<String, MutableList<(File?) -> Unit>>()
 
-    private fun loadFullImage(item: StockItem, done: (Bitmap?) -> Unit) {
-        // Only one network transfer writes a given UHD cache file at a time.
+    private fun loadFullImageFile(item: StockItem, done: (File?) -> Unit) {
+        // Coalesce requests so one UHD file is downloaded and cached only once.
         synchronized(fullImageCallbackLock) {
             val waiting = pendingFullImageCallbacks[item.image]
             if (waiting != null) {
@@ -700,103 +701,108 @@ class StockActivity : Activity() {
             }
             pendingFullImageCallbacks[item.image] = mutableListOf(done)
         }
-        executor.execute {
-            val cacheFile = stockFullImageCacheFile(item.image)
-            var ready = false
-            try {
-                if (cacheFile.isFile && cacheFile.length() > 0L) {
-                    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                    BitmapFactory.decodeFile(cacheFile.absolutePath, bounds)
-                    ready = bounds.outWidth > 0 && bounds.outHeight > 0
-                    if (ready) cacheFile.setLastModified(System.currentTimeMillis())
-                    else cacheFile.delete()
-                }
-                if (!ready) {
-                    var connection: HttpURLConnection? = null
-                    try {
-                        connection = (URL(item.image).openConnection() as HttpURLConnection).apply {
-                            connectTimeout = 12000
-                            readTimeout = 20000
-                            doInput = true
-                            instanceFollowRedirects = true
-                            requestMethod = "GET"
-                        }
-                        if (connection.responseCode !in 200..299) throw IllegalStateException("HTTP " + connection.responseCode)
-                        val declaredSize = connection.contentLengthLong
-                        if (declaredSize > 40L * 1024L * 1024L) throw IllegalStateException("Image exceeds cache limit")
-                        val temp = File(cacheFile.parentFile, cacheFile.name + ".tmp")
+        try {
+            executor.execute {
+                val cacheFile = stockFullImageCacheFile(item.image)
+                var ready = false
+                try {
+                    if (cacheFile.isFile && cacheFile.length() > 0L) {
+                        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                        BitmapFactory.decodeFile(cacheFile.absolutePath, bounds)
+                        ready = bounds.outWidth > 0 && bounds.outHeight > 0
+                        if (ready) cacheFile.setLastModified(System.currentTimeMillis())
+                        else cacheFile.delete()
+                    }
+                    if (!ready) {
+                        var connection: HttpURLConnection? = null
                         try {
-                            connection.inputStream.use { input ->
-                                FileOutputStream(temp).use { output ->
-                                    val buffer = ByteArray(8192)
-                                    var total = 0L
-                                    while (true) {
-                                        val count = input.read(buffer)
-                                        if (count < 0) break
-                                        total += count
-                                        if (total > 40L * 1024L * 1024L) throw IllegalStateException("Image exceeds cache limit")
-                                        output.write(buffer, 0, count)
+                            connection = (URL(item.image).openConnection() as HttpURLConnection).apply {
+                                connectTimeout = 12000
+                                readTimeout = 20000
+                                doInput = true
+                                instanceFollowRedirects = true
+                                requestMethod = "GET"
+                            }
+                            if (connection.responseCode !in 200..299) throw IllegalStateException("HTTP " + connection.responseCode)
+                            if (connection.contentLengthLong > 40L * 1024L * 1024L) {
+                                throw IllegalStateException("Image exceeds cache limit")
+                            }
+                            val temp = File(cacheFile.parentFile, cacheFile.name + ".tmp")
+                            try {
+                                connection.inputStream.use { input ->
+                                    FileOutputStream(temp).use { output ->
+                                        val buffer = ByteArray(8192)
+                                        var total = 0L
+                                        while (true) {
+                                            val count = input.read(buffer)
+                                            if (count < 0) break
+                                            total += count
+                                            if (total > 40L * 1024L * 1024L) {
+                                                throw IllegalStateException("Image exceeds cache limit")
+                                            }
+                                            output.write(buffer, 0, count)
+                                        }
                                     }
                                 }
-                            }
-                            if (temp.length() > 0L) {
-                                val stored = temp.renameTo(cacheFile) || try {
-                                    temp.copyTo(cacheFile, overwrite = true)
-                                    temp.delete()
-                                    cacheFile.isFile && cacheFile.length() > 0L
-                                } catch (_: Exception) {
-                                    false
-                                }
-                                if (stored) {
+                                if (temp.length() > 0L) {
                                     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                                    BitmapFactory.decodeFile(cacheFile.absolutePath, bounds)
-                                    ready = bounds.outWidth > 0 && bounds.outHeight > 0
-                                    if (ready) trimStockFullImageCache() else cacheFile.delete()
+                                    BitmapFactory.decodeFile(temp.absolutePath, bounds)
+                                    val validImage = bounds.outWidth > 0 && bounds.outHeight > 0
+                                    if (validImage) {
+                                        val stored = temp.renameTo(cacheFile) || try {
+                                            temp.copyTo(cacheFile, overwrite = true)
+                                            temp.delete()
+                                            cacheFile.isFile && cacheFile.length() > 0L
+                                        } catch (_: Exception) {
+                                            false
+                                        }
+                                        if (stored) {
+                                            ready = true
+                                            cacheFile.setLastModified(System.currentTimeMillis())
+                                            trimStockFullImageCache()
+                                        }
+                                    }
                                 }
+                            } finally {
+                                if (temp.exists()) temp.delete()
                             }
                         } finally {
-                            if (temp.exists()) temp.delete()
+                            connection?.disconnect()
                         }
-                    } finally {
-                        connection?.disconnect()
+                    }
+                } catch (_: Exception) {
+                    ready = false
+                }
+
+                val callbacks = synchronized(fullImageCallbackLock) {
+                    pendingFullImageCallbacks.remove(item.image)?.toList().orEmpty()
+                }
+                if (!isFinishing && !isDestroyed) runOnUiThread {
+                    if (!isFinishing && !isDestroyed) {
+                        val resultFile = cacheFile.takeIf { ready && it.isFile && it.length() > 0L }
+                        callbacks.forEach { callback -> callback(resultFile) }
                     }
                 }
-            } catch (_: Exception) {
-                ready = false
             }
-            val callbacks = synchronized(fullImageCallbackLock) {
-                pendingFullImageCallbacks.remove(item.image)?.toList().orEmpty()
-            }
-            // Decode a separate Bitmap for each consumer so one caller cannot recycle
-            // the image while another caller is sharing or applying it.
-            callbacks.forEach { callback ->
-                executor.execute {
-                    val bitmap = if (ready && cacheFile.isFile) {
-                        try { BitmapFactory.decodeFile(cacheFile.absolutePath) } catch (_: Exception) { null }
-                    } else null
-                    if (!isFinishing && !isDestroyed) runOnUiThread {
-                        if (!isFinishing && !isDestroyed) callback(bitmap) else bitmap?.recycle()
-                    } else bitmap?.recycle()
-                }
-            }
+        } catch (_: java.util.concurrent.RejectedExecutionException) {
+            synchronized(fullImageCallbackLock) { pendingFullImageCallbacks.remove(item.image) }
         }
     }
 
     private fun shareItem(item: StockItem) {
         Toast.makeText(this, "Menyiapkan gambar untuk dibagikan…", Toast.LENGTH_SHORT).show()
-        loadFullImage(item) { bitmap ->
-            if (bitmap == null) {
+        loadFullImageFile(item) { imageFile ->
+            if (imageFile == null) {
                 Toast.makeText(this, "Gambar gagal dimuat. Periksa koneksi internet.", Toast.LENGTH_LONG).show()
-                return@loadFullImage
+                return@loadFullImageFile
             }
             try {
-                val shareDir = File(cacheDir, "shared_wallpapers").apply { mkdirs() }
-                val safeName = item.title.replace(Regex("[^A-Za-z0-9_-]"), "_")
-                val imageFile = File(shareDir, safeName + ".jpg")
-                FileOutputStream(imageFile).use { output ->
-                    if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 95, output)) throw IllegalStateException("Gagal menyiapkan JPEG")
-                }
-                val imageUri = FileProvider.getUriForFile(this, "com.civamel.ultrahdwallpaper.fileprovider", imageFile)
+                // Share the original cached file; avoid recompressing or allocating a UHD Bitmap.
+                val imageUri = FileProvider.getUriForFile(
+                    this,
+                    "com.civamel.ultrahdwallpaper.fileprovider",
+                    imageFile
+                )
                 val sendIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                     type = "image/jpeg"
                     putExtra(android.content.Intent.EXTRA_STREAM, imageUri)
@@ -808,24 +814,22 @@ class StockActivity : Activity() {
                 startActivity(android.content.Intent.createChooser(sendIntent, "Bagikan wallpaper"))
             } catch (e: Exception) {
                 Toast.makeText(this, "Gagal membagikan gambar: " + e.localizedMessage, Toast.LENGTH_LONG).show()
-            } finally {
-                if (!bitmap.isRecycled) bitmap.recycle()
             }
         }
     }
 
     private fun applyItem(item: StockItem) {
         Toast.makeText(this, "Menyiapkan wallpaper…", Toast.LENGTH_SHORT).show()
-        loadFullImage(item) { bitmap ->
-            if (bitmap == null) {
+        loadFullImageFile(item) { imageFile ->
+            if (imageFile == null) {
                 Toast.makeText(this, "Gambar gagal dimuat. Periksa koneksi internet.", Toast.LENGTH_LONG).show()
-                return@loadFullImage
+                return@loadFullImageFile
             }
-            showApplyDestinationDialog(item, bitmap)
+            showApplyDestinationDialog(item, imageFile)
         }
     }
 
-    private fun showApplyDestinationDialog(item: StockItem, bitmap: Bitmap) {
+    private fun showApplyDestinationDialog(item: StockItem, imageFile: File) {
         val destinations = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             arrayOf("Layar utama", "Layar kunci", "Keduanya")
         } else {
@@ -836,29 +840,24 @@ class StockActivity : Activity() {
             .setItems(destinations) { _, which ->
                 try {
                     val manager = WallpaperManager.getInstance(this)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                        val flags = when (which) {
-                            1 -> WallpaperManager.FLAG_LOCK
-                            2 -> WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK
-                            else -> WallpaperManager.FLAG_SYSTEM
+                    FileInputStream(imageFile).use { input ->
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                            val flags = when (which) {
+                                1 -> WallpaperManager.FLAG_LOCK
+                                2 -> WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK
+                                else -> WallpaperManager.FLAG_SYSTEM
+                            }
+                            manager.setStream(input, null, true, flags)
+                        } else {
+                            manager.setStream(input)
                         }
-                        manager.setBitmap(bitmap, null, true, flags)
-                    } else {
-                        manager.setBitmap(bitmap)
                     }
                     Toast.makeText(this, "Wallpaper " + item.title + " diterapkan ke " + destinations[which], Toast.LENGTH_LONG).show()
                 } catch (e: Exception) {
                     Toast.makeText(this, "Gagal menerapkan wallpaper: " + e.localizedMessage, Toast.LENGTH_LONG).show()
-                } finally {
-                    if (!bitmap.isRecycled) bitmap.recycle()
                 }
             }
-            .setNegativeButton("Batal") { _, _ ->
-                if (!bitmap.isRecycled) bitmap.recycle()
-            }
-            .setOnCancelListener {
-                if (!bitmap.isRecycled) bitmap.recycle()
-            }
+            .setNegativeButton("Batal", null)
             .show()
     }
 
