@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "598707903500",
+    "project_id": "ultra-hd-wallpaper-d3d83",
+    "storage_bucket": "ultra-hd-wallpaper-d3d83.firebastorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:598707903500:android:26cd72a92f428ce916a229",
+        "android_client_info": {
+          "package_name": "com.civamel.ultrahdwallpaper"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCaRw_s84yJ8O9p_fC_UHTVEvThx0I8yzY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
