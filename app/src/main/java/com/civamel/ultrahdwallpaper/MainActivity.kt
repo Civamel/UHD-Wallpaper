@@ -26,8 +26,8 @@ import java.util.concurrent.Executors
 
 class MainActivity : Activity() {
     // Add the separately created production AdMob IDs after the account owner provides them.
-    private val ADMOB_APP_ID = ""
-    private val ADMOB_BANNER_ID = ""
+    private val ADMOB_APP_ID = "ca-app-pub-8497758897094065~8774727457"
+    private val ADMOB_BANNER_ID = "ca-app-pub-8497758897094065/3522400771"
     private data class ParsedCatalog(
         val names: MutableList<String>,
         val ids: MutableList<String>,
@@ -504,14 +504,14 @@ class MainActivity : Activity() {
         val request = com.google.android.libraries.ads.mobile.sdk.banner.BannerAdRequest.Builder(ADMOB_BANNER_ID, adSize).build()
         adView.loadAd(
             request,
-            object : com.google.android.libraries.ads.mobile.sdk.banner.AdLoadCallback<com.google.android.libraries.ads.mobile.sdk.banner.BannerAd> {
+            object : com.google.android.libraries.ads.mobile.sdk.common.AdLoadCallback<com.google.android.libraries.ads.mobile.sdk.banner.BannerAd> {
                 override fun onAdLoaded(ad: com.google.android.libraries.ads.mobile.sdk.banner.BannerAd) {
-                    android.util.Log.d("AdMob", "Test banner loaded")
+                    android.util.Log.d("AdMob", "Production banner loaded")
                 }
 
                 override fun onAdFailedToLoad(adError: com.google.android.libraries.ads.mobile.sdk.common.LoadAdError) {
                     bannerAdRequested = false
-                    android.util.Log.w("AdMob", "Test banner failed: $adError")
+                    android.util.Log.w("AdMob", "Production banner failed: $adError")
                 }
             }
         )
@@ -692,7 +692,6 @@ class MainActivity : Activity() {
         root.addView(bottom)
         val adContainer = FrameLayout(this@MainActivity).apply {
             setBackgroundColor(if (darkMode) 0xff202127.toInt() else Color.rgb(245, 245, 245))
-            gravity = Gravity.CENTER
         }
         if (bannerAdView == null) {
             bannerAdView = com.google.android.libraries.ads.mobile.sdk.banner.AdView(this@MainActivity)
