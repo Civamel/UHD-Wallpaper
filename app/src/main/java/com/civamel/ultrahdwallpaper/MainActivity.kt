@@ -25,6 +25,14 @@ import java.net.URL
 import java.util.concurrent.Executors
 
 class MainActivity : Activity() {
+    private data class ParsedCatalog(
+        val names: MutableList<String>,
+        val categories: MutableList<String>,
+        val types: MutableList<String>,
+        val tags: MutableList<List<String>>,
+        val thumbnails: MutableList<String>,
+        val images: MutableList<String>
+    )
     private val blue = Color.rgb(0, 119, 255)
     private val purple = Color.rgb(158, 67, 238)
     private val ink = Color.rgb(28, 28, 30)
@@ -1026,7 +1034,7 @@ class MainActivity : Activity() {
                 }
                 if (titles.isEmpty()) throw IllegalStateException("Katalog online kosong atau tidak valid")
                 validatedCatalogBody = body
-                arrayOf(titles, categories, types, tags, thumbs, images)
+                ParsedCatalog(titles, categories, types, tags, thumbs, images)
             } catch (_: Exception) {
                 null
             } finally {
@@ -1041,17 +1049,17 @@ class MainActivity : Activity() {
                 }
                 runOnUiThread {
                     names.clear()
-                    names.addAll(parsed[0])
+                    names.addAll(parsed.names)
                     itemCategories.clear()
-                    itemCategories.addAll(parsed[1])
+                    itemCategories.addAll(parsed.categories)
                     itemTypes.clear()
-                    itemTypes.addAll(parsed[2])
+                    itemTypes.addAll(parsed.types)
                     itemTags.clear()
-                    itemTags.addAll(parsed[3])
+                    itemTags.addAll(parsed.tags)
                     thumbnailUrls.clear()
-                    thumbnailUrls.addAll(parsed[4])
+                    thumbnailUrls.addAll(parsed.thumbnails)
                     fullUrls.clear()
-                    fullUrls.addAll(parsed[5])
+                    fullUrls.addAll(parsed.images)
                     imageCache.evictAll()
                     buildHome()
                 }
