@@ -49,6 +49,7 @@ android {
 
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     implementation("com.google.android.libraries.ads.mobile.sdk:ads-mobile-sdk:1.7.0")
 
     implementation(platform("com.google.firebase:firebase-bom:34.0.0"))
