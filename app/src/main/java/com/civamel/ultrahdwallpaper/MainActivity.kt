@@ -92,6 +92,8 @@ class MainActivity : Activity() {
         favorites.addAll(preferences.getStringSet("favorite_ids", emptySet()) ?: emptySet())
         legacyFavoriteTitles.addAll(preferences.getStringSet("favorite_titles", emptySet()) ?: emptySet())
         darkMode = preferences.getBoolean("dark_mode", false)
+        sortMode = preferences.getString("wallpaper_sort_mode", "Paling populer") ?: "Paling populer"
+        downloadSortMode = preferences.getString("download_sort_mode", "Nama A-Z") ?: "Nama A-Z"
         buildHome()
         loadBundledCatalog()
         loadCachedRemoteCatalog()
@@ -493,6 +495,7 @@ class MainActivity : Activity() {
             val options = arrayOf("Paling populer", "Terbaru", "A-Z", "Acak")
             AlertDialog.Builder(this@MainActivity).setTitle("Urutkan berdasarkan").setItems(options) { _, w ->
                 sortMode = options[w]
+                preferences.edit().putString("wallpaper_sort_mode", sortMode).apply()
                 visibleItemLimit = 60
                 buildHome()
             }.show()
@@ -946,6 +949,7 @@ class MainActivity : Activity() {
                     .setTitle("Urutkan unduhan")
                      .setSingleChoiceItems(modes, modes.indexOf(downloadSortMode).coerceAtLeast(0)) { dialog, which ->
                         downloadSortMode = modes[which]
+                        preferences.edit().putString("download_sort_mode", downloadSortMode).apply()
                         dialog.dismiss()
                         showDownloads()
                     }
