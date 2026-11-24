@@ -632,6 +632,7 @@ class MainActivity : Activity() {
     }
 
     private fun showPreview(index:Int) {
+        recordRecentlyViewed(index)
         val root=FrameLayout(this@MainActivity).apply { setBackgroundColor(Color.BLACK) }
         val art=ImageView(this@MainActivity).apply { scaleType=ImageView.ScaleType.CENTER_CROP; setImageDrawable(artDrawable(index)) }
         root.addView(art,FrameLayout.LayoutParams(-1,-1))
@@ -773,13 +774,14 @@ class MainActivity : Activity() {
         val root=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL; setBackgroundColor(settingsBg); setPadding(dp(22),dp(22),dp(22),dp(12)) }
         root.addView(text("‹   Pengaturan",22,settingsText,true).apply { setOnClickListener { buildHome() } })
         root.addView(space(28)); root.addView(text("Pengaturan",24,settingsText,true)); root.addView(space(12))
-        listOf("♟   Notifikasi","♡   Favorit","文   Bahasa Aplikasi","▧   Pengubah Wallpaper Otomatis","⇩   Unduh","▤   Wallpaper Penerangan Tepi","Bagikan Aplikasi","☆   Nilai kami","♧   Umpan Balik","▣   Kelola Cache").forEach { item ->
+        listOf("♟   Notifikasi","♡   Favorit","◷   Riwayat dilihat","文   Bahasa Aplikasi","▧   Pengubah Wallpaper Otomatis","⇩   Unduh","▤   Wallpaper Penerangan Tepi","Bagikan Aplikasi","☆   Nilai kami","♧   Umpan Balik","▣   Kelola Cache").forEach { item ->
             val row=text(item+"     ›",17,settingsText,false).apply {
                 setPadding(dp(16),dp(18),dp(10),dp(18))
                 background=rounded(if(darkMode) 0xff24262d.toInt() else Color.WHITE,16)
                 setOnClickListener {
                     when {
                         item.contains("Favorit") -> showFavorites()
+                        item.contains("Riwayat") -> showRecentlyViewed()
                         item.contains("Unduh") -> showDownloads()
                         item.contains("Kelola Cache") -> showCacheManager()
                         item.contains("Bagikan Aplikasi") -> shareApplication()
@@ -1189,6 +1191,103 @@ class MainActivity : Activity() {
             }.start()
         }.show()
     }
+    private fun recordRecentlyViewed(index: Int) {
+        val id = itemIds.getOrNull(index) ?: return
+        val history = org.json.JSONArray()
+        history.put(id)
+        val previous = try {
+            org.json.JSONArray(preferences.getString("recent_wallpaper_ids", "[]") ?: "[]")
+        } catch (_: Exception) {
+            org.json.JSONArray()
+        }
+        for (position in 0 until previous.length()) {
+            val oldId = previous.optString(position)
+            if (oldId.isNotBlank() && oldId != id && history.length() < 30) history.put(oldId)
+        }
+        preferences.edit().putString("recent_wallpaper_ids", history.toString()).apply()
+    }
+
+    private fun showRecentlyViewed() {
+        val ids = try {
+            val saved = org.json.JSONArray(preferences.getString("recent_wallpaper_ids", "[]") ?: "[]")
+            (0 until saved.length()).map { saved.optString(it) }.filter { it.isNotBlank() }.distinct()
+        } catch (_: Exception) {
+            emptyList()
+        }
+        val indexes = ids.mapNotNull { id ->
+            val index = itemIds.indexOf(id)
+            if (index >= 0) index else null
+        }
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(18), dp(18), dp(12))
+            setBackgroundColor(if (darkMode) 0xff121318.toInt() else Color.WHITE)
+        }
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        header.addView(text("‹", 30, if (darkMode) 0xfff2f2f5.toInt() else ink, false).apply {
+            gravity = Gravity.CENTER
+            setOnClickListener { showSettings() }
+        }, LinearLayout.LayoutParams(dp(48), dp(52)))
+        header.addView(text("Riwayat dilihat", 22, if (darkMode) 0xfff2f2f5.toInt() else ink, true),
+            LinearLayout.LayoutParams(0, -2, 1f))
+        header.addView(text("Hapus", 14, blue, true).apply {
+            setOnClickListener {
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle("Hapus riwayat?")
+                    .setMessage("Daftar wallpaper yang pernah dibuka akan dikosongkan.")
+                    .setNegativeButton("Batal", null)
+                    .setPositiveButton("Hapus") { _, _ ->
+                        preferences.edit().remove("recent_wallpaper_ids").apply()
+                        showRecentlyViewed()
+                    }.show()
+            }
+        })
+        root.addView(header)
+        root.addView(text("Maksimal 30 wallpaper terakhir yang dibuka", 13,
+            if (darkMode) 0xffaaaaaa.toInt() else Color.GRAY, false).apply {
+            setPadding(dp(4), dp(4), 0, dp(14))
+        })
+        if (indexes.isEmpty()) {
+            root.addView(text("Belum ada riwayat wallpaper.", 15,
+                if (darkMode) 0xfff2f2f5.toInt() else ink, false).apply {
+                gravity = Gravity.CENTER
+                setPadding(0, dp(48), 0, dp(48))
+            })
+        } else {
+            val scroll = ScrollView(this)
+            val list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            indexes.forEach { index ->
+                val row = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(12), dp(8), dp(12), dp(8))
+                    background = rounded(if (darkMode) 0xff24262d.toInt() else 0xfff4f4f7.toInt(), 14)
+                    setOnClickListener { showPreview(index) }
+                }
+                val thumbnail = ImageView(this).apply {
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    setImageDrawable(artDrawable(index))
+                }
+                row.addView(thumbnail, LinearLayout.LayoutParams(dp(72), dp(72)))
+                row.addView(text(names[index], 15, if (darkMode) 0xfff2f2f5.toInt() else ink, true),
+                    LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = dp(12) })
+                row.addView(text("›", 24, if (darkMode) 0xfff2f2f5.toInt() else ink, false))
+                list.addView(row, LinearLayout.LayoutParams(-1, dp(88)).apply { bottomMargin = dp(8) })
+                thumbnailUrls.getOrNull(index)?.let { url ->
+                    loadImage(url) { bitmap ->
+                        if (bitmap != null && thumbnail.isAttachedToWindow) thumbnail.setImageBitmap(bitmap)
+                    }
+                }
+            }
+            scroll.addView(list)
+            root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        }
+        setContentView(root)
+    }
+
     private fun showFavorites(){
         refreshFavoritesFromPreferences()
         showOnlyFavorites = true
