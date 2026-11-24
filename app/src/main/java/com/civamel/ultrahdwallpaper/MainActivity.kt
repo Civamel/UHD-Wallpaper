@@ -98,6 +98,7 @@ class MainActivity : Activity() {
     private var bannerAdRequested = false
     private var bannerAdView: com.google.android.libraries.ads.mobile.sdk.banner.AdView? = null
     private var adminSelectedImage: Uri? = null
+    private var adminImageLabel: TextView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -1063,16 +1064,17 @@ class MainActivity : Activity() {
         })
         val title = EditText(this).apply { hint = "Judul wallpaper"; setTextColor(fg) }
         val category = EditText(this).apply { hint = "Kategori, contoh: Nature"; setTextColor(fg) }
-        val type = Spinner(this).apply {
+        val wallpaperTypeSpinner = Spinner(this).apply {
             adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, listOf("wallpaper", "live"))
         }
         val imageLabel = text("Belum ada gambar dipilih", 13, fg, false).apply { setPadding(0, dp(12), 0, dp(12)) }
+        adminImageLabel = imageLabel
         val choose = Button(this).apply {
             text = "Pilih gambar"
             setOnClickListener {
                 val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                     addCategory(Intent.CATEGORY_OPENABLE)
-                    type = "image/*"
+                    this.type = "image/*"
                 }
                 startActivityForResult(intent, 7412)
             }
@@ -1080,7 +1082,7 @@ class MainActivity : Activity() {
         val upload = Button(this).apply { text = "Upload wallpaper" }
         root.addView(title)
         root.addView(category)
-        root.addView(type)
+        root.addView(wallpaperTypeSpinner)
         root.addView(choose)
         root.addView(imageLabel)
         root.addView(upload)
@@ -1111,7 +1113,7 @@ class MainActivity : Activity() {
                         "category" to group,
                         "thumbnail" to url,
                         "image" to url,
-                        "type" to type.selectedItem.toString(),
+                        "type" to wallpaperTypeSpinner.selectedItem.toString(),
                         "tags" to emptyList<String>(),
                         "createdAt" to com.google.firebase.Timestamp.now()
                     )
@@ -1137,18 +1139,6 @@ class MainActivity : Activity() {
                 }
         }
         setContentView(ScrollView(this).apply { addView(root) })
-    }
-
-    @Deprecated("Deprecated in Android API")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == 7412 && resultCode == RESULT_OK) {
-            adminSelectedImage = data?.data
-            if (adminSelectedImage != null) {
-                try { contentResolver.takePersistableUriPermission(adminSelectedImage!!, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) {}
-                Toast.makeText(this, "Gambar dipilih", Toast.LENGTH_SHORT).show()
-            }
-        }
     }
 
     private fun loadFirestoreWallpapers() {
@@ -1243,6 +1233,17 @@ class MainActivity : Activity() {
     @Deprecated("Deprecated API retained for minSdk compatibility")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 7412) {
+            if (resultCode == RESULT_OK) {
+                adminSelectedImage = data?.data
+                adminSelectedImage?.let { uri ->
+                    try { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) {}
+                    adminImageLabel?.text = "Gambar berhasil dipilih"
+                    Toast.makeText(this, "Gambar dipilih", Toast.LENGTH_SHORT).show()
+                }
+            }
+            return
+        }
         if (requestCode != createImageRequest) return
         val sourceFile = pendingDownloadFile
         val title = pendingDownloadTitle
