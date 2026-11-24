@@ -1427,6 +1427,7 @@ class MainActivity : Activity() {
         root.addView(card, LinearLayout.LayoutParams(-1, 0, 1f).apply {
             setMargins(0, dp(12), 0, dp(18))
         })
+        lateinit var updateQuote: () -> Unit
         val saveButton = Button(this).apply {
             isAllCaps = false
             setOnClickListener {
@@ -1443,7 +1444,7 @@ class MainActivity : Activity() {
                 updateQuote()
             }
         }
-        fun updateQuote() {
+        updateQuote = {
             val current = quotes[currentIndex]
             quoteText.text = current.first
             categoryText.text = current.second.uppercase()
