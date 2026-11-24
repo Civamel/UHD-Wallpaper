@@ -34,6 +34,12 @@ class StockActivity : Activity() {
         loadCatalog()
     }
 
+    override fun onDestroy() {
+        executor.shutdownNow()
+        gridHostView = null
+        super.onDestroy()
+    }
+
     private fun loadCatalog() {
         try {
             val body = assets.open("wallpapers.json").bufferedReader().use { it.readText() }
@@ -55,9 +61,11 @@ class StockActivity : Activity() {
                     val body = connection.inputStream.bufferedReader().use { it.readText() }
                     val parsed = parseItems(body)
                     if (parsed.isNotEmpty()) runOnUiThread {
-                        items.clear()
-                        items.addAll(parsed)
-                        showGallery()
+                        if (!isFinishing && !isDestroyed) {
+                            items.clear()
+                            items.addAll(parsed)
+                            showGallery()
+                        }
                     }
                 }
             } catch (_: Exception) {
@@ -194,7 +202,7 @@ class StockActivity : Activity() {
             }
             cell.addView(image, LinearLayout.LayoutParams(-1, dp(210)))
             loadThumbnail(item.thumbnail) { bitmap ->
-                if (bitmap != null && image.isAttachedToWindow) image.setImageBitmap(bitmap)
+                if (bitmap != null && image.isAttachedToWindow && !isFinishing && !isDestroyed) image.setImageBitmap(bitmap)
             }
             cell.addView(label(item.title, 14, ink, true).apply { setPadding(dp(5), dp(7), dp(5), 0); maxLines = 1 })
             cell.addView(label(item.category, 12, Color.GRAY, false).apply { setPadding(dp(5), dp(2), dp(5), 0) })
@@ -224,7 +232,7 @@ class StockActivity : Activity() {
             } finally {
                 connection?.disconnect()
             }
-            runOnUiThread { done(bitmap) }
+            if (!isFinishing && !isDestroyed) runOnUiThread { if (!isFinishing && !isDestroyed) done(bitmap) }
         }
     }
 
@@ -247,7 +255,10 @@ class StockActivity : Activity() {
                     }
                 }
                 dialog.show()
-                loadThumbnail(item.image) { bitmap -> if (bitmap != null && preview.isAttachedToWindow) preview.setImageBitmap(bitmap) }
+                // Use the smaller preview asset here; the full UHD file is only decoded when applying.
+                loadThumbnail(item.thumbnail) { bitmap ->
+                    if (bitmap != null && preview.isAttachedToWindow && !isFinishing && !isDestroyed) preview.setImageBitmap(bitmap)
+                }
             }
     }
 
@@ -267,12 +278,18 @@ class StockActivity : Activity() {
             } finally {
                 connection?.disconnect()
             }
-            runOnUiThread {
+            if (!isFinishing && !isDestroyed) runOnUiThread {
+                if (isFinishing || isDestroyed) {
+                    bitmap?.recycle()
+                    return@runOnUiThread
+                }
                 if (bitmap == null) {
                     Toast.makeText(this, "Gambar gagal dimuat. Periksa koneksi internet.", Toast.LENGTH_LONG).show()
                     return@runOnUiThread
                 }
                 showApplyDestinationDialog(item, bitmap)
+            } else {
+                bitmap?.recycle()
             }
         }
     }
