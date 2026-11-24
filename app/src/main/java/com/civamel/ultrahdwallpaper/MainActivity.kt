@@ -165,7 +165,7 @@ class MainActivity : Activity() {
             val tags = mutableListOf<List<String>>()
             val thumbs = mutableListOf<String>()
             val images = mutableListOf<String>()
-            for (i in 0 until items.length()) {
+            for (i in items.indices) {
                 val item = items[i]
                 val title = item.optString("title").trim()
                 val thumbnail = item.optString("thumbnail").trim()
@@ -1009,15 +1009,15 @@ class MainActivity : Activity() {
                 }
                 if (connection.responseCode !in 200..299) throw IllegalStateException("HTTP " + connection.responseCode)
                 val body = connection.inputStream.bufferedReader().use { it.readText() }
-                val items = JSONObject(body).getJSONArray("wallpapers")
+                val items = CatalogValidator.parse(body)
                 val titles = mutableListOf<String>()
                 val categories = mutableListOf<String>()
                 val types = mutableListOf<String>()
                 val tags = mutableListOf<List<String>>()
                 val thumbs = mutableListOf<String>()
                 val images = mutableListOf<String>()
-                for (i in 0 until items.length()) {
-                    val item = items.optJSONObject(i) ?: continue
+                for (i in items.indices) {
+                    val item = items[i]
                     val title = item.optString("title").trim()
                     val thumbnail = item.optString("thumbnail").trim()
                     val image = item.optString("image").trim()
