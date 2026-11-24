@@ -430,6 +430,9 @@ class MainActivity : Activity() {
                     bitmap = null
                 } finally {
                     connection?.disconnect()
+                    val cacheFile = wallpaperDiskCacheFile(url)
+                    val temporaryFile = File(cacheFile.parentFile, cacheFile.name + "." + Thread.currentThread().id + ".tmp")
+                    if (temporaryFile.exists()) temporaryFile.delete()
                 }
 
                 if (bitmap != null) imageCache.put(url, bitmap)
