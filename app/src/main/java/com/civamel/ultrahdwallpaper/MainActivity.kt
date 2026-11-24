@@ -476,7 +476,6 @@ class MainActivity : Activity() {
     private fun text(s:String,size:Int,color:Int,bold:Boolean)=TextView(this@MainActivity).apply { text=s; textSize=size.toFloat(); setTextColor(color); if(bold) typeface=Typeface.DEFAULT_BOLD }
     private fun space(h:Int)=View(this@MainActivity).apply { layoutParams=LinearLayout.LayoutParams(1,dp(h)) }
     private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
-}
 
     // Fetch an updatable catalog without bundling thousands of image files in the APK.
     private fun refreshRemoteCatalog() {
