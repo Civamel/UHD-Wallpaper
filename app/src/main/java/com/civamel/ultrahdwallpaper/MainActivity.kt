@@ -567,10 +567,10 @@ class MainActivity : Activity() {
         val scroll=ScrollView(this@MainActivity)
         val content=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL; setBackgroundColor(pageBg) }
         if(promoVisible) {
-            val promo=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(dp(14),0,dp(12),0); background=rounded(purple,28) }
-            promo.addView(text("♛   Get All Wallpaper Pro!",17,Color.WHITE,true),LinearLayout.LayoutParams(0,dp(52),1f))
-            promo.addView(text("×",25,Color.WHITE,false).apply { gravity=Gravity.CENTER; setOnClickListener { promoVisible=false; buildHome() } },LinearLayout.LayoutParams(dp(34),dp(48)))
-            val pp=LinearLayout.LayoutParams(-1,dp(54)); pp.setMargins(dp(12),dp(8),dp(12),dp(12)); content.addView(promo,pp)
+            val promo=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(dp(14),0,dp(12),0); background=rounded(0xffe0115f.toInt(),28) }
+            promo.addView(text("♛   Get All Wallpaper Pro!",17,Color.WHITE,true),LinearLayout.LayoutParams(0,dp(36),1f))
+            promo.addView(text("×",25,Color.WHITE,false).apply { gravity=Gravity.CENTER; setOnClickListener { promoVisible=false; buildHome() } },LinearLayout.LayoutParams(dp(30),dp(34)))
+            val pp=LinearLayout.LayoutParams(-1,dp(38)); pp.setMargins(dp(12),dp(8),dp(12),dp(12)); content.addView(promo,pp)
         }
         val sort=TextView(this@MainActivity).apply { text="Urutkan berdasarkan: "+sortMode.uppercase()+"   ▾"; textSize=14f; setTextColor(if(darkMode) 0xff9bbcff.toInt() else blue); setPadding(dp(18),dp(12),dp(12),dp(18)); setOnClickListener {
             val options = arrayOf("Paling populer", "Terbaru", "A-Z", "Acak")
@@ -650,12 +650,12 @@ class MainActivity : Activity() {
                 text = when {
                     shardLoading -> "Memuat halaman katalog…"
                     hasVisibleRemainder -> "Muat lebih banyak ($remaining tersisa)"
-                    else -> "Muat halaman katalog berikutnya"
+                    else -> "Berikutnya"
                 }
                 isAllCaps = false
                 isEnabled = !shardLoading
                 setTextColor(Color.WHITE)
-                background = rounded(blue, 28)
+                background = rounded(0xffe0115f.toInt(), 28)
                 setOnClickListener {
                     if (visibleIndexes.size > visibleItemLimit) {
                         visibleItemLimit += 60
@@ -665,7 +665,7 @@ class MainActivity : Activity() {
                     }
                 }
             }
-            content.addView(moreButton, LinearLayout.LayoutParams(-1, dp(50)).apply {
+            content.addView(moreButton, LinearLayout.LayoutParams(-1, dp(35)).apply {
                 setMargins(dp(18), dp(14), dp(18), dp(18))
             })
         }
