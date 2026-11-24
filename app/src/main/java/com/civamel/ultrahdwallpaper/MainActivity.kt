@@ -1064,78 +1064,56 @@ class MainActivity : Activity() {
         })
         val title = EditText(this).apply { hint = "Judul wallpaper"; setTextColor(fg) }
         val category = EditText(this).apply { hint = "Kategori, contoh: Nature"; setTextColor(fg) }
+        val imageUrl = EditText(this).apply {
+            hint = "URL gambar (https://...)"
+            setTextColor(fg)
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
+        }
         val wallpaperTypeSpinner = Spinner(this).apply {
             adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, listOf("wallpaper", "live"))
         }
-        val imageLabel = text("Belum ada gambar dipilih", 13, fg, false).apply { setPadding(0, dp(12), 0, dp(12)) }
-        adminImageLabel = imageLabel
-        val choose = Button(this).apply {
-            text = "Pilih gambar"
-            setOnClickListener {
-                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                    addCategory(Intent.CATEGORY_OPENABLE)
-                    this.type = "image/*"
-                }
-                startActivityForResult(intent, 7412)
-            }
-        }
-        val upload = Button(this).apply { text = "Upload wallpaper" }
+        val save = Button(this).apply { text = "Simpan wallpaper" }
         root.addView(title)
         root.addView(category)
+        root.addView(imageUrl)
         root.addView(wallpaperTypeSpinner)
-        root.addView(choose)
-        root.addView(imageLabel)
-        root.addView(upload)
-        root.addView(text("Gambar disimpan di Firebase Storage dan datanya di Firestore.", 12,
+        root.addView(save)
+        root.addView(text("Gunakan URL gambar HTTPS yang dapat dibuka publik. Data wallpaper disimpan di Cloud Firestore.", 12,
             if (darkMode) 0xffa6a6ad.toInt() else Color.GRAY, false).apply { setPadding(0, dp(12), 0, 0) })
-        upload.setOnClickListener {
-            val uri = adminSelectedImage
+        save.setOnClickListener {
             val name = title.text.toString().trim()
             val group = category.text.toString().trim()
-            if (uri == null || name.isBlank() || group.isBlank()) {
-                Toast.makeText(this, "Pilih gambar, isi judul dan kategori", Toast.LENGTH_LONG).show()
+            val url = imageUrl.text.toString().trim()
+            if (name.isBlank() || group.isBlank() || !url.startsWith("https://", ignoreCase = true)) {
+                Toast.makeText(this, "Isi judul, kategori, dan URL HTTPS yang valid", Toast.LENGTH_LONG).show()
                 return@setOnClickListener
             }
-            upload.isEnabled = false
-            upload.text = "Mengunggah…"
+            save.isEnabled = false
+            save.text = "Menyimpan…"
             val id = "wp-" + java.util.UUID.randomUUID().toString().replace("-", "").take(16)
-            val ref = FirebaseStorage.getInstance().reference.child("wallpapers/$id.jpg")
-            ref.putFile(uri)
-                .continueWithTask { task ->
-                    if (!task.isSuccessful) throw task.exception ?: IllegalStateException("Upload gagal")
-                    ref.downloadUrl
-                }
-                .addOnSuccessListener { downloadUri ->
-                    val url = downloadUri.toString()
-                    val data = hashMapOf(
-                        "id" to id,
-                        "title" to name,
-                        "category" to group,
-                        "thumbnail" to url,
-                        "image" to url,
-                        "type" to wallpaperTypeSpinner.selectedItem.toString(),
-                        "tags" to emptyList<String>(),
-                        "createdAt" to com.google.firebase.Timestamp.now()
-                    )
-                    FirebaseFirestore.getInstance().collection("wallpapers").document(id).set(data)
-                        .addOnSuccessListener {
-                            adminSelectedImage = null
-                            imageLabel.text = "Belum ada gambar dipilih"
-                            title.text.clear()
-                            Toast.makeText(this, "Wallpaper berhasil diunggah", Toast.LENGTH_LONG).show()
-                            upload.isEnabled = true
-                            upload.text = "Upload wallpaper"
-                        }
-                        .addOnFailureListener { error ->
-                            upload.isEnabled = true
-                            upload.text = "Upload wallpaper"
-                            Toast.makeText(this, "Data gagal disimpan: ${error.localizedMessage}", Toast.LENGTH_LONG).show()
-                        }
+            val data = hashMapOf(
+                "id" to id,
+                "title" to name,
+                "category" to group,
+                "thumbnail" to url,
+                "image" to url,
+                "type" to wallpaperTypeSpinner.selectedItem.toString(),
+                "tags" to emptyList<String>(),
+                "createdAt" to com.google.firebase.Timestamp.now()
+            )
+            FirebaseFirestore.getInstance().collection("wallpapers").document(id).set(data)
+                .addOnSuccessListener {
+                    title.text.clear()
+                    category.text.clear()
+                    imageUrl.text.clear()
+                    Toast.makeText(this, "Wallpaper berhasil disimpan", Toast.LENGTH_LONG).show()
+                    save.isEnabled = true
+                    save.text = "Simpan wallpaper"
                 }
                 .addOnFailureListener { error ->
-                    upload.isEnabled = true
-                    upload.text = "Upload wallpaper"
-                    Toast.makeText(this, "Upload gagal: ${error.localizedMessage}", Toast.LENGTH_LONG).show()
+                    save.isEnabled = true
+                    save.text = "Simpan wallpaper"
+                    Toast.makeText(this, "Data gagal disimpan: ${error.localizedMessage}", Toast.LENGTH_LONG).show()
                 }
         }
         setContentView(ScrollView(this).apply { addView(root) })
