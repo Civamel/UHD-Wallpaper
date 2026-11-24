@@ -776,7 +776,7 @@ class MainActivity : Activity() {
                 loadFirestoreWallpapers { isRefreshing = false }
             }
         }
-        swipeRefresh.addView(scroll, SwipeRefreshLayout.LayoutParams(-1, -1))
+        swipeRefresh.addView(scroll, ViewGroup.LayoutParams(-1, -1))
         root.addView(swipeRefresh, LinearLayout.LayoutParams(-1, 0, 1f))
         val bottom=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER; setPadding(0,dp(4),0,dp(3)); setBackgroundColor(panelSurface) }
         listOf("⌂" to "Wallpaper","▦" to "Category","✦" to "Quotes","▧" to "Stock").forEachIndexed { i,item ->
