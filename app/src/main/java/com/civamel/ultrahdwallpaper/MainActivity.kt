@@ -566,7 +566,7 @@ class MainActivity : Activity() {
                     buildHome()
                 }
             }
-            item.addView(text(tab,16,if(tab==selectedTab) blue else pageText,true).apply { gravity=Gravity.CENTER; setPadding(dp(15),dp(12),dp(15),dp(12)) })
+            item.addView(text(tab,16,if(tab==selectedTab) blue else if (darkMode) Color.WHITE else ink,true).apply { gravity=Gravity.CENTER; setPadding(dp(15),dp(12),dp(15),dp(12)) })
             item.addView(View(this@MainActivity).apply { setBackgroundColor(if(tab==selectedTab) blue else Color.TRANSPARENT) },LinearLayout.LayoutParams(-1,dp(3)))
             tabRow.addView(item)
         }
@@ -574,7 +574,7 @@ class MainActivity : Activity() {
         val scroll=ScrollView(this@MainActivity)
         val content=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL; setBackgroundColor(pageBg) }
         if(promoVisible) {
-            val promo=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(dp(14),0,dp(12),0); background=rounded(0xffe0115f.toInt(),28) }
+            val promo=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(dp(14),0,dp(12),0); background=rounded(0xff733044.toInt(),28) }
             promo.addView(text("♛   Get All Wallpaper Pro!",17,Color.WHITE,true),LinearLayout.LayoutParams(0,dp(36),1f))
             promo.addView(text("×",25,Color.WHITE,false).apply { gravity=Gravity.CENTER; setOnClickListener { promoVisible=false; buildHome() } },LinearLayout.LayoutParams(dp(30),dp(34)))
             val pp=LinearLayout.LayoutParams(-1,dp(38)); pp.setMargins(dp(12),dp(8),dp(12),dp(3)); content.addView(promo,pp)
@@ -598,7 +598,7 @@ class MainActivity : Activity() {
                 val category = pair.first
                 val wallpaperIndex = pair.second
                 val slide = FrameLayout(this@MainActivity).apply {
-                    background = rounded(if (darkMode) 0xff77736e.toInt() else 0xffe9e9ed.toInt(), 0)
+                    background = rounded(if (darkMode) 0xff77736e.toInt() else 0xffe9e9ed.toInt(), 14)
                     clipToOutline = true
                     setOnClickListener {
                         selectedCategory = category
@@ -623,10 +623,11 @@ class MainActivity : Activity() {
                 }, FrameLayout.LayoutParams(-1, dp(68), Gravity.BOTTOM))
                 slide.addView(text(category, 21, Color.WHITE, true).apply {
                     gravity = Gravity.BOTTOM or Gravity.START
-                    setPadding(dp(18), 0, dp(16), dp(14))
+                    setPadding(dp(18), 0, dp(16), dp(8))
                     maxLines = 1
-                }, FrameLayout.LayoutParams(-1, dp(58), Gravity.BOTTOM))
-                slideRow.addView(slide, LinearLayout.LayoutParams(slideWidth, dp(158)))
+                    setShadowLayer(1.2f, 0f, dp(1).toFloat(), 0x99000000.toInt())
+                }, FrameLayout.LayoutParams(-1, dp(38), Gravity.BOTTOM))
+                slideRow.addView(slide, LinearLayout.LayoutParams(slideWidth, dp(95)))
                 thumbnailUrls.getOrNull(wallpaperIndex)?.let { imageUrl ->
                     loadImage(imageUrl) { bitmap ->
                         if (bitmap != null && image.isAttachedToWindow) image.setImageBitmap(bitmap)
@@ -634,7 +635,7 @@ class MainActivity : Activity() {
                 }
             }
             slideScroll.addView(slideRow)
-            content.addView(slideScroll, LinearLayout.LayoutParams(-1, dp(158)))
+            content.addView(slideScroll, LinearLayout.LayoutParams(-1, dp(95)))
             if (categorySlides.size > 1) {
                 var slidePosition = 0
                 val autoAdvance = object : Runnable {
@@ -752,7 +753,7 @@ class MainActivity : Activity() {
                 isAllCaps = false
                 isEnabled = !shardLoading
                 setTextColor(Color.WHITE)
-                background = rounded(0xffe0115f.toInt(), 28)
+                background = rounded(0xff733044.toInt(), 28)
                 setOnClickListener {
                     if (visibleIndexes.size > visibleItemLimit) {
                         visibleItemLimit += 24
@@ -792,7 +793,7 @@ class MainActivity : Activity() {
                 }
             }
             navItem.addView(modernIcon(item.first, 34), LinearLayout.LayoutParams(dp(42),dp(32)))
-            navItem.addView(text(item.second,11,if(i==0) blue else pageText,i==0).apply { gravity=Gravity.CENTER; setPadding(0,dp(2),0,0) })
+            navItem.addView(text(item.second,11,if(i==0) blue else if (darkMode) Color.WHITE else ink,i==0).apply { gravity=Gravity.CENTER; setPadding(0,dp(2),0,0) })
             bottom.addView(navItem,LinearLayout.LayoutParams(0,dp(48),1f))
         }
         root.addView(bottom)
@@ -1910,10 +1911,11 @@ class MainActivity : Activity() {
     }
 
     // Load only the first shard at startup; remaining pages are fetched on demand.
+    // Fetch all catalog shards at startup so a page can show up to 24 available items.
     private fun refreshRemoteCatalog() {
         Thread {
             var connection: HttpURLConnection? = null
-            val firstPage = try {
+            val result = try {
                 connection = (URL("https://raw.githubusercontent.com/Civamel/UHD-Wallpaper/main/catalog/manifest.json").openConnection() as HttpURLConnection).apply {
                     connectTimeout = 12000
                     readTimeout = 18000
@@ -1926,28 +1928,36 @@ class MainActivity : Activity() {
                 val index = CatalogManifest.parse(manifestBody)
                 connection.disconnect()
                 connection = null
-                val firstShard = index.shards.first()
-                connection = (URL("https://raw.githubusercontent.com/Civamel/UHD-Wallpaper/main/catalog/" + firstShard.path).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 12000
-                    readTimeout = 18000
-                    requestMethod = "GET"
-                    setRequestProperty("Accept", "application/json")
+                val allItems = mutableListOf<org.json.JSONObject>()
+                val pageBodies = mutableListOf<Pair<Int, String>>()
+                for ((position, shard) in index.shards.withIndex()) {
+                    connection = (URL("https://raw.githubusercontent.com/Civamel/UHD-Wallpaper/main/catalog/" + shard.path).openConnection() as HttpURLConnection).apply {
+                        connectTimeout = 12000
+                        readTimeout = 18000
+                        requestMethod = "GET"
+                        setRequestProperty("Accept", "application/json")
+                    }
+                    if (connection.responseCode !in 200..299) throw IllegalStateException("Shard HTTP " + connection.responseCode)
+                    val pageBody = connection.inputStream.bufferedReader().use { it.readText() }
+                    allItems.addAll(CatalogManifest.parseShard(pageBody, shard))
+                    pageBodies.add(position to pageBody)
+                    connection.disconnect()
+                    connection = null
                 }
-                if (connection.responseCode !in 200..299) throw IllegalStateException("Shard HTTP " + connection.responseCode)
-                val pageBody = connection.inputStream.bufferedReader().use { it.readText() }
-                Triple(index, CatalogManifest.parseShard(pageBody, firstShard), Pair(manifestBody, pageBody))
+                if (allItems.isEmpty()) throw IllegalStateException("Katalog online kosong")
+                Triple(index, allItems, Pair(manifestBody, pageBodies))
             } catch (_: Exception) {
                 null
             } finally {
                 connection?.disconnect()
             }
-            if (firstPage == null) {
+            if (result == null) {
                 refreshLegacyRemoteCatalog()
                 return@Thread
             }
             try {
-                File(filesDir, "catalog_manifest_cache.json").writeText(firstPage.third.first)
-                cachedShardFile(0).writeText(firstPage.third.second)
+                File(filesDir, "catalog_manifest_cache.json").writeText(result.third.first)
+                result.third.second.forEach { (position, body) -> cachedShardFile(position).writeText(body) }
             } catch (_: Exception) {
                 // The online catalog remains usable if caching is unavailable.
             }
@@ -1955,10 +1965,9 @@ class MainActivity : Activity() {
                 if (isFinishing || isDestroyed) return@runOnUiThread
                 names.clear(); itemIds.clear(); itemCategories.clear(); itemTypes.clear()
                 itemTags.clear(); thumbnailUrls.clear(); fullUrls.clear()
-                remoteCatalogIndex = firstPage.first
-                loadedShardCount = 0
-                appendCatalogItems(firstPage.second)
-                loadedShardCount = 1
+                remoteCatalogIndex = result.first
+                appendCatalogItems(result.second)
+                loadedShardCount = result.first.shards.size
                 visibleItemLimit = 24
                 buildHome()
             }
