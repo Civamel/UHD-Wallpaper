@@ -23,6 +23,7 @@ class StockActivity : Activity() {
     private val executor = Executors.newFixedThreadPool(3)
     private var query = ""
     private var selectedCategory = "All"
+    private var selectedSort = "Default"
     private var gridHostView: LinearLayout? = null
     private val blue = Color.rgb(0, 119, 255)
     private val ink = Color.rgb(28, 28, 30)
@@ -146,8 +147,28 @@ class StockActivity : Activity() {
             })
         }
         root.addView(search, LinearLayout.LayoutParams(-1, dp(48)).apply {
-            setMargins(dp(16), 0, dp(16), dp(10))
+            setMargins(dp(16), 0, dp(16), dp(8))
         })
+        val sortRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(16), 0, dp(16), dp(8))
+        }
+        sortRow.addView(label("Urutkan:", 13, secondaryText, false), LinearLayout.LayoutParams(-2, dp(42)))
+        val sortSpinner = Spinner(this).apply {
+            val options = listOf("Default", "Nama A–Z", "Nama Z–A", "Kategori")
+            adapter = ArrayAdapter(this@StockActivity, android.R.layout.simple_spinner_dropdown_item, options)
+            setSelection(options.indexOf(selectedSort).coerceAtLeast(0), false)
+            onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onNothingSelected(parent: AdapterView<*>?) {}
+                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                    val next = options[position]
+                    if (selectedSort != next) { selectedSort = next; renderGrid() }
+                }
+            }
+        }
+        sortRow.addView(sortSpinner, LinearLayout.LayoutParams(0, dp(42), 1f))
+        root.addView(sortRow)
         val categories = listOf("All") + items.map { it.category }.distinct().sorted()
         val categoryScroll = HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false }
         val categoryRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(dp(12), 0, dp(12), dp(10)) }
@@ -189,9 +210,15 @@ class StockActivity : Activity() {
 
     private fun renderGridInto(host: LinearLayout) {
         host.removeAllViews()
-        val matches = items.filter {
+        val filtered = items.filter {
             (selectedCategory == "All" || it.category == selectedCategory) &&
                 (query.isBlank() || it.title.contains(query, true) || it.category.contains(query, true))
+        }
+        val matches = when (selectedSort) {
+            "Nama A–Z" -> filtered.sortedBy { it.title.lowercase() }
+            "Nama Z–A" -> filtered.sortedByDescending { it.title.lowercase() }
+            "Kategori" -> filtered.sortedWith(compareBy<StockItem> { it.category.lowercase() }.thenBy { it.title.lowercase() })
+            else -> filtered
         }
         if (matches.isEmpty()) {
             host.addView(label("Tidak ada wallpaper yang cocok.", 14, secondaryText, false).apply {
