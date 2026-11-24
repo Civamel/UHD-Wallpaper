@@ -266,10 +266,28 @@ class StockActivity : Activity() {
             else -> filtered
         }
         if (matches.isEmpty()) {
-            host.addView(label("Tidak ada wallpaper yang cocok.", 14, secondaryText, false).apply {
+            val emptyState = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
                 setPadding(dp(24), dp(48), dp(24), dp(48))
+            }
+            emptyState.addView(label("Tidak ada wallpaper yang cocok.", 15, primaryText, true).apply {
+                gravity = Gravity.CENTER
             })
+            emptyState.addView(label("Coba kata kunci atau kategori lain.", 13, secondaryText, false).apply {
+                gravity = Gravity.CENTER
+                setPadding(0, dp(8), 0, dp(16))
+            })
+            emptyState.addView(Button(this).apply {
+                text = "Hapus filter"
+                setOnClickListener {
+                    query = ""
+                    selectedCategory = "All"
+                    selectedSort = "Default"
+                    showGallery()
+                }
+            })
+            host.addView(emptyState, LinearLayout.LayoutParams(-1, -2))
             return
         }
         val grid = GridLayout(this).apply { columnCount = 2; useDefaultMargins = false }
