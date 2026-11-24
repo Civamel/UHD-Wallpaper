@@ -668,88 +668,125 @@ class StockActivity : Activity() {
             }
     }
 
-    private fun shareItem(item: StockItem) {
-        Toast.makeText(this, "Menyiapkan gambar untuk dibagikan…", Toast.LENGTH_SHORT).show()
-        executor.execute {
-            var connection: HttpURLConnection? = null
-            val bitmap = try {
-                connection = (URL(item.image).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 12000
-                    readTimeout = 20000
-                    doInput = true
-                }
-                if (connection.responseCode in 200..299) connection.inputStream.use { BitmapFactory.decodeStream(it) } else null
-            } catch (_: Exception) {
-                null
-            } finally {
-                connection?.disconnect()
+    private fun stockFullImageCacheFile(url: String): File {
+        val digest = java.security.MessageDigest.getInstance("SHA-256").digest(url.toByteArray(Charsets.UTF_8))
+        val key = digest.joinToString("") { "%02x".format(it) }
+        return File(File(filesDir, "stock_full_images").apply { mkdirs() }, "$key.img")
+    }
+
+    private fun trimStockFullImageCache(maxBytes: Long = 180L * 1024L * 1024L) {
+        try {
+            val directory = File(filesDir, "stock_full_images")
+            val files = directory.listFiles()?.filter { it.isFile && it.extension == "img" }?.sortedBy { it.lastModified() } ?: return
+            var total = files.sumOf { it.length() }
+            for (file in files) {
+                if (total <= maxBytes) break
+                val size = file.length()
+                if (file.delete()) total -= size
             }
-            if (!isFinishing && !isDestroyed) runOnUiThread {
-                if (isFinishing || isDestroyed) {
-                    bitmap?.recycle()
-                    return@runOnUiThread
+        } catch (_: Exception) { }
+    }
+
+    private fun loadFullImage(item: StockItem, done: (Bitmap?) -> Unit) {
+        executor.execute {
+            val cacheFile = stockFullImageCacheFile(item.image)
+            var bitmap: Bitmap? = null
+            try {
+                if (cacheFile.isFile) {
+                    bitmap = BitmapFactory.decodeFile(cacheFile.absolutePath)
+                    if (bitmap != null) cacheFile.setLastModified(System.currentTimeMillis())
+                    else cacheFile.delete()
                 }
                 if (bitmap == null) {
-                    Toast.makeText(this, "Gambar gagal dimuat. Periksa koneksi internet.", Toast.LENGTH_LONG).show()
-                    return@runOnUiThread
-                }
-                try {
-                    val shareDir = File(cacheDir, "shared_wallpapers").apply { mkdirs() }
-                    val safeName = item.title.replace(Regex("[^A-Za-z0-9_-]"), "_")
-                    val imageFile = File(shareDir, safeName + ".jpg")
-                    FileOutputStream(imageFile).use { output ->
-                        if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 95, output)) throw IllegalStateException("Gagal menyiapkan JPEG")
+                    var connection: HttpURLConnection? = null
+                    try {
+                        connection = (URL(item.image).openConnection() as HttpURLConnection).apply {
+                            connectTimeout = 12000
+                            readTimeout = 20000
+                            doInput = true
+                            instanceFollowRedirects = true
+                            requestMethod = "GET"
+                        }
+                        if (connection.responseCode !in 200..299) throw IllegalStateException("HTTP " + connection.responseCode)
+                        val declaredSize = connection.contentLengthLong
+                        if (declaredSize > 40L * 1024L * 1024L) throw IllegalStateException("Image exceeds cache limit")
+                        val temp = File(cacheFile.parentFile, cacheFile.name + ".tmp")
+                        try {
+                            connection.inputStream.use { input ->
+                                FileOutputStream(temp).use { output ->
+                                    val buffer = ByteArray(8192)
+                                    var total = 0L
+                                    while (true) {
+                                        val count = input.read(buffer)
+                                        if (count < 0) break
+                                        total += count
+                                        if (total > 40L * 1024L * 1024L) throw IllegalStateException("Image exceeds cache limit")
+                                        output.write(buffer, 0, count)
+                                    }
+                                }
+                            }
+                            if (temp.length() > 0L && temp.renameTo(cacheFile)) {
+                                bitmap = BitmapFactory.decodeFile(cacheFile.absolutePath)
+                                if (bitmap == null) cacheFile.delete() else trimStockFullImageCache()
+                            }
+                        } finally {
+                            if (temp.exists()) temp.delete()
+                        }
+                    } finally {
+                        connection?.disconnect()
                     }
-                    val imageUri = FileProvider.getUriForFile(this, "com.civamel.ultrahdwallpaper.fileprovider", imageFile)
-                    val sendIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                        type = "image/jpeg"
-                        putExtra(android.content.Intent.EXTRA_STREAM, imageUri)
-                        putExtra(android.content.Intent.EXTRA_SUBJECT, item.title)
-                        putExtra(android.content.Intent.EXTRA_TEXT, item.title + " — Ultra HD Wallpaper")
-                        clipData = android.content.ClipData.newUri(contentResolver, item.title, imageUri)
-                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    }
-                    startActivity(android.content.Intent.createChooser(sendIntent, "Bagikan wallpaper"))
-                } catch (e: Exception) {
-                    Toast.makeText(this, "Gagal membagikan gambar: " + e.localizedMessage, Toast.LENGTH_LONG).show()
-                } finally {
-                    if (!bitmap.isRecycled) bitmap.recycle()
                 }
-            } else {
-                bitmap?.recycle()
+            } catch (_: Exception) {
+                bitmap = null
+            }
+            val result = bitmap
+            if (!isFinishing && !isDestroyed) runOnUiThread {
+                if (!isFinishing && !isDestroyed) done(result)
+                else result?.recycle()
+            } else result?.recycle()
+        }
+    }
+
+    private fun shareItem(item: StockItem) {
+        Toast.makeText(this, "Menyiapkan gambar untuk dibagikan…", Toast.LENGTH_SHORT).show()
+        loadFullImage(item) { bitmap ->
+            if (bitmap == null) {
+                Toast.makeText(this, "Gambar gagal dimuat. Periksa koneksi internet.", Toast.LENGTH_LONG).show()
+                return@loadFullImage
+            }
+            try {
+                val shareDir = File(cacheDir, "shared_wallpapers").apply { mkdirs() }
+                val safeName = item.title.replace(Regex("[^A-Za-z0-9_-]"), "_")
+                val imageFile = File(shareDir, safeName + ".jpg")
+                FileOutputStream(imageFile).use { output ->
+                    if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 95, output)) throw IllegalStateException("Gagal menyiapkan JPEG")
+                }
+                val imageUri = FileProvider.getUriForFile(this, "com.civamel.ultrahdwallpaper.fileprovider", imageFile)
+                val sendIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    type = "image/jpeg"
+                    putExtra(android.content.Intent.EXTRA_STREAM, imageUri)
+                    putExtra(android.content.Intent.EXTRA_SUBJECT, item.title)
+                    putExtra(android.content.Intent.EXTRA_TEXT, item.title + " — Ultra HD Wallpaper")
+                    clipData = android.content.ClipData.newUri(contentResolver, item.title, imageUri)
+                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                startActivity(android.content.Intent.createChooser(sendIntent, "Bagikan wallpaper"))
+            } catch (e: Exception) {
+                Toast.makeText(this, "Gagal membagikan gambar: " + e.localizedMessage, Toast.LENGTH_LONG).show()
+            } finally {
+                if (!bitmap.isRecycled) bitmap.recycle()
             }
         }
     }
 
     private fun applyItem(item: StockItem) {
         Toast.makeText(this, "Menyiapkan wallpaper…", Toast.LENGTH_SHORT).show()
-        executor.execute {
-            var connection: HttpURLConnection? = null
-            val bitmap = try {
-                connection = (URL(item.image).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 12000
-                    readTimeout = 20000
-                    doInput = true
-                }
-                if (connection.responseCode in 200..299) connection.inputStream.use { BitmapFactory.decodeStream(it) } else null
-            } catch (_: Exception) {
-                null
-            } finally {
-                connection?.disconnect()
+        loadFullImage(item) { bitmap ->
+            if (bitmap == null) {
+                Toast.makeText(this, "Gambar gagal dimuat. Periksa koneksi internet.", Toast.LENGTH_LONG).show()
+                return@loadFullImage
             }
-            if (!isFinishing && !isDestroyed) runOnUiThread {
-                if (isFinishing || isDestroyed) {
-                    bitmap?.recycle()
-                    return@runOnUiThread
-                }
-                if (bitmap == null) {
-                    Toast.makeText(this, "Gambar gagal dimuat. Periksa koneksi internet.", Toast.LENGTH_LONG).show()
-                    return@runOnUiThread
-                }
-                showApplyDestinationDialog(item, bitmap)
-            } else {
-                bitmap?.recycle()
-            }
+            showApplyDestinationDialog(item, bitmap)
         }
     }
 
