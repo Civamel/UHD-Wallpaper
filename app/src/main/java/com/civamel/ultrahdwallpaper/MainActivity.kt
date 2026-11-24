@@ -47,9 +47,7 @@ class MainActivity : Activity() {
     private val purple = Color.rgb(158, 67, 238)
     private val ink = Color.rgb(28, 28, 30)
     private val tabs = listOf("Home", "Live", "Parallax", "Wallpaper", "Double", "Charging Live")
-    private val names = mutableListOf("Neon Flow", "Color Splash", "Red Horizon", "White Wings", "Ocean Glass", "Dark Bubbles",
-        "Tropical Beach", "Blue Eyes", "Liquid Planet", "Golden Sunset", "Green Forest", "Stone Texture",
-        "Lightning", "Fire Glow", "Smoke Art", "Crystal Lights", "Neon Apple", "Mountain Lake")
+    private val names = mutableListOf<String>()
     private val palettes = listOf(
         intArrayOf(0xff09090f.toInt(),0xffb20d34.toInt()), intArrayOf(0xfff5d8b4.toInt(),0xff00a9c7.toInt()),
         intArrayOf(0xff260000.toInt(),0xffff3428.toInt()), intArrayOf(0xff080808.toInt(),0xffe8e8e8.toInt()),
@@ -88,7 +86,7 @@ class MainActivity : Activity() {
     private var darkMode = false
     private val categoryNames: List<String>
         get() = listOf("All") + itemCategories.map { it.trim() }.filter { it.isNotEmpty() }.distinct().sorted()
-    private val itemCategories = mutableListOf("Abstract","Art","Abstract","Animals","Ocean","Abstract","Nature","Animals","Space","Nature","Nature","Art","Technology","Art","Abstract","Space","Technology","Nature")
+    private val itemCategories = mutableListOf<String>()
     private val itemTypes = mutableListOf<String>()
     private val itemTags = mutableListOf<List<String>>()
     private var remoteCatalogIndex: CatalogManifest.Index? = null
@@ -116,10 +114,7 @@ class MainActivity : Activity() {
         selectedCategory = preferences.getString("selected_wallpaper_category", "All") ?: "All"
         buildHome()
         initializeAds()
-        loadBundledCatalog()
-        loadCachedRemoteCatalog()
-        loadCachedShardedCatalog()
-        refreshRemoteCatalog()
+        // Start with a clean catalog: only wallpapers added by the owner in Admin are shown.
         loadFirestoreWallpapers()
     }
 
