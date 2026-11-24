@@ -518,6 +518,20 @@ class MainActivity : Activity() {
             .toList().asReversed().filter { record ->
                 File(File(filesDir, "downloads"), record.substringBefore("\t")).isFile
             }
+        val downloadBytes = records.sumOf { record ->
+            File(File(filesDir, "downloads"), record.substringBefore("\t")).length()
+        }
+        val downloadSize = if (downloadBytes < 1024L * 1024L) {
+            "\${downloadBytes / 1024L} KB"
+        } else {
+            String.format("%.1f MB", downloadBytes / (1024.0 * 1024.0))
+        }
+        root.addView(text(
+            "\${records.size} wallpaper tersimpan  •  $downloadSize digunakan",
+            13,
+            if (darkMode) 0xffb9bdc8.toInt() else 0xff666a75.toInt(),
+            false
+        ).apply { setPadding(0, 0, 0, dp(14)) })
         if (records.isEmpty()) {
             val empty = text("Belum ada wallpaper yang diunduh.\n\nBuka wallpaper, tekan ikon unduh, lalu simpan gambarnya untuk melihatnya di sini.", 15, pageText, false).apply {
                 gravity = Gravity.CENTER
