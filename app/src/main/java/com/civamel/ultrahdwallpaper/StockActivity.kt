@@ -218,8 +218,9 @@ class StockActivity : Activity() {
         val categoryScroll = HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false }
         val categoryRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(dp(12), 0, dp(12), dp(10)) }
         categories.forEach { category ->
+            val categoryCount = if (category == "All") items.size else items.count { it.category == category }
             val chip = TextView(this).apply {
-                text = category
+                text = "$category ($categoryCount)"
                 textSize = 13f
                 setTextColor(if (selectedCategory == category) Color.WHITE else primaryText)
                 gravity = Gravity.CENTER
