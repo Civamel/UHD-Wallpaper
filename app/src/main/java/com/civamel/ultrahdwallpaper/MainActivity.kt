@@ -159,6 +159,7 @@ class MainActivity : Activity() {
                 "Parallax" -> type == "parallax"
                 "Double" -> type == "double"
                 "Charging Live" -> type == "charging"
+                "Wallpaper" -> type == "wallpaper"
                 else -> true
             }
             categoryMatch && searchMatch && favoriteMatch && tabMatch
@@ -223,7 +224,7 @@ class MainActivity : Activity() {
         top.addView(circle("‹"){buildHome()})
         top.addView(View(this@MainActivity),LinearLayout.LayoutParams(0,1,1f))
         top.addView(circle("💎"){Toast.makeText(this@MainActivity,"Premium",Toast.LENGTH_SHORT).show()})
-        top.addView(circle("ⓘ"){ AlertDialog.Builder(this@MainActivity).setTitle(names[index]).setMessage("Kategori: "+itemCategories.getOrNull(index).orEmpty()+"\n\nWallpaper Ultra HD. Pilih Terapkan untuk memasang wallpaper atau Unduh untuk menyimpan gambar.").setPositiveButton("Mengerti",null).show() })
+        top.addView(circle("ⓘ"){ AlertDialog.Builder(this@MainActivity).setTitle(names[index]).setMessage("Kategori: "+itemCategories.getOrNull(index).orEmpty()+"\nJenis: "+(itemTypes.getOrNull(index) ?: "wallpaper")+"\n\nWallpaper Ultra HD. Pilih Terapkan untuk memasang wallpaper atau Unduh untuk menyimpan gambar.").setPositiveButton("Mengerti",null).show() })
         top.addView(circle("↗"){shareWallpaper()})
         root.addView(top,FrameLayout.LayoutParams(-1,dp(76),Gravity.TOP))
         val bottom=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(dp(20),dp(12),dp(20),dp(20)) }
@@ -233,7 +234,7 @@ class MainActivity : Activity() {
         bottom.addView(details,LinearLayout.LayoutParams(0,dp(54),1f))
         bottom.addView(circle(if(names[index] in favorites) "♥" else "♡"){ if(!favorites.add(names[index])) favorites.remove(names[index]); preferences.edit().putStringSet("favorite_titles", favorites.toSet()).apply(); showPreview(index) })
         bottom.addView(View(this@MainActivity),LinearLayout.LayoutParams(0,1,1f))
-        val apply=Button(this@MainActivity).apply { text="Terapkan"; isAllCaps=false; textSize=16f; setTextColor(Color.WHITE); background=rounded(blue,32); setOnClickListener { if(selectedTab=="Live" || selectedTab=="Charging Live") applyLiveWallpaper(index) else applyWallpaper(index) } }
+        val apply=Button(this@MainActivity).apply { text="Terapkan"; isAllCaps=false; textSize=16f; setTextColor(Color.WHITE); background=rounded(blue,32); setOnClickListener { if(itemTypes.getOrNull(index) == "live") applyLiveWallpaper(index) else applyWallpaper(index) } }
         bottom.addView(apply,LinearLayout.LayoutParams(dp(150),dp(54)))
         bottom.addView(View(this@MainActivity),LinearLayout.LayoutParams(dp(20),1))
         bottom.addView(circle("⇩"){ requestDownload(index) })
