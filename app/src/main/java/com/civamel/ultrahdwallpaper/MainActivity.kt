@@ -25,6 +25,8 @@ import java.net.URL
 import java.util.concurrent.Executors
 
 class MainActivity : Activity() {
+    private val TEST_ADMOB_APP_ID = "ca-app-pub-3940256099942544~3347511713"
+    private val TEST_ADMOB_BANNER_ID = "ca-app-pub-3940256099942544/9214589741"
     private data class ParsedCatalog(
         val names: MutableList<String>,
         val ids: MutableList<String>,
@@ -83,6 +85,10 @@ class MainActivity : Activity() {
     private var remoteCatalogIndex: CatalogManifest.Index? = null
     private var loadedShardCount = 0
     private var shardLoading = false
+    private var adsInitialized = false
+    private var adsInitializationStarted = false
+    private var bannerAdRequested = false
+    private var bannerAdView: com.google.android.libraries.ads.mobile.sdk.banner.AdView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -98,6 +104,7 @@ class MainActivity : Activity() {
         if (selectedTab !in tabs && selectedTab != "Home") selectedTab = "Wallpaper"
         selectedCategory = preferences.getString("selected_wallpaper_category", "All") ?: "All"
         buildHome()
+        initializeAds()
         loadBundledCatalog()
         loadCachedRemoteCatalog()
         loadCachedShardedCatalog()
@@ -466,6 +473,61 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun initializeAds() {
+        if (adsInitializationStarted) return
+        adsInitializationStarted = true
+        Thread {
+            try {
+                com.google.android.libraries.ads.mobile.sdk.MobileAds.initialize(
+                    this,
+                    com.google.android.libraries.ads.mobile.sdk.initialization.InitializationConfig.Builder(TEST_ADMOB_APP_ID).build()
+                ) {
+                    runOnUiThread {
+                        adsInitialized = true
+                        bannerAdView?.let { loadBannerAd(it) }
+                    }
+                }
+            } catch (error: Exception) {
+                android.util.Log.w("AdMob", "SDK initialization failed", error)
+            }
+        }.start()
+    }
+
+    private fun loadBannerAd(adView: com.google.android.libraries.ads.mobile.sdk.banner.AdView) {
+        if (!adsInitialized || bannerAdRequested) return
+        val widthDp = (resources.displayMetrics.widthPixels / resources.displayMetrics.density).toInt()
+        if (widthDp <= 0) return
+        bannerAdRequested = true
+        val adSize = com.google.android.libraries.ads.mobile.sdk.banner.AdSize.getLargeAnchoredAdaptiveBannerAdSize(this, widthDp)
+        val request = com.google.android.libraries.ads.mobile.sdk.banner.BannerAdRequest.Builder(TEST_ADMOB_BANNER_ID, adSize).build()
+        adView.loadAd(
+            request,
+            object : com.google.android.libraries.ads.mobile.sdk.banner.AdLoadCallback<com.google.android.libraries.ads.mobile.sdk.banner.BannerAd> {
+                override fun onAdLoaded(ad: com.google.android.libraries.ads.mobile.sdk.banner.BannerAd) {
+                    android.util.Log.d("AdMob", "Test banner loaded")
+                }
+
+                override fun onAdFailedToLoad(adError: com.google.android.libraries.ads.mobile.sdk.common.LoadAdError) {
+                    bannerAdRequested = false
+                    android.util.Log.w("AdMob", "Test banner failed: $adError")
+                }
+            }
+        )
+    }
+
+    private fun releaseBannerAd() {
+        bannerAdView?.let { view ->
+            (view.parent as? android.view.ViewGroup)?.removeView(view)
+            view.destroy()
+        }
+        bannerAdView = null
+    }
+
+    override fun onDestroy() {
+        releaseBannerAd()
+        super.onDestroy()
+    }
+
     private fun buildHome() {
         val pageBg = if (darkMode) 0xff121318.toInt() else Color.WHITE
         val pageText = if (darkMode) 0xfff2f2f5.toInt() else ink
@@ -626,8 +688,17 @@ class MainActivity : Activity() {
             } },LinearLayout.LayoutParams(0,dp(62),1f))
         }
         root.addView(bottom)
-        val ad=text("ADVERTISEMENT  •  Ultra HD Wallpaper",10,Color.DKGRAY,false).apply { gravity=Gravity.CENTER; setTextColor(if(darkMode) 0xffcccccc.toInt() else Color.DKGRAY); setBackgroundColor(if(darkMode) 0xff202127.toInt() else Color.rgb(245,245,245)) }
-        root.addView(ad,LinearLayout.LayoutParams(-1,dp(42)))
+        val adContainer = FrameLayout(this@MainActivity).apply {
+            setBackgroundColor(if (darkMode) 0xff202127.toInt() else Color.rgb(245, 245, 245))
+            gravity = Gravity.CENTER
+        }
+        if (bannerAdView == null) {
+            bannerAdView = com.google.android.libraries.ads.mobile.sdk.banner.AdView(this@MainActivity)
+        }
+        (bannerAdView?.parent as? android.view.ViewGroup)?.removeView(bannerAdView)
+        adContainer.addView(bannerAdView, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER))
+        root.addView(adContainer, LinearLayout.LayoutParams(-1, -2))
+        if (adsInitialized) bannerAdView?.let { loadBannerAd(it) }
         setContentView(root)
     }
 

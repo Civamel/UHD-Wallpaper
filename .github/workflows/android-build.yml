@@ -1,4 +1,4 @@
-name: Android APK and Signed AAB
+name: Android Signed Release APK
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build:
-    name: Build APK and signed AAB
+    name: Build signed release APK
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
@@ -35,17 +35,6 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Build debug APK
-        run: gradle --no-daemon :app:assembleDebug
-
-      - name: Upload debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Ultra-HD-Wallpaper-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
-          retention-days: 14
-
       - name: Validate release signing secrets
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -65,18 +54,18 @@ jobs:
           test -s "$RUNNER_TEMP/android-signing/release-key.jks"
           chmod 600 "$RUNNER_TEMP/android-signing/release-key.jks"
 
-      - name: Build signed release AAB
+      - name: Build signed release APK
         env:
           ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/android-signing/release-key.jks
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: gradle --no-daemon :app:bundleRelease
+        run: gradle --no-daemon :app:assembleRelease
 
-      - name: Upload signed AAB
+      - name: Upload the only release artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Ultra-HD-Wallpaper-release-AAB
-          path: app/build/outputs/bundle/release/app-release.aab
+          name: Ultra-HD-Wallpaper-release-APK
+          path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 14

@@ -23,7 +23,7 @@ android {
 
     defaultConfig {
         applicationId = "com.civamel.ultrahdwallpaper"
-        minSdk = 23
+        minSdk = 24
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
@@ -47,4 +47,5 @@ android {
 
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
+    implementation("com.google.android.libraries.ads.mobile.sdk:ads-mobile-sdk:1.7.0")
 }
