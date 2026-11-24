@@ -2,4 +2,5 @@
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <cache-path name="shared_wallpapers" path="shared_wallpapers/" />
     <files-path name="stock_full_images" path="stock_full_images/" />
+    <files-path name="wallpaper_images" path="wallpaper_images/" />
 </paths>

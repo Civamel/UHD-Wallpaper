@@ -13,6 +13,7 @@ import android.net.Uri
 import androidx.core.content.FileProvider
 import java.io.File
 import java.io.FileOutputStream
+import java.io.FileInputStream
 import java.security.MessageDigest
 import android.view.Gravity
 import android.view.View
@@ -183,6 +184,83 @@ class MainActivity : Activity() {
             }
         } catch (_: Exception) {
             // Cache cleanup is best-effort; it must never interrupt wallpaper loading.
+        }
+    }
+
+
+    private fun isValidWallpaperFile(file: File): Boolean {
+        if (!file.isFile || file.length() <= 0L || file.length() > 40L * 1024L * 1024L) return false
+        return try {
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(file.absolutePath, options)
+            options.outWidth > 0 && options.outHeight > 0
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun loadWallpaperFile(url: String, onLoaded: (File?) -> Unit) {
+        imageExecutor.execute {
+            var connection: HttpURLConnection? = null
+            var result: File? = null
+            try {
+                val target = wallpaperDiskCacheFile(url)
+                if (isValidWallpaperFile(target)) {
+                    target.setLastModified(System.currentTimeMillis())
+                    result = target
+                } else {
+                    target.delete()
+                    connection = (URL(url).openConnection() as HttpURLConnection).apply {
+                        connectTimeout = 15000
+                        readTimeout = 25000
+                        doInput = true
+                        instanceFollowRedirects = true
+                        requestMethod = "GET"
+                    }
+                    if (connection.responseCode !in 200..299) throw IllegalStateException("HTTP " + connection.responseCode)
+                    val contentLength = connection.contentLengthLong
+                    val maxBytes = 40L * 1024L * 1024L
+                    if (contentLength > maxBytes) throw IllegalStateException("Ukuran gambar melebihi batas")
+                    val temporary = File(target.parentFile, target.name + ".download")
+                    try {
+                        connection.inputStream.use { input ->
+                            FileOutputStream(temporary).use { output ->
+                                val buffer = ByteArray(32 * 1024)
+                                var total = 0L
+                                while (true) {
+                                    val count = input.read(buffer)
+                                    if (count < 0) break
+                                    total += count
+                                    if (total > maxBytes) throw IllegalStateException("Ukuran gambar melebihi batas")
+                                    output.write(buffer, 0, count)
+                                }
+                                output.fd.sync()
+                            }
+                        }
+                        if (!isValidWallpaperFile(temporary)) throw IllegalStateException("File gambar tidak valid")
+                        if (!temporary.renameTo(target)) {
+                            temporary.copyTo(target, overwrite = true)
+                            temporary.delete()
+                        }
+                        if (isValidWallpaperFile(target)) {
+                            target.setLastModified(System.currentTimeMillis())
+                            trimWallpaperDiskCache()
+                            result = target
+                        } else {
+                            target.delete()
+                        }
+                    } finally {
+                        if (temporary.exists()) temporary.delete()
+                    }
+                }
+            } catch (_: Exception) {
+                result = null
+            } finally {
+                connection?.disconnect()
+            }
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed) onLoaded(result)
+            }
         }
     }
 
@@ -449,36 +527,58 @@ class MainActivity : Activity() {
         setContentView(root)
     }
 
-    private fun applyWallpaper(index:Int) {
-        val targets = if (Build.VERSION.SDK_INT >= 24) arrayOf("Layar utama","Layar kunci","Keduanya") else arrayOf("Layar utama")
-        AlertDialog.Builder(this@MainActivity).setTitle("Terapkan wallpaper").setItems(targets) { _,which ->
-            val flags = when(which) { 1 -> WallpaperManager.FLAG_LOCK; 2 -> WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK; else -> WallpaperManager.FLAG_SYSTEM }
-            val applyBitmap: (Bitmap) -> Unit = { bitmap ->
+    private fun applyWallpaper(index: Int) {
+        val targets = if (Build.VERSION.SDK_INT >= 24) arrayOf("Layar utama", "Layar kunci", "Keduanya") else arrayOf("Layar utama")
+        AlertDialog.Builder(this@MainActivity).setTitle("Terapkan wallpaper").setItems(targets) { _, which ->
+            val flags = when (which) {
+                1 -> WallpaperManager.FLAG_LOCK
+                2 -> WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK
+                else -> WallpaperManager.FLAG_SYSTEM
+            }
+            if (index < fullUrls.size) {
+                Toast.makeText(this@MainActivity, "Menyiapkan file UHD…", Toast.LENGTH_SHORT).show()
+                loadWallpaperFile(fullUrls[index]) { file ->
+                    if (file == null) {
+                        Toast.makeText(this@MainActivity, "Gambar gagal dimuat atau file tidak valid.", Toast.LENGTH_LONG).show()
+                        return@loadWallpaperFile
+                    }
+                    Thread {
+                        try {
+                            FileInputStream(file).use { input ->
+                                val manager = WallpaperManager.getInstance(this@MainActivity)
+                                if (Build.VERSION.SDK_INT >= 24) manager.setStream(input, null, true, flags)
+                                else manager.setStream(input)
+                            }
+                            runOnUiThread {
+                                if (!isFinishing && !isDestroyed) Toast.makeText(this@MainActivity, "Wallpaper berhasil diterapkan", Toast.LENGTH_LONG).show()
+                            }
+                        } catch (e: Exception) {
+                            runOnUiThread {
+                                if (!isFinishing && !isDestroyed) Toast.makeText(this@MainActivity, "Gagal: " + e.localizedMessage, Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }.start()
+                }
+            } else {
+                val colors = palettes[index % palettes.size]
+                val bitmap = Bitmap.createBitmap(1080, 1920, Bitmap.Config.ARGB_8888)
+                val canvas = Canvas(bitmap)
+                val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+                paint.shader = LinearGradient(0f, 0f, 1080f, 1920f, colors[0], colors[1], Shader.TileMode.CLAMP)
+                canvas.drawRect(0f, 0f, 1080f, 1920f, paint)
                 Thread {
                     try {
-                        val wm = WallpaperManager.getInstance(this@MainActivity)
-                        if (Build.VERSION.SDK_INT >= 24) wm.setBitmap(bitmap, null, true, flags) else wm.setBitmap(bitmap)
-                        runOnUiThread { Toast.makeText(this@MainActivity,"Wallpaper berhasil diterapkan",Toast.LENGTH_LONG).show() }
-                    } catch(e:Exception) {
-                        runOnUiThread { Toast.makeText(this@MainActivity,"Gagal: "+e.localizedMessage,Toast.LENGTH_LONG).show() }
+                        val manager = WallpaperManager.getInstance(this@MainActivity)
+                        if (Build.VERSION.SDK_INT >= 24) manager.setBitmap(bitmap, null, true, flags) else manager.setBitmap(bitmap)
+                        bitmap.recycle()
+                        runOnUiThread { if (!isFinishing && !isDestroyed) Toast.makeText(this@MainActivity, "Wallpaper berhasil diterapkan", Toast.LENGTH_LONG).show() }
+                    } catch (e: Exception) {
+                        if (!bitmap.isRecycled) bitmap.recycle()
+                        runOnUiThread { if (!isFinishing && !isDestroyed) Toast.makeText(this@MainActivity, "Gagal: " + e.localizedMessage, Toast.LENGTH_LONG).show() }
                     }
                 }.start()
             }
-            if (index < fullUrls.size) {
-                Toast.makeText(this@MainActivity,"Mengunduh wallpaper…",Toast.LENGTH_SHORT).show()
-                loadImage(fullUrls[index]) { bitmap ->
-                    if (bitmap != null) applyBitmap(bitmap)
-                    else Toast.makeText(this@MainActivity,"Gambar gagal dimuat. Periksa koneksi internet.",Toast.LENGTH_LONG).show()
-                }
-            } else {
-                val colors=palettes[index%palettes.size]
-                val bitmap=Bitmap.createBitmap(1080,1920,Bitmap.Config.ARGB_8888)
-                val canvas=Canvas(bitmap); val paint=Paint(Paint.ANTI_ALIAS_FLAG)
-                paint.shader=LinearGradient(0f,0f,1080f,1920f,colors[0],colors[1],Shader.TileMode.CLAMP)
-                canvas.drawRect(0f,0f,1080f,1920f,paint)
-                applyBitmap(bitmap)
-            }
-        }.setNegativeButton("Batal",null).show()
+        }.setNegativeButton("Batal", null).show()
     }
 
     private fun showSettings() {
@@ -988,22 +1088,16 @@ class MainActivity : Activity() {
             Toast.makeText(this, "Gambar belum tersedia", Toast.LENGTH_LONG).show()
             return
         }
-        Toast.makeText(this, "Menyiapkan gambar untuk dibagikan…", Toast.LENGTH_SHORT).show()
-        loadImage(url) { bitmap ->
-            if (bitmap == null) {
+        Toast.makeText(this, "Menyiapkan file asli untuk dibagikan…", Toast.LENGTH_SHORT).show()
+        loadWallpaperFile(url) { imageFile ->
+            if (imageFile == null) {
                 Toast.makeText(this, "Gambar gagal dimuat. Periksa koneksi internet.", Toast.LENGTH_LONG).show()
-                return@loadImage
+                return@loadWallpaperFile
             }
             try {
-                val shareDir = File(cacheDir, "shared_wallpapers").apply { mkdirs() }
-                val safeName = names[index].replace(Regex("[^A-Za-z0-9_-]"), "_")
-                val imageFile = File(shareDir, safeName + ".jpg")
-                FileOutputStream(imageFile).use { output ->
-                    if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 95, output)) throw IllegalStateException("Gagal menyiapkan JPEG")
-                }
                 val imageUri = FileProvider.getUriForFile(this, "com.civamel.ultrahdwallpaper.fileprovider", imageFile)
                 val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "image/jpeg"
+                    type = "image/*"
                     putExtra(Intent.EXTRA_STREAM, imageUri)
                     putExtra(Intent.EXTRA_SUBJECT, names[index])
                     putExtra(Intent.EXTRA_TEXT, names[index] + " — Ultra HD Wallpaper")
