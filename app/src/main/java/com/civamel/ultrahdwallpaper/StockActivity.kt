@@ -725,9 +725,18 @@ class StockActivity : Activity() {
                                     }
                                 }
                             }
-                            if (temp.length() > 0L && temp.renameTo(cacheFile)) {
-                                bitmap = BitmapFactory.decodeFile(cacheFile.absolutePath)
-                                if (bitmap == null) cacheFile.delete() else trimStockFullImageCache()
+                            if (temp.length() > 0L) {
+                                val stored = temp.renameTo(cacheFile) || try {
+                                    temp.copyTo(cacheFile, overwrite = true)
+                                    temp.delete()
+                                    cacheFile.isFile && cacheFile.length() > 0L
+                                } catch (_: Exception) {
+                                    false
+                                }
+                                if (stored) {
+                                    bitmap = BitmapFactory.decodeFile(cacheFile.absolutePath)
+                                    if (bitmap == null) cacheFile.delete() else trimStockFullImageCache()
+                                }
                             }
                         } finally {
                             if (temp.exists()) temp.delete()
