@@ -20,7 +20,7 @@ import java.net.URL
 import java.util.concurrent.Executors
 
 class StockActivity : Activity() {
-    private data class StockItem(val title: String, val category: String, val thumbnail: String, val image: String, val tags: List<String>)
+    private data class StockItem(val id: String, val title: String, val category: String, val thumbnail: String, val image: String, val tags: List<String>)
     private val items = mutableListOf<StockItem>()
     private val executor = Executors.newFixedThreadPool(3)
     private var query = ""
@@ -29,6 +29,7 @@ class StockActivity : Activity() {
     private var isRefreshingCatalog = false
     private var showOnlyFavorites = false
     private val favorites = mutableSetOf<String>()
+    private val legacyFavoriteTitles = mutableSetOf<String>()
     private var gridHostView: LinearLayout? = null
     private val blue = Color.rgb(0, 119, 255)
     private val ink = Color.rgb(28, 28, 30)
@@ -42,7 +43,8 @@ class StockActivity : Activity() {
         super.onCreate(savedInstanceState)
         val preferences = getSharedPreferences("wallpaper_preferences", MODE_PRIVATE)
         darkMode = preferences.getBoolean("dark_mode", false)
-        favorites.addAll(preferences.getStringSet("favorite_titles", emptySet()) ?: emptySet())
+        favorites.addAll(preferences.getStringSet("favorite_ids", emptySet()) ?: emptySet())
+        legacyFavoriteTitles.addAll(preferences.getStringSet("favorite_titles", emptySet()) ?: emptySet())
         window.statusBarColor = pageBg
         window.navigationBarColor = pageBg
         if (Build.VERSION.SDK_INT >= 23) {
@@ -144,16 +146,27 @@ class StockActivity : Activity() {
         val array = CatalogValidator.parse(body)
         for (item in array) {
             val title = item.optString("title").trim()
+            val id = item.optString("id").trim().ifBlank { stableStockId(item.optString("image").ifBlank { title }) }
             val category = item.optString("category", "Stock").ifBlank { "Stock" }
             val thumbnail = item.optString("thumbnail").trim()
             val image = item.optString("image").trim()
             val tagsArray = item.optJSONArray("tags")
             val tags = (0 until (tagsArray?.length() ?: 0)).map { tagsArray!!.optString(it).trim() }.filter { it.isNotEmpty() }
             if (title.isNotEmpty() && thumbnail.startsWith("https://") && image.startsWith("https://")) {
-                result.add(StockItem(title, category, thumbnail, image, tags))
+                result.add(StockItem(id, title, category, thumbnail, image, tags))
             }
         }
+        if (legacyFavoriteTitles.isNotEmpty()) {
+            result.filter { it.title in legacyFavoriteTitles }.forEach { favorites.add(it.id) }
+            legacyFavoriteTitles.clear()
+            getSharedPreferences("wallpaper_preferences", MODE_PRIVATE).edit().putStringSet("favorite_ids", favorites.toSet()).apply()
+        }
         return result
+    }
+
+    private fun stableStockId(source: String): String {
+        val digest = java.security.MessageDigest.getInstance("SHA-256").digest(source.toByteArray(Charsets.UTF_8))
+        return "wp-" + digest.take(12).joinToString("") { "%02x".format(it) }
     }
 
     private fun showGallery() {
@@ -272,7 +285,7 @@ class StockActivity : Activity() {
         host.removeAllViews()
         val filtered = items.filter {
             (selectedCategory == "All" || it.category == selectedCategory) &&
-                (!showOnlyFavorites || favorites.contains(it.title)) &&
+                (!showOnlyFavorites || favorites.contains(it.id)) &&
                 (query.isBlank() || it.title.contains(query, true) || it.category.contains(query, true) || it.tags.any { tag -> tag.contains(query, true) })
         }
         val matches = when (selectedSort) {
@@ -321,13 +334,13 @@ class StockActivity : Activity() {
             }
             val imageFrame = FrameLayout(this).apply {
                 addView(image, FrameLayout.LayoutParams(-1, dp(210)))
-                addView(label(if (item.title in favorites) "♥" else "♡", 18, Color.WHITE, true).apply {
+                addView(label(if (item.id in favorites) "♥" else "♡", 18, Color.WHITE, true).apply {
                     gravity = Gravity.CENTER
                     background = rounded(0xcc000000.toInt(), 18)
                     setOnClickListener {
-                        if (!favorites.add(item.title)) favorites.remove(item.title)
+                        if (!favorites.add(item.id)) favorites.remove(item.id)
                         getSharedPreferences("wallpaper_preferences", MODE_PRIVATE).edit()
-                            .putStringSet("favorite_titles", favorites.toSet()).apply()
+                            .putStringSet("favorite_ids", favorites.toSet()).apply()
                         showGallery()
                     }
                 }, FrameLayout.LayoutParams(dp(32), dp(32), Gravity.TOP or Gravity.START).apply {
@@ -394,12 +407,12 @@ class StockActivity : Activity() {
         }
         layout.addView(detailInfo, LinearLayout.LayoutParams(-1, -2))
         val favoriteButton = Button(this).apply {
-            text = if (item.title in favorites) "♥  Hapus dari favorit" else "♡  Tambahkan ke favorit"
+            text = if (item.id in favorites) "♥  Hapus dari favorit" else "♡  Tambahkan ke favorit"
             setOnClickListener {
-                if (!favorites.add(item.title)) favorites.remove(item.title)
+                if (!favorites.add(item.id)) favorites.remove(item.id)
                 getSharedPreferences("wallpaper_preferences", MODE_PRIVATE).edit()
-                    .putStringSet("favorite_titles", favorites.toSet()).apply()
-                text = if (item.title in favorites) "♥  Hapus dari favorit" else "♡  Tambahkan ke favorit"
+                    .putStringSet("favorite_ids", favorites.toSet()).apply()
+                text = if (item.id in favorites) "♥  Hapus dari favorit" else "♡  Tambahkan ke favorit"
                 renderGrid()
             }
         }

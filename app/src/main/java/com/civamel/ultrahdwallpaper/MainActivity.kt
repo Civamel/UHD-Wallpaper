@@ -26,6 +26,7 @@ import java.util.concurrent.Executors
 class MainActivity : Activity() {
     private data class ParsedCatalog(
         val names: MutableList<String>,
+        val ids: MutableList<String>,
         val categories: MutableList<String>,
         val types: MutableList<String>,
         val tags: MutableList<List<String>>,
@@ -47,6 +48,8 @@ class MainActivity : Activity() {
         intArrayOf(0xff40104f.toInt(),0xffff8c26.toInt()), intArrayOf(0xffed8d24.toInt(),0xff1a9c36.toInt()),
         intArrayOf(0xff062f25.toInt(),0xff9bcf80.toInt()), intArrayOf(0xff20232a.toInt(),0xff656a73.toInt())
     )
+    private val itemIds = mutableListOf<String>()
+    private val legacyFavoriteTitles = mutableSetOf<String>()
     private val thumbnailUrls = mutableListOf<String>()
     private val fullUrls = mutableListOf<String>()
     private val imageExecutor = Executors.newFixedThreadPool(4)
@@ -78,7 +81,8 @@ class MainActivity : Activity() {
         window.statusBarColor = Color.WHITE
         window.navigationBarColor = Color.WHITE
         if (Build.VERSION.SDK_INT >= 23) window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-        favorites.addAll(preferences.getStringSet("favorite_titles", emptySet()) ?: emptySet())
+        favorites.addAll(preferences.getStringSet("favorite_ids", emptySet()) ?: emptySet())
+        legacyFavoriteTitles.addAll(preferences.getStringSet("favorite_titles", emptySet()) ?: emptySet())
         darkMode = preferences.getBoolean("dark_mode", false)
         buildHome()
         loadBundledCatalog()
@@ -94,7 +98,27 @@ class MainActivity : Activity() {
 
     private fun refreshFavoritesFromPreferences() {
         favorites.clear()
-        favorites.addAll(preferences.getStringSet("favorite_titles", emptySet()) ?: emptySet())
+        favorites.addAll(preferences.getStringSet("favorite_ids", emptySet()) ?: emptySet())
+        legacyFavoriteTitles.clear()
+        legacyFavoriteTitles.addAll(preferences.getStringSet("favorite_titles", emptySet()) ?: emptySet())
+        migrateLegacyFavorites()
+    }
+
+    private fun stableWallpaperId(item: org.json.JSONObject): String {
+        val explicit = item.optString("id").trim()
+        if (explicit.isNotEmpty()) return explicit
+        val source = item.optString("image").ifBlank { item.optString("title") }
+        val digest = MessageDigest.getInstance("SHA-256").digest(source.toByteArray(Charsets.UTF_8))
+        return "wp-" + digest.take(12).joinToString("") { "%02x".format(it) }
+    }
+
+    private fun migrateLegacyFavorites() {
+        if (legacyFavoriteTitles.isEmpty() || itemIds.isEmpty()) return
+        names.forEachIndexed { index, title ->
+            if (title in legacyFavoriteTitles) itemIds.getOrNull(index)?.let { favorites.add(it) }
+        }
+        legacyFavoriteTitles.clear()
+        preferences.edit().putStringSet("favorite_ids", favorites.toSet()).apply()
     }
 
     private fun loadBundledCatalog() {
@@ -102,6 +126,7 @@ class MainActivity : Activity() {
             val body = assets.open("wallpapers.json").bufferedReader().use { it.readText() }
             val items = CatalogValidator.parse(body)
             val newNames = mutableListOf<String>()
+            val newIds = mutableListOf<String>()
             val newCategories = mutableListOf<String>()
             val newTypes = mutableListOf<String>()
             val newTags = mutableListOf<List<String>>()
@@ -110,6 +135,7 @@ class MainActivity : Activity() {
             for (i in items.indices) {
                 val item = items[i]
                 newNames.add(item.getString("title"))
+                newIds.add(stableWallpaperId(item))
                 newCategories.add(item.optString("category", "Abstract").ifBlank { "Abstract" })
                 newTypes.add(item.optString("type", "wallpaper").lowercase())
                 val tagsArray = item.optJSONArray("tags")
@@ -119,6 +145,8 @@ class MainActivity : Activity() {
             }
             if (newNames.isNotEmpty()) {
                 names.clear(); names.addAll(newNames)
+                itemIds.clear(); itemIds.addAll(newIds)
+                migrateLegacyFavorites()
                 itemCategories.clear(); itemCategories.addAll(newCategories)
                 itemTypes.clear(); itemTypes.addAll(newTypes)
                 itemTags.clear(); itemTags.addAll(newTags)
@@ -160,6 +188,7 @@ class MainActivity : Activity() {
             if (!cacheFile.isFile || cacheFile.length() <= 0L) return
             val items = CatalogValidator.parse(cacheFile.readText())
             val titles = mutableListOf<String>()
+            val ids = mutableListOf<String>()
             val categories = mutableListOf<String>()
             val types = mutableListOf<String>()
             val tags = mutableListOf<List<String>>()
@@ -173,6 +202,7 @@ class MainActivity : Activity() {
                 if (title.isEmpty() || thumbnail.isEmpty() || image.isEmpty()) continue
                 if (!thumbnail.startsWith("https://") || !image.startsWith("https://")) continue
                 titles.add(title)
+                ids.add(stableWallpaperId(item))
                 categories.add(item.optString("category", "Abstract").ifBlank { "Abstract" })
                 types.add(item.optString("type", "wallpaper").lowercase())
                 val tagsArray = item.optJSONArray("tags")
@@ -182,6 +212,8 @@ class MainActivity : Activity() {
             }
             if (titles.isEmpty()) return
             names.clear(); names.addAll(titles)
+            itemIds.clear(); itemIds.addAll(ids)
+            migrateLegacyFavorites()
             itemCategories.clear(); itemCategories.addAll(categories)
             itemTypes.clear(); itemTypes.addAll(types)
             itemTags.clear(); itemTags.addAll(tags)
@@ -283,7 +315,7 @@ class MainActivity : Activity() {
         val filteredIndexes = names.indices.filter { index ->
             val categoryMatch = selectedCategory == "All" || itemCategories[index] == selectedCategory
             val searchMatch = searchQuery.isBlank() || names[index].contains(searchQuery, true) || itemCategories[index].contains(searchQuery, true) || itemTags.getOrNull(index).orEmpty().any { it.contains(searchQuery, true) }
-            val favoriteMatch = !showOnlyFavorites || favorites.contains(names[index])
+            val favoriteMatch = !showOnlyFavorites || favorites.contains(itemIds.getOrNull(index) ?: names[index])
             val type = itemTypes.getOrNull(index) ?: "wallpaper"
             val tabMatch = when (selectedTab) {
                 "Live" -> type == "live"
@@ -322,12 +354,13 @@ class MainActivity : Activity() {
                 setOnClickListener { showPreview(index) }
             }
             cell.addView(art,FrameLayout.LayoutParams(-1,dp(148)))
-            cell.addView(text(if (names[index] in favorites) "♥" else "♡", 18, Color.WHITE, true).apply {
+            cell.addView(text(if ((itemIds.getOrNull(index) ?: names[index]) in favorites) "♥" else "♡", 18, Color.WHITE, true).apply {
                 gravity = Gravity.CENTER
                 background = rounded(0xcc000000.toInt(), 18)
                 setOnClickListener {
-                    if (!favorites.add(names[index])) favorites.remove(names[index])
-                    preferences.edit().putStringSet("favorite_titles", favorites.toSet()).apply()
+                    val favoriteId = itemIds.getOrNull(index) ?: names[index]
+                    if (!favorites.add(favoriteId)) favorites.remove(favoriteId)
+                    preferences.edit().putStringSet("favorite_ids", favorites.toSet()).putStringSet("favorite_titles", names.filterIndexed { i, _ -> itemIds.getOrNull(i) in favorites }.toSet()).apply()
                     buildHome()
                 }
             }, FrameLayout.LayoutParams(dp(32), dp(32), Gravity.TOP or Gravity.START).apply {
@@ -390,7 +423,7 @@ class MainActivity : Activity() {
         details.addView(text(names[index],15,Color.WHITE,true))
         details.addView(text(itemCategories.getOrNull(index).orEmpty(),12,0xffcccccc.toInt(),false))
         bottom.addView(details,LinearLayout.LayoutParams(0,dp(54),1f))
-        bottom.addView(circle(if(names[index] in favorites) "♥" else "♡"){ if(!favorites.add(names[index])) favorites.remove(names[index]); preferences.edit().putStringSet("favorite_titles", favorites.toSet()).apply(); showPreview(index) })
+        bottom.addView(circle(if((itemIds.getOrNull(index) ?: names[index]) in favorites) "♥" else "♡"){ val favoriteId = itemIds.getOrNull(index) ?: names[index]; if(!favorites.add(favoriteId)) favorites.remove(favoriteId); preferences.edit().putStringSet("favorite_ids", favorites.toSet()).putStringSet("favorite_titles", names.filterIndexed { i, _ -> itemIds.getOrNull(i) in favorites }.toSet()).apply(); showPreview(index) })
         bottom.addView(View(this@MainActivity),LinearLayout.LayoutParams(0,1,1f))
         val apply=Button(this@MainActivity).apply { text="Terapkan"; isAllCaps=false; textSize=16f; setTextColor(Color.WHITE); background=rounded(blue,32); setOnClickListener { if(itemTypes.getOrNull(index) == "live") applyLiveWallpaper(index) else applyWallpaper(index) } }
         bottom.addView(apply,LinearLayout.LayoutParams(dp(150),dp(54)))
@@ -1011,6 +1044,7 @@ class MainActivity : Activity() {
                 val body = connection.inputStream.bufferedReader().use { it.readText() }
                 val items = CatalogValidator.parse(body)
                 val titles = mutableListOf<String>()
+                val ids = mutableListOf<String>()
                 val categories = mutableListOf<String>()
                 val types = mutableListOf<String>()
                 val tags = mutableListOf<List<String>>()
@@ -1024,6 +1058,7 @@ class MainActivity : Activity() {
                     if (title.isEmpty() || thumbnail.isEmpty() || image.isEmpty()) continue
                     if (!thumbnail.startsWith("https://") || !image.startsWith("https://")) continue
                     titles.add(title)
+                    ids.add(stableWallpaperId(item))
                     categories.add(item.optString("category", "Abstract").ifBlank { "Abstract" })
                     types.add(item.optString("type", "wallpaper").lowercase())
                     val tagsArray = item.optJSONArray("tags")
@@ -1033,7 +1068,7 @@ class MainActivity : Activity() {
                 }
                 if (titles.isEmpty()) throw IllegalStateException("Katalog online kosong atau tidak valid")
                 validatedCatalogBody = body
-                ParsedCatalog(titles, categories, types, tags, thumbs, images)
+                ParsedCatalog(titles, ids, categories, types, tags, thumbs, images)
             } catch (_: Exception) {
                 null
             } finally {
@@ -1049,6 +1084,9 @@ class MainActivity : Activity() {
                 runOnUiThread {
                     names.clear()
                     names.addAll(parsed.names)
+                    itemIds.clear()
+                    itemIds.addAll(parsed.ids)
+                    migrateLegacyFavorites()
                     itemCategories.clear()
                     itemCategories.addAll(parsed.categories)
                     itemTypes.clear()
