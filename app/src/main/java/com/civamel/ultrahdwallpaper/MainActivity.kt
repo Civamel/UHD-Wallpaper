@@ -56,6 +56,8 @@ class MainActivity : Activity() {
     private val imageExecutor = Executors.newFixedThreadPool(4)
     private val pendingWallpaperFileLock = Any()
     private val pendingWallpaperFileCallbacks = mutableMapOf<String, MutableList<(File?) -> Unit>>()
+    private val previewCallbackLock = Any()
+    private val pendingPreviewCallbacks = mutableMapOf<String, MutableList<(Bitmap?) -> Unit>>()
     private val imageCache = object : LruCache<String, Bitmap>(24 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount / 1024
     }
@@ -352,73 +354,108 @@ class MainActivity : Activity() {
 
     private fun loadImage(url: String, onLoaded: (Bitmap?) -> Unit) {
         val cached = imageCache.get(url)
-        if (cached != null && !cached.isRecycled) { onLoaded(cached); return }
-        imageExecutor.execute {
-            var connection: HttpURLConnection? = null
-            var bitmap: Bitmap? = null
-            try {
-                val cacheFile = wallpaperDiskCacheFile(url)
-                if (cacheFile.isFile) {
-                    bitmap = decodeWallpaperPreview(cacheFile)
-                    if (bitmap != null) cacheFile.setLastModified(System.currentTimeMillis())
-                    else cacheFile.delete()
-                }
-                if (bitmap == null) {
-                    connection = (URL(url).openConnection() as HttpURLConnection).apply {
-                        connectTimeout = 15000
-                        readTimeout = 20000
-                        doInput = true
-                        instanceFollowRedirects = true
-                        requestMethod = "GET"
-                    }
-                    if (connection.responseCode !in 200..299) throw IllegalStateException("HTTP " + connection.responseCode)
-                    val maxBytes = 40L * 1024L * 1024L
-                    if (connection.contentLengthLong > maxBytes) throw IllegalStateException("Ukuran gambar melebihi batas")
-                    val temporaryFile = File(cacheFile.parentFile, cacheFile.name + "." + Thread.currentThread().id + ".tmp")
-                    try {
-                        connection.inputStream.use { input ->
-                            FileOutputStream(temporaryFile).use { output ->
-                                val buffer = ByteArray(32 * 1024)
-                                var total = 0L
-                                while (true) {
-                                    val count = input.read(buffer)
-                                    if (count < 0) break
-                                    total += count
-                                    if (total > maxBytes) throw IllegalStateException("Ukuran gambar melebihi batas")
-                                    output.write(buffer, 0, count)
-                                }
-                                output.fd.sync()
-                            }
-                        }
-                        bitmap = decodeWallpaperPreview(temporaryFile)
-                        if (bitmap != null) {
-                            if (!temporaryFile.renameTo(cacheFile)) {
-                                temporaryFile.copyTo(cacheFile, overwrite = true)
-                                temporaryFile.delete()
-                            }
-                            if (cacheFile.isFile) {
-                                cacheFile.setLastModified(System.currentTimeMillis())
-                                trimWallpaperDiskCache()
-                            }
-                        } else {
-                            cacheFile.delete()
-                        }
-                    } finally {
-                        if (temporaryFile.exists()) temporaryFile.delete()
-                    }
-                }
-            } catch (_: Exception) {
-                bitmap = null
-            } finally {
-                connection?.disconnect()
+        if (cached != null && !cached.isRecycled) {
+            onLoaded(cached)
+            return
+        }
+
+        val shouldStart = synchronized(previewCallbackLock) {
+            val waiting = pendingPreviewCallbacks[url]
+            if (waiting != null) {
+                waiting.add(onLoaded)
+                false
+            } else {
+                pendingPreviewCallbacks[url] = mutableListOf(onLoaded)
+                true
             }
-            if (bitmap != null) imageCache.put(url, bitmap)
-            runOnUiThread {
-                if (!isFinishing && !isDestroyed) onLoaded(bitmap)
-                else bitmap?.recycle()
+        }
+        if (!shouldStart) return
+
+        try {
+            imageExecutor.execute {
+                var connection: HttpURLConnection? = null
+                var bitmap: Bitmap? = null
+                try {
+                    val cacheFile = wallpaperDiskCacheFile(url)
+                    if (cacheFile.isFile) {
+                        bitmap = decodeWallpaperPreview(cacheFile)
+                        if (bitmap != null) cacheFile.setLastModified(System.currentTimeMillis())
+                        else cacheFile.delete()
+                    }
+                    if (bitmap == null) {
+                        connection = (URL(url).openConnection() as HttpURLConnection).apply {
+                            connectTimeout = 15000
+                            readTimeout = 20000
+                            doInput = true
+                            instanceFollowRedirects = true
+                            requestMethod = "GET"
+                        }
+                        if (connection.responseCode !in 200..299) throw IllegalStateException("HTTP " + connection.responseCode)
+                        val maxBytes = 40L * 1024L * 1024L
+                        if (connection.contentLengthLong > maxBytes) throw IllegalStateException("Ukuran gambar melebihi batas")
+                        val temporaryFile = File(cacheFile.parentFile, cacheFile.name + "." + Thread.currentThread().id + ".tmp")
+                        try {
+                            connection.inputStream.use { input ->
+                                FileOutputStream(temporaryFile).use { output ->
+                                    val buffer = ByteArray(32 * 1024)
+                                    var total = 0L
+                                    while (true) {
+                                        val count = input.read(buffer)
+                                        if (count < 0) break
+                                        total += count
+                                        if (total > maxBytes) throw IllegalStateException("Ukuran gambar melebihi batas")
+                                        output.write(buffer, 0, count)
+                                    }
+                                    output.fd.sync()
+                                }
+                            }
+                            bitmap = decodeWallpaperPreview(temporaryFile)
+                            if (bitmap != null) {
+                                if (!temporaryFile.renameTo(cacheFile)) {
+                                    temporaryFile.copyTo(cacheFile, overwrite = true)
+                                    temporaryFile.delete()
+                                }
+                                if (cacheFile.isFile) {
+                                    cacheFile.setLastModified(System.currentTimeMillis())
+                                    trimWallpaperDiskCache()
+                                }
+                            } else {
+                                cacheFile.delete()
+                            }
+                        } finally {
+                            if (temporaryFile.exists()) temporaryFile.delete()
+                        }
+                    }
+                } catch (_: Exception) {
+                    bitmap = null
+                } finally {
+                    connection?.disconnect()
+                }
+
+                if (bitmap != null) imageCache.put(url, bitmap)
+                val callbacks = synchronized(previewCallbackLock) {
+                    pendingPreviewCallbacks.remove(url)?.toList().orEmpty()
+                }
+                runOnUiThread {
+                    if (!isFinishing && !isDestroyed) {
+                        callbacks.forEach { callback ->
+                            try { callback(bitmap) } catch (_: Exception) { }
+                        }
+                    } else {
+                        bitmap?.recycle()
+                    }
+                }
+            }
+        } catch (_: java.util.concurrent.RejectedExecutionException) {
+            val callbacks = synchronized(previewCallbackLock) {
+                pendingPreviewCallbacks.remove(url)?.toList().orEmpty()
+            }
+            callbacks.forEach { callback ->
+                try { callback(null) } catch (_: Exception) { }
             }
         }
     }
+
     private fun buildHome() {
         val pageBg = if (darkMode) 0xff121318.toInt() else Color.WHITE
         val pageText = if (darkMode) 0xfff2f2f5.toInt() else ink
