@@ -25,8 +25,9 @@ import java.net.URL
 import java.util.concurrent.Executors
 
 class MainActivity : Activity() {
-    private val TEST_ADMOB_APP_ID = "ca-app-pub-3940256099942544~3347511713"
-    private val TEST_ADMOB_BANNER_ID = "ca-app-pub-3940256099942544/9214589741"
+    // Add the separately created production AdMob IDs after the account owner provides them.
+    private val ADMOB_APP_ID = ""
+    private val ADMOB_BANNER_ID = ""
     private data class ParsedCatalog(
         val names: MutableList<String>,
         val ids: MutableList<String>,
@@ -474,13 +475,14 @@ class MainActivity : Activity() {
     }
 
     private fun initializeAds() {
+        if (ADMOB_APP_ID.isBlank() || ADMOB_BANNER_ID.isBlank()) return
         if (adsInitializationStarted) return
         adsInitializationStarted = true
         Thread {
             try {
                 com.google.android.libraries.ads.mobile.sdk.MobileAds.initialize(
                     this,
-                    com.google.android.libraries.ads.mobile.sdk.initialization.InitializationConfig.Builder(TEST_ADMOB_APP_ID).build()
+                    com.google.android.libraries.ads.mobile.sdk.initialization.InitializationConfig.Builder(ADMOB_APP_ID).build()
                 ) {
                     runOnUiThread {
                         adsInitialized = true
@@ -499,7 +501,7 @@ class MainActivity : Activity() {
         if (widthDp <= 0) return
         bannerAdRequested = true
         val adSize = com.google.android.libraries.ads.mobile.sdk.banner.AdSize.getLargeAnchoredAdaptiveBannerAdSize(this, widthDp)
-        val request = com.google.android.libraries.ads.mobile.sdk.banner.BannerAdRequest.Builder(TEST_ADMOB_BANNER_ID, adSize).build()
+        val request = com.google.android.libraries.ads.mobile.sdk.banner.BannerAdRequest.Builder(ADMOB_BANNER_ID, adSize).build()
         adView.loadAd(
             request,
             object : com.google.android.libraries.ads.mobile.sdk.banner.AdLoadCallback<com.google.android.libraries.ads.mobile.sdk.banner.BannerAd> {
