@@ -13,6 +13,8 @@ import android.os.Looper
 import android.os.SystemClock
 import android.service.wallpaper.WallpaperService
 import android.view.SurfaceHolder
+import java.io.File
+import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.math.max
@@ -27,6 +29,7 @@ class LiveWallpaperService : WallpaperService() {
         @Volatile private var wallpaperBitmap: Bitmap? = null
         private var visible = false
         private var surfaceReady = false
+        @Volatile private var destroyed = false
         private val drawTask = object : Runnable {
             override fun run() {
                 if (visible && surfaceReady) {
@@ -38,26 +41,110 @@ class LiveWallpaperService : WallpaperService() {
 
         init { loadSelectedWallpaper() }
 
+        private fun liveCacheFile(url: String): File {
+            val digest = java.security.MessageDigest.getInstance("SHA-256")
+                .digest(url.toByteArray(Charsets.UTF_8))
+            val key = digest.joinToString("") { "%02x".format(it) }
+            return File(File(filesDir, "live_wallpaper_cache").apply { mkdirs() }, "$key.img")
+        }
+
+        private fun decodeForDisplay(file: File): Bitmap? {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(file.absolutePath, bounds)
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+            // A half-resolution decode is ample for a phone display and avoids
+            // keeping a huge UHD bitmap in the live wallpaper service's RAM.
+            val options = BitmapFactory.Options().apply {
+                inSampleSize = 2
+                inPreferredConfig = Bitmap.Config.RGB_565
+                inDither = true
+            }
+            return BitmapFactory.decodeFile(file.absolutePath, options)
+        }
+
         private fun loadSelectedWallpaper() {
             val url = getSharedPreferences("wallpaper_preferences", MODE_PRIVATE)
                 .getString("selected_live_wallpaper_url", null) ?: return
             Thread {
-                var connection: HttpURLConnection? = null
-                val bitmap = try {
-                    connection = (URL(url).openConnection() as HttpURLConnection).apply {
-                        connectTimeout = 15000
-                        readTimeout = 20000
-                        doInput = true
+                val cacheFile = liveCacheFile(url)
+                var bitmap: Bitmap? = null
+                try {
+                    if (cacheFile.isFile && cacheFile.length() > 0L) {
+                        bitmap = decodeForDisplay(cacheFile)
+                        if (bitmap != null) cacheFile.setLastModified(System.currentTimeMillis())
+                        else cacheFile.delete()
                     }
-                    connection.inputStream.use { BitmapFactory.decodeStream(it) }
+                    if (bitmap == null && !destroyed) {
+                        var connection: HttpURLConnection? = null
+                        try {
+                            connection = (URL(url).openConnection() as HttpURLConnection).apply {
+                                connectTimeout = 12000
+                                readTimeout = 20000
+                                doInput = true
+                                instanceFollowRedirects = true
+                                requestMethod = "GET"
+                            }
+                            if (connection.responseCode !in 200..299) {
+                                throw IllegalStateException("Live wallpaper HTTP " + connection.responseCode)
+                            }
+                            if (connection.contentLengthLong > 40L * 1024L * 1024L) {
+                                throw IllegalStateException("Live wallpaper file too large")
+                            }
+                            val temp = File(cacheFile.parentFile, cacheFile.name + ".tmp")
+                            try {
+                                connection.inputStream.use { input ->
+                                    FileOutputStream(temp).use { output ->
+                                        val buffer = ByteArray(8192)
+                                        var total = 0L
+                                        while (true) {
+                                            if (destroyed) throw InterruptedException("Wallpaper engine stopped")
+                                            val count = input.read(buffer)
+                                            if (count < 0) break
+                                            total += count
+                                            if (total > 40L * 1024L * 1024L) {
+                                                throw IllegalStateException("Live wallpaper file too large")
+                                            }
+                                            output.write(buffer, 0, count)
+                                        }
+                                    }
+                                }
+                                val validated = decodeForDisplay(temp)
+                                if (validated != null) {
+                                    val stored = temp.renameTo(cacheFile) || try {
+                                        temp.copyTo(cacheFile, overwrite = true)
+                                        temp.delete()
+                                        cacheFile.isFile && cacheFile.length() > 0L
+                                    } catch (_: Exception) {
+                                        false
+                                    }
+                                    if (stored) {
+                                        bitmap = validated
+                                        cacheFile.setLastModified(System.currentTimeMillis())
+                                    } else {
+                                        validated.recycle()
+                                    }
+                                }
+                            } finally {
+                                if (temp.exists()) temp.delete()
+                            }
+                        } finally {
+                            connection?.disconnect()
+                        }
+                    }
                 } catch (_: Exception) {
-                    null
-                } finally {
-                    connection?.disconnect()
+                    bitmap?.recycle()
+                    bitmap = null
                 }
-                if (bitmap != null && !bitmap.isRecycled) {
-                    wallpaperBitmap = bitmap
-                    handler.post { if (visible || surfaceReady) drawFrame() }
+                val loaded = bitmap
+                if (loaded != null) {
+                    if (destroyed) {
+                        loaded.recycle()
+                    } else {
+                        wallpaperBitmap = loaded
+                        handler.post {
+                            if (!destroyed && (visible || surfaceReady)) drawFrame()
+                        }
+                    }
                 }
             }.start()
         }
@@ -88,9 +175,12 @@ class LiveWallpaperService : WallpaperService() {
         }
 
         override fun onDestroy() {
+            destroyed = true
             visible = false
             surfaceReady = false
             handler.removeCallbacks(drawTask)
+            wallpaperBitmap?.let { if (!it.isRecycled) it.recycle() }
+            wallpaperBitmap = null
             super.onDestroy()
         }
 
