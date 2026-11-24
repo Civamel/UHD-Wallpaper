@@ -48,6 +48,7 @@ class MainActivity : Activity() {
     private var searchQuery = ""
     private var selectedCategory = "All"
     private var showOnlyFavorites = false
+    private var visibleItemLimit = 60
     private var darkMode = false
     private val categoryNames: List<String>
         get() = listOf("All") + itemCategories.map { it.trim() }.filter { it.isNotEmpty() }.distinct().sorted()
@@ -126,7 +127,7 @@ class MainActivity : Activity() {
         val tabScroll=HorizontalScrollView(this@MainActivity).apply { isHorizontalScrollBarEnabled=false }
         val tabRow=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL }
         tabs.forEach { tab ->
-            val item=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER; setOnClickListener { selectedTab=tab; showOnlyFavorites=false; buildHome() } }
+            val item=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER; setOnClickListener { selectedTab=tab; showOnlyFavorites=false; visibleItemLimit=60; buildHome() } }
             item.addView(text(tab,16,if(tab==selectedTab) blue else pageText,true).apply { gravity=Gravity.CENTER; setPadding(dp(15),dp(12),dp(15),dp(12)) })
             item.addView(View(this@MainActivity).apply { setBackgroundColor(if(tab==selectedTab) blue else Color.TRANSPARENT) },LinearLayout.LayoutParams(-1,dp(3)))
             tabRow.addView(item)
@@ -144,6 +145,7 @@ class MainActivity : Activity() {
             val options = arrayOf("Paling populer", "Terbaru", "A-Z", "Acak")
             AlertDialog.Builder(this@MainActivity).setTitle("Urutkan berdasarkan").setItems(options) { _, w ->
                 sortMode = options[w]
+                visibleItemLimit = 60
                 buildHome()
             }.show()
         }}
@@ -182,7 +184,7 @@ class MainActivity : Activity() {
             }
             content.addView(emptyState, LinearLayout.LayoutParams(-1, -2))
         }
-        visibleIndexes.forEach { index ->
+        visibleIndexes.take(visibleItemLimit).forEach { index ->
             val name = names[index]
             val cell=FrameLayout(this@MainActivity)
             val art=ImageView(this@MainActivity).apply {
@@ -197,12 +199,28 @@ class MainActivity : Activity() {
             grid.addView(cell,params)
         }
         content.addView(grid)
+        if (visibleIndexes.size > visibleItemLimit) {
+            val remaining = visibleIndexes.size - visibleItemLimit
+            val moreButton = Button(this@MainActivity).apply {
+                text = "Muat lebih banyak ($remaining tersisa)"
+                isAllCaps = false
+                setTextColor(Color.WHITE)
+                background = rounded(blue, 28)
+                setOnClickListener {
+                    visibleItemLimit += 60
+                    buildHome()
+                }
+            }
+            content.addView(moreButton, LinearLayout.LayoutParams(-1, dp(50)).apply {
+                setMargins(dp(18), dp(14), dp(18), dp(18))
+            })
+        }
         scroll.addView(content); root.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
         val bottom=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER; setPadding(0,dp(8),0,dp(7)); setBackgroundColor(pageBg) }
         listOf("▣\nWallpaper","▦\nCategory","▤\nQuotes","♧\nStock").forEachIndexed { i,label ->
             bottom.addView(text(label,13,if(i==0) blue else pageText,i==0).apply { gravity=Gravity.CENTER; setOnClickListener {
                 when(i) {
-                    0 -> { showOnlyFavorites=false; selectedCategory="All"; buildHome() }
+                    0 -> { showOnlyFavorites=false; selectedCategory="All"; visibleItemLimit=60; buildHome() }
                     1 -> showCategories()
                     2 -> showQuotes()
                     3 -> showFavorites()
@@ -340,7 +358,7 @@ class MainActivity : Activity() {
         }.start()
     }
 
-    private fun showFavorites(){ showOnlyFavorites=true; selectedCategory="All"; selectedTab="Wallpaper"; buildHome() }
+    private fun showFavorites(){ showOnlyFavorites=true; selectedCategory="All"; selectedTab="Wallpaper"; visibleItemLimit=60; buildHome() }
     private fun showCategories(){
         val root = LinearLayout(this@MainActivity).apply {
             orientation = LinearLayout.VERTICAL
@@ -372,6 +390,7 @@ class MainActivity : Activity() {
                 setOnClickListener {
                     selectedCategory = category
                     selectedTab = "Wallpaper"
+                    visibleItemLimit = 60
                     showOnlyFavorites = false
                     buildHome()
                 }
@@ -472,7 +491,7 @@ class MainActivity : Activity() {
         updateQuote()
         setContentView(root)
     }
-    private fun search(){ val input=EditText(this@MainActivity).apply { hint="Cari wallpaper"; setText(searchQuery) }; AlertDialog.Builder(this@MainActivity).setTitle("Search").setView(input).setPositiveButton("Cari"){_,_-> searchQuery=input.text.toString().trim(); showOnlyFavorites=false; buildHome() }.setNeutralButton("Hapus"){_,_-> searchQuery=""; buildHome() }.setNegativeButton("Batal",null).show() }
+    private fun search(){ val input=EditText(this@MainActivity).apply { hint="Cari wallpaper"; setText(searchQuery) }; AlertDialog.Builder(this@MainActivity).setTitle("Search").setView(input).setPositiveButton("Cari"){_,_-> searchQuery=input.text.toString().trim(); showOnlyFavorites=false; visibleItemLimit=60; buildHome() }.setNeutralButton("Hapus"){_,_-> searchQuery=""; visibleItemLimit=60; buildHome() }.setNegativeButton("Batal",null).show() }
     private fun shareWallpaper(){ val i=Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,"Ultra HD Wallpaper"); startActivity(Intent.createChooser(i,"Bagikan")) }
     private fun applyLiveWallpaper(index: Int) {
         val liveUrl = fullUrls.getOrNull(index)
