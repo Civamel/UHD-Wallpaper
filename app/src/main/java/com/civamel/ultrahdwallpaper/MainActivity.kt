@@ -1682,7 +1682,7 @@ class MainActivity : Activity() {
         }
         val symbol = text(glyph, (size * 0.48f).toInt().coerceAtLeast(14), Color.WHITE, true).apply {
             gravity = Gravity.CENTER
-            shadowLayer(dp(3).toFloat(), 0f, dp(1).toFloat(), 0x99001d66.toInt())
+            setShadowLayer(dp(3).toFloat(), 0f, dp(1).toFloat(), 0x99001d66.toInt())
         }
         tile.addView(symbol, FrameLayout.LayoutParams(-1,-1))
         tile.contentDescription = glyph
