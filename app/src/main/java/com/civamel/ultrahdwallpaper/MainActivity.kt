@@ -536,11 +536,13 @@ class MainActivity : Activity() {
         val root = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(pageBg) }
         val header = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(15),dp(12),dp(12),dp(10)) }
         header.addView(text(if (showOnlyFavorites) "Favorit (${favorites.size})" else "4k Ultra HD Wallpaper",25,pageText,true).apply { if (!showOnlyFavorites) textSize = 16.25f }, LinearLayout.LayoutParams(0,dp(54),1f))
-        listOf("💎","☾","⌕","⚙").forEachIndexed { i,s ->
-            val v=text(s, if (i == 0 && s == "💎") 25 else 32,pageText,false).apply { gravity=Gravity.CENTER; setOnClickListener {
+        listOf("✦","☾","⌕","⚙").forEachIndexed { i,glyph ->
+            val icon = modernIcon(glyph, 38)
+            icon.contentDescription = listOf("Premium","Tema","Cari","Pengaturan")[i]
+            icon.setOnClickListener {
                 when(i){0->Toast.makeText(this@MainActivity,"Wallpaper Premium",Toast.LENGTH_SHORT).show();1->toggleTheme();2->search();3->showSettings()}
-            }}
-            header.addView(v,LinearLayout.LayoutParams(dp(48),dp(54)))
+            }
+            header.addView(icon,LinearLayout.LayoutParams(dp(44),dp(48)))
         }
         root.addView(header)
         val tabScroll=HorizontalScrollView(this@MainActivity).apply { isHorizontalScrollBarEnabled=false }
@@ -669,25 +671,32 @@ class MainActivity : Activity() {
         }
         scroll.addView(content); root.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
         val bottom=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER; setPadding(0,dp(8),0,dp(7)); setBackgroundColor(pageBg) }
-        listOf("▣\nWallpaper","▦\nCategory","▤\nQuotes","♧\nStock").forEachIndexed { i,label ->
-            bottom.addView(text(label,13,if(i==0) blue else pageText,i==0).apply { gravity=Gravity.CENTER; setOnClickListener {
-                when(i) {
-                    0 -> {
-                        showOnlyFavorites = false
-                        selectedCategory = "All"
-                        selectedTab = "Wallpaper"
-                        preferences.edit()
-                            .putString("selected_wallpaper_category", selectedCategory)
-                            .putString("selected_wallpaper_tab", selectedTab)
-                            .apply()
-                        visibleItemLimit = 60
-                        buildHome()
+        listOf("⌂" to "Wallpaper","▦" to "Category","✦" to "Quotes","▧" to "Stock").forEachIndexed { i,item ->
+            val navItem = LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                setOnClickListener {
+                    when(i) {
+                        0 -> {
+                            showOnlyFavorites = false
+                            selectedCategory = "All"
+                            selectedTab = "Wallpaper"
+                            preferences.edit()
+                                .putString("selected_wallpaper_category", selectedCategory)
+                                .putString("selected_wallpaper_tab", selectedTab)
+                                .apply()
+                            visibleItemLimit = 60
+                            buildHome()
+                        }
+                        1 -> showCategories()
+                        2 -> showQuotes()
+                        3 -> startActivity(Intent(this@MainActivity, StockActivity::class.java))
                     }
-                    1 -> showCategories()
-                    2 -> showQuotes()
-                    3 -> startActivity(Intent(this@MainActivity, StockActivity::class.java))
                 }
-            } },LinearLayout.LayoutParams(0,dp(62),1f))
+            }
+            navItem.addView(modernIcon(item.first, 30), LinearLayout.LayoutParams(dp(38),dp(36)))
+            navItem.addView(text(item.second,11,if(i==0) blue else pageText,i==0).apply { gravity=Gravity.CENTER; setPadding(0,dp(2),0,0) })
+            bottom.addView(navItem,LinearLayout.LayoutParams(0,dp(62),1f))
         }
         root.addView(bottom)
         val adContainer = FrameLayout(this@MainActivity).apply {
@@ -846,10 +855,16 @@ class MainActivity : Activity() {
         val root=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL; setBackgroundColor(settingsBg); setPadding(dp(22),dp(22),dp(22),dp(12)) }
         root.addView(text("‹   Pengaturan",22,settingsText,true).apply { setOnClickListener { buildHome() } })
         root.addView(space(28)); root.addView(text("Pengaturan",24,settingsText,true)); root.addView(space(12))
-        listOf("♟   Notifikasi","♡   Favorit","◷   Riwayat dilihat","文   Bahasa Aplikasi","▧   Pengubah Wallpaper Otomatis","⇩   Unduh","▤   Wallpaper Penerangan Tepi","Bagikan Aplikasi","☆   Nilai kami","♧   Umpan Balik","▣   Kelola Cache").forEach { item ->
-            val row=text(item+"     ›",17,settingsText,false).apply {
-                setPadding(dp(16),dp(18),dp(10),dp(18))
-                background=rounded(if(darkMode) 0xff24262d.toInt() else Color.WHITE,16)
+        listOf(
+            "♟" to "Notifikasi","♡" to "Favorit","◷" to "Riwayat dilihat","文" to "Bahasa Aplikasi",
+            "▧" to "Pengubah Wallpaper Otomatis","⇩" to "Unduh","▤" to "Wallpaper Penerangan Tepi",
+            "↗" to "Bagikan Aplikasi","☆" to "Nilai kami","✉" to "Umpan Balik","▣" to "Kelola Cache"
+        ).forEach { (glyph,item) ->
+            val row = LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(12),dp(9),dp(12),dp(9))
+                background = rounded(if(darkMode) 0xff24262d.toInt() else 0xfff7f8fc.toInt(),16)
                 setOnClickListener {
                     when {
                         item.contains("Favorit") -> showFavorites()
@@ -862,7 +877,12 @@ class MainActivity : Activity() {
                     }
                 }
             }
-            root.addView(row,LinearLayout.LayoutParams(-1,-2))
+            row.addView(modernIcon(glyph,34),LinearLayout.LayoutParams(dp(42),dp(42)))
+            row.addView(text(item,15,settingsText,false),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(12) })
+            row.addView(text("›",23,if(darkMode) 0xffb9c8e8.toInt() else 0xff6f7f9b.toInt(),false))
+            val rowParams = LinearLayout.LayoutParams(-1,-2)
+            rowParams.bottomMargin = dp(8)
+            root.addView(row,rowParams)
         }
         setContentView(ScrollView(this@MainActivity).apply { addView(root) })
     }
@@ -1393,7 +1413,7 @@ class MainActivity : Activity() {
         })
         val scroll = ScrollView(this@MainActivity)
         val list = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL }
-        val symbols = listOf("▦", "✦", "🐾", "▶", "🎨", "🚘", "🌿", "🌊", "☄", "⚙")
+        val symbols = listOf("▦", "✦", "●", "▶", "◈", "⌁", "❋", "≈", "✧", "⚙")
         categoryNames.forEachIndexed { index, category ->
             val row = LinearLayout(this@MainActivity).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -1412,7 +1432,7 @@ class MainActivity : Activity() {
                     buildHome()
                 }
             }
-            row.addView(text(symbols.getOrElse(index) { "✧" }, 23, purple, false).apply { gravity = Gravity.CENTER },
+            row.addView(modernIcon(symbols.getOrElse(index) { "✧" },38),
                 LinearLayout.LayoutParams(dp(48), dp(48)))
             row.addView(text(category, 16, if(darkMode) 0xfff2f2f5.toInt() else ink, true), LinearLayout.LayoutParams(0, -2, 1f))
             val count = if (category == "All") names.size else itemCategories.count { it == category }
@@ -1648,7 +1668,30 @@ class MainActivity : Activity() {
         }
     }
     private fun toggleTheme(){ darkMode = !darkMode; preferences.edit().putBoolean("dark_mode", darkMode).apply(); buildHome(); Toast.makeText(this@MainActivity,if(darkMode) "Tema gelap aktif" else "Tema terang aktif",Toast.LENGTH_SHORT).show() }
-    private fun circle(symbol:String, action:()->Unit):View = TextView(this@MainActivity).apply { text=symbol; textSize=24f; gravity=Gravity.CENTER; setTextColor(Color.BLACK); background=rounded(0xffdddddd.toInt(),50); setOnClickListener{action()} }.also { it.layoutParams=LinearLayout.LayoutParams(dp(48),dp(48)).apply { setMargins(dp(4),0,dp(4),0) } }
+    private fun modernIcon(glyph: String, size: Int): FrameLayout {
+        val tile = FrameLayout(this@MainActivity).apply {
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(0xff00c6ff.toInt(), 0xff176bff.toInt(), 0xff9b35f5.toInt())
+            ).apply {
+                cornerRadius = dp(12).toFloat()
+                setStroke(dp(1), 0x88ffffff.toInt())
+            }
+            elevation = dp(3).toFloat()
+            clipToOutline = true
+        }
+        val symbol = text(glyph, (size * 0.48f).toInt().coerceAtLeast(14), Color.WHITE, true).apply {
+            gravity = Gravity.CENTER
+            shadowLayer(dp(3).toFloat(), 0f, dp(1).toFloat(), 0x99001d66.toInt())
+        }
+        tile.addView(symbol, FrameLayout.LayoutParams(-1,-1))
+        tile.contentDescription = glyph
+        return tile
+    }
+
+    private fun circle(symbol:String, action:()->Unit):View = modernIcon(symbol,48).apply {
+        setOnClickListener { action() }
+    }.also { it.layoutParams=LinearLayout.LayoutParams(dp(48),dp(48)).apply { setMargins(dp(4),0,dp(4),0) } }
     private fun artDrawable(index:Int):GradientDrawable { val a=palettes[index%palettes.size]; return GradientDrawable(GradientDrawable.Orientation.TL_BR,a).apply { cornerRadius=dp(2).toFloat() } }
     private fun rounded(color:Int,radius:Int)=GradientDrawable().apply { setColor(color); cornerRadius=dp(radius).toFloat() }
     private fun text(s:String,size:Int,color:Int,bold:Boolean)=TextView(this@MainActivity).apply { text=s; textSize=size.toFloat(); setTextColor(color); if(bold) typeface=Typeface.DEFAULT_BOLD }
