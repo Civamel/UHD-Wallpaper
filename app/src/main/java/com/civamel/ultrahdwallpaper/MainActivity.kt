@@ -18,6 +18,7 @@ import android.util.LruCache
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.Executors
 
 class MainActivity : Activity() {
     private val blue = Color.rgb(0, 119, 255)
@@ -37,6 +38,7 @@ class MainActivity : Activity() {
     )
     private val thumbnailUrls = mutableListOf<String>()
     private val fullUrls = mutableListOf<String>()
+    private val imageExecutor = Executors.newFixedThreadPool(4)
     private val imageCache = object : LruCache<String, Bitmap>(24 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount / 1024
     }
@@ -100,15 +102,24 @@ class MainActivity : Activity() {
     private fun loadImage(url: String, onLoaded: (Bitmap?) -> Unit) {
         val cached = imageCache.get(url)
         if (cached != null) { onLoaded(cached); return }
-        Thread {
+        imageExecutor.execute {
             var connection: HttpURLConnection? = null
             val bitmap = try {
-                connection = (URL(url).openConnection() as HttpURLConnection).apply { connectTimeout = 15000; readTimeout = 20000; doInput = true }
+                connection = (URL(url).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 15000
+                    readTimeout = 20000
+                    doInput = true
+                    instanceFollowRedirects = true
+                }
                 connection.inputStream.use { BitmapFactory.decodeStream(it) }
-            } catch (_: Exception) { null } finally { connection?.disconnect() }
+            } catch (_: Exception) {
+                null
+            } finally {
+                connection?.disconnect()
+            }
             if (bitmap != null) imageCache.put(url, bitmap)
             runOnUiThread { onLoaded(bitmap) }
-        }.start()
+        }
     }
 
     private fun buildHome() {
