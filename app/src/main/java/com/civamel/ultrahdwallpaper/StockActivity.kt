@@ -28,6 +28,8 @@ class StockActivity : Activity() {
     private var selectedCategory = "All"
     private var selectedSort = "Default"
     private var isRefreshingCatalog = false
+    private var showOnlyFavorites = false
+    private val favorites = mutableSetOf<String>()
     private var gridHostView: LinearLayout? = null
     private val blue = Color.rgb(0, 119, 255)
     private val ink = Color.rgb(28, 28, 30)
@@ -39,7 +41,9 @@ class StockActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        darkMode = getSharedPreferences("wallpaper_preferences", MODE_PRIVATE).getBoolean("dark_mode", false)
+        val preferences = getSharedPreferences("wallpaper_preferences", MODE_PRIVATE)
+        darkMode = preferences.getBoolean("dark_mode", false)
+        favorites.addAll(preferences.getStringSet("favorite_titles", emptySet()) ?: emptySet())
         window.statusBarColor = pageBg
         window.navigationBarColor = pageBg
         if (Build.VERSION.SDK_INT >= 23) {
@@ -168,6 +172,13 @@ class StockActivity : Activity() {
         }, LinearLayout.LayoutParams(dp(48), dp(52)))
         header.addView(label("Stock", 24, primaryText, true), LinearLayout.LayoutParams(0, dp(52), 1f))
         header.addView(label(items.size.toString() + " foto", 13, secondaryText, false))
+        header.addView(label(if (showOnlyFavorites) "♥" else "♡", 24, if (showOnlyFavorites) blue else primaryText, true).apply {
+            gravity = Gravity.CENTER
+            setOnClickListener {
+                showOnlyFavorites = !showOnlyFavorites
+                showGallery()
+            }
+        }, LinearLayout.LayoutParams(dp(42), dp(48)))
         header.addView(label("↻", 25, blue, true).apply {
             gravity = Gravity.CENTER
             setOnClickListener { refreshCatalogManually() }
@@ -261,6 +272,7 @@ class StockActivity : Activity() {
         host.removeAllViews()
         val filtered = items.filter {
             (selectedCategory == "All" || it.category == selectedCategory) &&
+                (!showOnlyFavorites || favorites.contains(it.title)) &&
                 (query.isBlank() || it.title.contains(query, true) || it.category.contains(query, true))
         }
         val matches = when (selectedSort) {
@@ -288,6 +300,7 @@ class StockActivity : Activity() {
                     query = ""
                     selectedCategory = "All"
                     selectedSort = "Default"
+                    showOnlyFavorites = false
                     showGallery()
                 }
             })
@@ -365,6 +378,17 @@ class StockActivity : Activity() {
             setPadding(dp(4), 0, dp(4), dp(6))
         }
         layout.addView(detailInfo, LinearLayout.LayoutParams(-1, -2))
+        val favoriteButton = Button(this).apply {
+            text = if (item.title in favorites) "♥  Hapus dari favorit" else "♡  Tambahkan ke favorit"
+            setOnClickListener {
+                if (!favorites.add(item.title)) favorites.remove(item.title)
+                getSharedPreferences("wallpaper_preferences", MODE_PRIVATE).edit()
+                    .putStringSet("favorite_titles", favorites.toSet()).apply()
+                text = if (item.title in favorites) "♥  Hapus dari favorit" else "♡  Tambahkan ke favorit"
+                renderGrid()
+            }
+        }
+        layout.addView(favoriteButton, LinearLayout.LayoutParams(-1, dp(48)))
         AlertDialog.Builder(this).setTitle(item.title).setView(layout)
             .setNeutralButton("Bagikan", null)
             .setNegativeButton("Tutup", null)
