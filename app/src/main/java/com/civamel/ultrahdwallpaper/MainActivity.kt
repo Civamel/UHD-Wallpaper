@@ -622,11 +622,24 @@ class MainActivity : Activity() {
                     setImageBitmap(BitmapFactory.decodeFile(imageFile.absolutePath))
                 }
                 row.addView(thumb, LinearLayout.LayoutParams(dp(72), dp(88)))
-                val label = text(title, 15, pageText, true).apply {
+                val labelColumn = LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.VERTICAL
                     setPadding(dp(12), 0, dp(8), 0)
-                    maxLines = 2
                 }
-                row.addView(label, LinearLayout.LayoutParams(0, -2, 1f))
+                val label = text(title, 15, pageText, true).apply { maxLines = 2 }
+                val fileBytes = imageFile.length()
+                val fileSize = if (fileBytes < 1024L * 1024L) {
+                    "${fileBytes / 1024L} KB"
+                } else {
+                    String.format("%.1f MB", fileBytes / (1024.0 * 1024.0))
+                }
+                val savedDate = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.getDefault())
+                    .format(java.util.Date(imageFile.lastModified()))
+                val details = text("$savedDate  •  $fileSize", 11,
+                    if (darkMode) 0xffaeb3bf.toInt() else 0xff777b86.toInt(), false)
+                labelColumn.addView(label)
+                labelColumn.addView(details)
+                row.addView(labelColumn, LinearLayout.LayoutParams(0, -2, 1f))
                 val share = text("↗", 22, if (darkMode) 0xff9bbcff.toInt() else blue, true).apply {
                     gravity = Gravity.CENTER
                     setOnClickListener {
