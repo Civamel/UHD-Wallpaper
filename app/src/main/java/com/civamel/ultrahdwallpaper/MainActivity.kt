@@ -566,7 +566,7 @@ class MainActivity : Activity() {
                     buildHome()
                 }
             }
-            item.addView(text(tab,16,if(tab==selectedTab) blue else if (darkMode) Color.WHITE else ink,true).apply { gravity=Gravity.CENTER; setPadding(dp(15),dp(12),dp(15),dp(12)) })
+            item.addView(text(tab,16,if(tab==selectedTab) blue else Color.WHITE,true).apply { gravity=Gravity.CENTER; setPadding(dp(15),dp(12),dp(15),dp(12)) })
             item.addView(View(this@MainActivity).apply { setBackgroundColor(if(tab==selectedTab) blue else Color.TRANSPARENT) },LinearLayout.LayoutParams(-1,dp(3)))
             tabRow.addView(item)
         }
@@ -627,7 +627,7 @@ class MainActivity : Activity() {
                     maxLines = 1
                     setShadowLayer(1.2f, 0f, dp(1).toFloat(), 0x99000000.toInt())
                 }, FrameLayout.LayoutParams(-1, dp(38), Gravity.BOTTOM))
-                slideRow.addView(slide, LinearLayout.LayoutParams(slideWidth, dp(95)))
+                slideRow.addView(slide, LinearLayout.LayoutParams(slideWidth, dp(105)))
                 thumbnailUrls.getOrNull(wallpaperIndex)?.let { imageUrl ->
                     loadImage(imageUrl) { bitmap ->
                         if (bitmap != null && image.isAttachedToWindow) image.setImageBitmap(bitmap)
@@ -635,7 +635,7 @@ class MainActivity : Activity() {
                 }
             }
             slideScroll.addView(slideRow)
-            content.addView(slideScroll, LinearLayout.LayoutParams(-1, dp(95)))
+            content.addView(slideScroll, LinearLayout.LayoutParams(-1, dp(105)))
             if (categorySlides.size > 1) {
                 var slidePosition = 0
                 val autoAdvance = object : Runnable {
@@ -670,7 +670,7 @@ class MainActivity : Activity() {
             popularPanel.addView(tagScroll, LinearLayout.LayoutParams(-1, dp(25)))
             content.addView(popularPanel, LinearLayout.LayoutParams(-1, dp(56)).apply { setMargins(dp(12), dp(1), dp(12), dp(5)) })
         }
-        val sort=TextView(this@MainActivity).apply { text="Filter : "+sortMode+"   ▾"; textSize=13f; setTextColor(if(darkMode) 0xffe0115f.toInt() else blue); setPadding(dp(18),dp(2),dp(12),dp(6)); setOnClickListener {
+        val sort=TextView(this@MainActivity).apply { text="Filter : "+sortMode+"   ▾"; textSize=13f; setTextColor(0xff50c878.toInt()); setTypeface(typeface, android.graphics.Typeface.BOLD); setPadding(dp(18),dp(2),dp(12),dp(6)); setOnClickListener {
             val options = arrayOf("Paling populer", "Terbaru", "A-Z", "Acak")
             AlertDialog.Builder(this@MainActivity).setTitle("Urutkan berdasarkan").setItems(options) { _, w ->
                 sortMode = options[w]
@@ -793,7 +793,7 @@ class MainActivity : Activity() {
                 }
             }
             navItem.addView(modernIcon(item.first, 34), LinearLayout.LayoutParams(dp(42),dp(32)))
-            navItem.addView(text(item.second,11,if(i==0) blue else if (darkMode) Color.WHITE else ink,i==0).apply { gravity=Gravity.CENTER; setPadding(0,dp(2),0,0) })
+            navItem.addView(text(item.second,11,if(i==0) blue else Color.WHITE,true).apply { gravity=Gravity.CENTER; setTypeface(typeface, android.graphics.Typeface.BOLD); setPadding(0,dp(2),0,0) })
             bottom.addView(navItem,LinearLayout.LayoutParams(0,dp(48),1f))
         }
         root.addView(bottom)
