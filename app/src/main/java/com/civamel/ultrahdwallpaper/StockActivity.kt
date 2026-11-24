@@ -399,7 +399,7 @@ class StockActivity : Activity() {
             return
         }
         val grid = GridLayout(this).apply { columnCount = 2; useDefaultMargins = false }
-        matches.forEach { item ->
+        matches.take(visibleStockLimit).forEach { item ->
             val cell = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(3), dp(3), dp(3), dp(8))
