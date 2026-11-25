@@ -423,6 +423,7 @@ class MainActivity : Activity() {
             imageExecutor.execute {
                 var connection: HttpURLConnection? = null
                 var bitmap: Bitmap? = null
+                var failureReason = "unknown"
                 try {
                     val cacheFile = wallpaperDiskCacheFile(url)
                     if (cacheFile.isFile) {
@@ -442,6 +443,7 @@ class MainActivity : Activity() {
                             setRequestProperty("Connection", "keep-alive")
                         }
                         if (connection.responseCode !in 200..299) throw IllegalStateException("HTTP " + connection.responseCode)
+                        android.util.Log.d("WallpaperImage", "HTTP ${connection.responseCode} for $url")
                         val maxBytes = 40L * 1024L * 1024L
                         if (connection.contentLengthLong > maxBytes) throw IllegalStateException("Ukuran gambar melebihi batas")
                         val temporaryFile = File(cacheFile.parentFile, cacheFile.name + "." + Thread.currentThread().id + ".tmp")
@@ -477,8 +479,10 @@ class MainActivity : Activity() {
                             if (temporaryFile.exists()) temporaryFile.delete()
                         }
                     }
-                } catch (_: Exception) {
+                } catch (error: Exception) {
                     bitmap = null
+                    failureReason = error.javaClass.simpleName + ": " + (error.message ?: "no message")
+                    android.util.Log.e("WallpaperImage", "Failed to load $url — $failureReason", error)
                 } finally {
                     connection?.disconnect()
                     val cacheFile = wallpaperDiskCacheFile(url)
@@ -575,7 +579,8 @@ class MainActivity : Activity() {
         val panelSurface = if (darkMode) 0xff0B3D4A.toInt() else 0xff050608.toInt()
         val root = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(pageBg) }
         val header = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(15),dp(6),dp(12),dp(5)); setBackgroundColor(panelSurface) }
-        header.addView(text(if (showOnlyFavorites) "Favorit (${favorites.size})" else "4k Ultra HD Wallpaper",25,0xfff4f7ff.toInt(),true).apply { if (!showOnlyFavorites) textSize = 16.25f }, LinearLayout.LayoutParams(0,dp(38),1f))
+        header.addView(text(if (showOnlyFavorites) "Favorit (${favorites.size})" else "4k Wallpaper",25,0xfff4f7ff.toInt(),true).apply { if (!showOnlyFavorites) textSize = 22f }, LinearLayout.LayoutParams(0,dp(38),1f))
+        if (!showOnlyFavorites) header.addView(animatedDiamond(dp(42)))
         listOf("✦","☾","⌕","⚙").forEachIndexed { i,glyph ->
             val icon = modernIcon(glyph, 40)
             icon.contentDescription = listOf("Premium","Tema","Cari","Pengaturan")[i]
@@ -883,100 +888,303 @@ class MainActivity : Activity() {
         setContentView(root)
     }
 
-    private fun showPreview(index:Int) {
+    private fun showPreview(index: Int) {
+        if (index !in names.indices) return
         homeScreenActive = false
         recordRecentlyViewed(index)
-        val root=FrameLayout(this@MainActivity).apply { setBackgroundColor(Color.BLACK) }
-        val art=ImageView(this@MainActivity).apply { scaleType=ImageView.ScaleType.CENTER_CROP; setImageDrawable(artDrawable(index)) }
-        root.addView(art,FrameLayout.LayoutParams(-1,-1))
-        if (index < fullUrls.size) loadImage(fullUrls[index]) { bitmap -> if (bitmap != null && art.isAttachedToWindow) art.setImageBitmap(bitmap) }
-        val top=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(dp(18),dp(18),dp(18),0) }
-        top.addView(circle("‹"){buildHome()})
-        top.addView(View(this@MainActivity),LinearLayout.LayoutParams(0,1,1f))
-        top.addView(circle("💎"){Toast.makeText(this@MainActivity,"Premium",Toast.LENGTH_SHORT).show()})
-        top.addView(circle("ⓘ"){ AlertDialog.Builder(this@MainActivity).setTitle(names[index]).setMessage("Kategori: "+itemCategories.getOrNull(index).orEmpty()+"\nJenis: "+(itemTypes.getOrNull(index) ?: "wallpaper")+"\n\nWallpaper Ultra HD. Pilih Terapkan untuk memasang wallpaper atau Unduh untuk menyimpan gambar.").setPositiveButton("Mengerti",null).show() })
-        top.addView(circle("↗"){shareWallpaper(index)})
-        root.addView(top,FrameLayout.LayoutParams(-1,dp(76),Gravity.TOP))
-        val bottom=LinearLayout(this@MainActivity).apply {
-            orientation=LinearLayout.VERTICAL
-            gravity=Gravity.CENTER_VERTICAL
-            setPadding(dp(18),dp(7),dp(18),dp(9))
-            setBackgroundColor(0x99000000.toInt())
+
+        val root = FrameLayout(this@MainActivity).apply {
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(0xff064b3d.toInt(), 0xff16a6bd.toInt(), 0xffd8c39a.toInt())
+            )
         }
-        val details=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER_VERTICAL }
-        val title = text(names[index],14,Color.WHITE,true).apply {
-            maxLines = 1
-            ellipsize = android.text.TextUtils.TruncateAt.END
+
+        fun loadCard(target: ImageView, itemIndex: Int, preferFull: Boolean) {
+            val full = fullUrls.getOrNull(itemIndex).orEmpty()
+            val thumb = thumbnailUrls.getOrNull(itemIndex).orEmpty()
+            val first = if (preferFull) full else thumb
+            val second = if (preferFull) thumb else full
+            if (first.isNotBlank()) {
+                loadImage(first) { bitmap ->
+                    if (bitmap != null && !bitmap.isRecycled && target.isAttachedToWindow) {
+                        target.setImageBitmap(bitmap)
+                    } else if (second.isNotBlank() && second != first) {
+                        android.util.Log.w("WallpaperImage", "Primary preview source failed; trying fallback for ${names.getOrNull(itemIndex)}")
+                        loadImage(second) { fallback ->
+                            if (fallback != null && !fallback.isRecycled && target.isAttachedToWindow) {
+                                target.setImageBitmap(fallback)
+                            } else {
+                                android.util.Log.e("WallpaperImage", "Both full and thumbnail sources failed for ${names.getOrNull(itemIndex)}")
+                            }
+                        }
+                    }
+                }
+            }
         }
-        details.addView(title,LinearLayout.LayoutParams(-1,dp(23)))
-        details.addView(text(itemCategories.getOrNull(index).orEmpty(),11,0xffe4d4d6.toInt(),false).apply { maxLines = 1 },LinearLayout.LayoutParams(-1,dp(18)))
-        bottom.addView(details,LinearLayout.LayoutParams(-1,dp(42)))
-        val controls=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL }
-        controls.addView(circle(if((itemIds.getOrNull(index) ?: names[index]) in favorites) "♥" else "♡"){ val favoriteId = itemIds.getOrNull(index) ?: names[index]; if(!favorites.add(favoriteId)) favorites.remove(favoriteId); preferences.edit().putStringSet("favorite_ids", favorites.toSet()).putStringSet("favorite_titles", emptySet()).apply(); showPreview(index) },LinearLayout.LayoutParams(dp(42),dp(42)))
-        controls.addView(View(this@MainActivity),LinearLayout.LayoutParams(0,1,1f))
-        val apply=Button(this@MainActivity).apply { text="Terapkan"; isAllCaps=false; textSize=15f; setTextColor(Color.WHITE); background=rounded(blue,32); setOnClickListener { if(itemTypes.getOrNull(index) == "live") applyLiveWallpaper(index) else applyWallpaper(index) } }
-        controls.addView(apply,LinearLayout.LayoutParams(dp(128),dp(46)))
-        controls.addView(View(this@MainActivity),LinearLayout.LayoutParams(0,1,1f))
-        controls.addView(circle("⇩"){ requestDownload(index) },LinearLayout.LayoutParams(dp(42),dp(42)))
-        bottom.addView(controls,LinearLayout.LayoutParams(-1,dp(46)))
-        root.addView(bottom,FrameLayout.LayoutParams(-1,dp(96),Gravity.BOTTOM))
-        val ad=text("ADVERTISEMENT  •  Ultra HD Wallpaper",10,Color.WHITE,false).apply { gravity=Gravity.CENTER; setBackgroundColor(0xff292929.toInt()) }
-        root.addView(ad,FrameLayout.LayoutParams(-1,dp(42),Gravity.BOTTOM).apply { bottomMargin=dp(96) })
+
+        val previousIndex = (index - 1 + names.size) % names.size
+        val nextIndex = (index + 1) % names.size
+
+        val leftPreview = ImageView(this@MainActivity).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            background = rounded(0xff111820.toInt(), 18)
+            clipToOutline = true
+            alpha = 0.82f
+            setImageDrawable(artDrawable(previousIndex))
+        }
+        root.addView(leftPreview, FrameLayout.LayoutParams(dp(96), dp(430), Gravity.CENTER_VERTICAL or Gravity.START).apply {
+            leftMargin = -dp(38)
+        })
+        loadCard(leftPreview, previousIndex, false)
+
+        val rightPreview = ImageView(this@MainActivity).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            background = rounded(0xff111820.toInt(), 18)
+            clipToOutline = true
+            alpha = 0.82f
+            setImageDrawable(artDrawable(nextIndex))
+        }
+        root.addView(rightPreview, FrameLayout.LayoutParams(dp(96), dp(430), Gravity.CENTER_VERTICAL or Gravity.END).apply {
+            rightMargin = -dp(38)
+        })
+        loadCard(rightPreview, nextIndex, false)
+
+        val art = ImageView(this@MainActivity).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            background = rounded(0xff14242b.toInt(), 22)
+            clipToOutline = true
+            setImageDrawable(artDrawable(index))
+            contentDescription = names[index]
+        }
+        root.addView(art, FrameLayout.LayoutParams(-1, -1).apply {
+            setMargins(dp(55), dp(118), dp(55), dp(112))
+        })
+        // Full-resolution URL is preferred; thumbnail is a real fallback if it fails.
+        loadCard(art, index, true)
+
+        val top = LinearLayout(this@MainActivity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(18), dp(18), dp(18), 0)
+        }
+        top.addView(previewCircle("‹") { buildHome() })
+        top.addView(View(this@MainActivity), LinearLayout.LayoutParams(0, 1, 1f))
+        top.addView(animatedDiamond(dp(48)))
+        top.addView(View(this@MainActivity), LinearLayout.LayoutParams(0, 1, 1f))
+        top.addView(previewCircle("⚑") {
+            AlertDialog.Builder(this@MainActivity)
+                .setTitle("Laporkan wallpaper")
+                .setMessage("Laporkan jika gambar tidak pantas atau tidak sesuai.")
+                .setNegativeButton("Batal", null)
+                .setPositiveButton("Tutup", null)
+                .show()
+        })
+        top.addView(previewCircle("ⓘ") {
+            AlertDialog.Builder(this@MainActivity)
+                .setTitle(names[index])
+                .setMessage("Kategori: " + itemCategories.getOrNull(index).orEmpty() +
+                    "\nJenis: " + (itemTypes.getOrNull(index) ?: "wallpaper"))
+                .setPositiveButton("Mengerti", null)
+                .show()
+        })
+        top.addView(previewCircle("↗") { shareWallpaper(index) })
+        root.addView(top, FrameLayout.LayoutParams(-1, dp(76), Gravity.TOP))
+
+        val bottom = LinearLayout(this@MainActivity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(16), dp(8), dp(16), dp(8))
+            setBackgroundColor(0x44000000)
+        }
+        val favoriteId = itemIds.getOrNull(index) ?: names[index]
+        bottom.addView(previewCircle(if (favoriteId in favorites) "♥" else "♡") {
+            if (!favorites.add(favoriteId)) favorites.remove(favoriteId)
+            preferences.edit().putStringSet("favorite_ids", favorites.toSet())
+                .putStringSet("favorite_titles", emptySet()).apply()
+            showPreview(index)
+        })
+        bottom.addView(View(this@MainActivity), LinearLayout.LayoutParams(0, 1, 1f))
+        val apply = Button(this@MainActivity).apply {
+            text = "Set Wallpaper"
+            isAllCaps = false
+            textSize = 15f
+            setTextColor(Color.WHITE)
+            background = rounded(0xff0878ef.toInt(), 32)
+            setOnClickListener {
+                if (itemTypes.getOrNull(index) == "live") applyLiveWallpaper(index)
+                else applyWallpaper(index)
+            }
+        }
+        bottom.addView(apply, LinearLayout.LayoutParams(dp(158), dp(48)))
+        bottom.addView(View(this@MainActivity), LinearLayout.LayoutParams(0, 1, 1f))
+        bottom.addView(previewCircle("⇩") { requestDownload(index) })
+        root.addView(bottom, FrameLayout.LayoutParams(-1, dp(78), Gravity.BOTTOM))
+
+        val ad = TextView(this@MainActivity).apply {
+            text = "ADVERTISEMENT"
+            textSize = 10f
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            setBackgroundColor(0xff292929.toInt())
+        }
+        root.addView(ad, FrameLayout.LayoutParams(-1, dp(42), Gravity.BOTTOM).apply {
+            bottomMargin = dp(78)
+        })
         setContentView(root)
     }
 
+    private fun animatedDiamond(sizePx: Int): TextView {
+        val diamond = TextView(this@MainActivity).apply {
+            text = "💎✨"
+            textSize = 25f
+            gravity = Gravity.CENTER
+            contentDescription = "Diamond premium"
+        }
+        val pulse = android.animation.ValueAnimator.ofFloat(0.88f, 1.12f).apply {
+            duration = 850L
+            repeatMode = android.animation.ValueAnimator.REVERSE
+            repeatCount = android.animation.ValueAnimator.INFINITE
+            addUpdateListener { value ->
+                val scale = value.animatedValue as Float
+                diamond.scaleX = scale
+                diamond.scaleY = scale
+                diamond.alpha = 0.78f + (scale - 0.88f) * 1.35f
+            }
+        }
+        diamond.tag = pulse
+        pulse.start()
+        diamond.layoutParams = LinearLayout.LayoutParams(sizePx, sizePx)
+        return diamond
+    }
+
+    private fun previewCircle(symbol: String, action: () -> Unit): View {
+        val button = FrameLayout(this@MainActivity).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(0xfff3f3f3.toInt())
+            }
+            setOnClickListener { action() }
+            contentDescription = symbol
+        }
+        button.addView(TextView(this@MainActivity).apply {
+            text = symbol
+            textSize = 24f
+            gravity = Gravity.CENTER
+            setTextColor(0xff111111.toInt())
+            typeface = Typeface.DEFAULT
+        }, FrameLayout.LayoutParams(-1, -1))
+        return button.also {
+            it.layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply {
+                setMargins(dp(3), 0, dp(3), 0)
+            }
+        }
+    }
+
     private fun applyWallpaper(index: Int) {
-        val targets = if (Build.VERSION.SDK_INT >= 24) arrayOf("Layar utama", "Layar kunci", "Keduanya") else arrayOf("Layar utama")
-        AlertDialog.Builder(this@MainActivity).setTitle("Terapkan wallpaper").setItems(targets) { _, which ->
-            val flags = when (which) {
-                1 -> WallpaperManager.FLAG_LOCK
-                2 -> WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK
-                else -> WallpaperManager.FLAG_SYSTEM
+        if (index !in fullUrls.indices) {
+            Toast.makeText(this, "Gambar belum tersedia", Toast.LENGTH_LONG).show()
+            return
+        }
+        val dialog = android.app.Dialog(this@MainActivity)
+        val panel = LinearLayout(this@MainActivity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(10), dp(18), dp(14))
+            background = GradientDrawable().apply {
+                setColor(Color.WHITE)
+                cornerRadii = floatArrayOf(dp(22).toFloat(), dp(22).toFloat(), dp(22).toFloat(), dp(22).toFloat(), 0f, 0f, 0f, 0f)
             }
-            if (index < fullUrls.size) {
-                Toast.makeText(this@MainActivity, "Menyiapkan file UHD…", Toast.LENGTH_SHORT).show()
-                loadWallpaperFile(fullUrls[index]) { file ->
-                    if (file == null) {
-                        Toast.makeText(this@MainActivity, "Gambar gagal dimuat atau file tidak valid.", Toast.LENGTH_LONG).show()
-                        return@loadWallpaperFile
-                    }
-                    Thread {
-                        try {
-                            FileInputStream(file).use { input ->
-                                val manager = WallpaperManager.getInstance(this@MainActivity)
-                                if (Build.VERSION.SDK_INT >= 24) manager.setStream(input, null, true, flags)
-                                else manager.setStream(input)
-                            }
-                            runOnUiThread {
-                                if (!isFinishing && !isDestroyed) Toast.makeText(this@MainActivity, "Wallpaper berhasil diterapkan", Toast.LENGTH_LONG).show()
-                            }
-                        } catch (e: Exception) {
-                            runOnUiThread {
-                                if (!isFinishing && !isDestroyed) Toast.makeText(this@MainActivity, "Gagal: " + e.localizedMessage, Toast.LENGTH_LONG).show()
-                            }
-                        }
-                    }.start()
+        }
+        val handle = View(this@MainActivity).apply {
+            background = rounded(0xffe8e8e8.toInt(), 20)
+        }
+        panel.addView(handle, LinearLayout.LayoutParams(dp(38), dp(5)).apply {
+            gravity = Gravity.CENTER
+            bottomMargin = dp(14)
+        })
+        panel.addView(TextView(this@MainActivity).apply {
+            text = "Set As :"
+            textSize = 19f
+            gravity = Gravity.CENTER
+            setTextColor(Color.BLACK)
+            typeface = Typeface.DEFAULT_BOLD
+        }, LinearLayout.LayoutParams(-1, dp(42)))
+
+        val options = listOf(
+            Triple("⌂", "Home Screen", WallpaperManager.FLAG_SYSTEM),
+            Triple("▣", "Lock Screen", WallpaperManager.FLAG_LOCK),
+            Triple("▣", "Home Screen & Lock Screen", WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK),
+            Triple("⚙", "System Default", WallpaperManager.FLAG_SYSTEM)
+        )
+        options.forEachIndexed { optionIndex, option ->
+            val row = LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(4), 0, dp(4), 0)
+                setOnClickListener {
+                    dialog.dismiss()
+                    applyWallpaperTarget(index, option.third)
                 }
-            } else {
-                val colors = palettes[index % palettes.size]
-                val bitmap = Bitmap.createBitmap(1080, 1920, Bitmap.Config.ARGB_8888)
-                val canvas = Canvas(bitmap)
-                val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-                paint.shader = LinearGradient(0f, 0f, 1080f, 1920f, colors[0], colors[1], Shader.TileMode.CLAMP)
-                canvas.drawRect(0f, 0f, 1080f, 1920f, paint)
-                Thread {
-                    try {
-                        val manager = WallpaperManager.getInstance(this@MainActivity)
-                        if (Build.VERSION.SDK_INT >= 24) manager.setBitmap(bitmap, null, true, flags) else manager.setBitmap(bitmap)
-                        bitmap.recycle()
-                        runOnUiThread { if (!isFinishing && !isDestroyed) Toast.makeText(this@MainActivity, "Wallpaper berhasil diterapkan", Toast.LENGTH_LONG).show() }
-                    } catch (e: Exception) {
-                        if (!bitmap.isRecycled) bitmap.recycle()
-                        runOnUiThread { if (!isFinishing && !isDestroyed) Toast.makeText(this@MainActivity, "Gagal: " + e.localizedMessage, Toast.LENGTH_LONG).show() }
-                    }
-                }.start()
             }
-        }.setNegativeButton("Batal", null).show()
+            row.addView(TextView(this@MainActivity).apply {
+                text = option.first
+                textSize = 27f
+                gravity = Gravity.CENTER
+                setTextColor(0xff222222.toInt())
+            }, LinearLayout.LayoutParams(dp(52), dp(58)))
+            row.addView(TextView(this@MainActivity).apply {
+                text = option.second
+                textSize = 17f
+                setTextColor(Color.BLACK)
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER_VERTICAL
+            }, LinearLayout.LayoutParams(0, dp(58), 1f))
+            panel.addView(row, LinearLayout.LayoutParams(-1, dp(58)))
+            if (optionIndex != options.lastIndex) {
+                panel.addView(View(this@MainActivity).apply { setBackgroundColor(0xffeeeeee.toInt()) },
+                    LinearLayout.LayoutParams(-1, dp(1)))
+            }
+        }
+        dialog.setContentView(panel)
+        dialog.window?.apply {
+            setBackgroundDrawableResource(android.R.color.transparent)
+            setLayout(-1, -2)
+            setGravity(Gravity.BOTTOM)
+            addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            attributes = attributes.apply { dimAmount = 0.55f }
+        }
+        dialog.show()
+        dialog.window?.setLayout(-1, -2)
+        dialog.window?.setGravity(Gravity.BOTTOM)
+    }
+
+    private fun applyWallpaperTarget(index: Int, flags: Int) {
+        if (index !in fullUrls.indices) return
+        Toast.makeText(this@MainActivity, "Menyiapkan file UHD…", Toast.LENGTH_SHORT).show()
+        loadWallpaperFile(fullUrls[index]) { file ->
+            if (file == null) {
+                Toast.makeText(this@MainActivity, "Gambar gagal dimuat atau file tidak valid.", Toast.LENGTH_LONG).show()
+                return@loadWallpaperFile
+            }
+            Thread {
+                try {
+                    FileInputStream(file).use { input ->
+                        val manager = WallpaperManager.getInstance(this@MainActivity)
+                        if (Build.VERSION.SDK_INT >= 24) manager.setStream(input, null, true, flags)
+                        else manager.setStream(input)
+                    }
+                    runOnUiThread {
+                        if (!isFinishing && !isDestroyed) Toast.makeText(this@MainActivity,
+                            "Wallpaper berhasil diterapkan", Toast.LENGTH_LONG).show()
+                    }
+                } catch (e: Exception) {
+                    runOnUiThread {
+                        if (!isFinishing && !isDestroyed) Toast.makeText(this@MainActivity,
+                            "Gagal: " + e.localizedMessage, Toast.LENGTH_LONG).show()
+                    }
+                }
+            }.start()
+        }
     }
 
     private fun cacheDirectories(): List<Pair<String, File>> = listOf(
