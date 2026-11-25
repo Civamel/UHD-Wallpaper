@@ -857,7 +857,7 @@ class MainActivity : Activity() {
                 setOnClickListener { showPreview(index) }
             }
             cell.addView(art,FrameLayout.LayoutParams(-1, -1))
-            cell.addView(text(if ((itemIds.getOrNull(index) ?: names[index]) in favorites) "♥" else "♡", 21, 0xffb76e79.toInt(), true).apply {
+            cell.addView(text(if ((itemIds.getOrNull(index) ?: names[index]) in favorites) "♥" else "♡", 15, Color.WHITE, true).apply {
                 gravity = Gravity.CENTER
                 background = rounded(0xcc000000.toInt(), 18)
                 setOnClickListener {
@@ -866,7 +866,7 @@ class MainActivity : Activity() {
                     preferences.edit().putStringSet("favorite_ids", favorites.toSet()).putStringSet("favorite_titles", emptySet()).apply()
                     buildHome()
                 }
-            }, FrameLayout.LayoutParams(dp(32), dp(32), Gravity.TOP or Gravity.START).apply {
+            }, FrameLayout.LayoutParams(dp(22), dp(22), Gravity.TOP or Gravity.START).apply {
                 setMargins(dp(7), dp(7), 0, 0)
             })
             if (index < thumbnailUrls.size) {
