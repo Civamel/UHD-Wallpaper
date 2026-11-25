@@ -102,6 +102,7 @@ class MainActivity : Activity() {
     private var homeScreenActive = false
     private var gestureStartX = 0f
     private var gestureStartY = 0f
+    private var filterSwipeTopY = Float.MAX_VALUE
     private var previewScreenActive = false
     private var previewIndex = 0
 
@@ -141,7 +142,7 @@ class MainActivity : Activity() {
                     showPreview(target)
                     return handled
                 }
-                if (homeScreenActive && horizontalSwipe) {
+                if (homeScreenActive && horizontalSwipe && gestureStartY >= filterSwipeTopY) {
                     val current = tabs.indexOf(selectedTab).coerceAtLeast(0)
                     val next = (current + if (dx < 0) 1 else -1).coerceIn(0, tabs.lastIndex)
                     if (next != current) {
@@ -155,6 +156,25 @@ class MainActivity : Activity() {
             }
         }
         return super.dispatchTouchEvent(event)
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        if (!homeScreenActive) {
+            previewScreenActive = false
+            showOnlyFavorites = false
+            selectedCategory = "All"
+            searchQuery = ""
+            selectedTab = "Home"
+            preferences.edit()
+                .putString("selected_wallpaper_category", selectedCategory)
+                .putString("selected_wallpaper_tab", selectedTab)
+                .apply()
+            visibleItemLimit = 24
+            buildHome()
+        } else {
+            super.onBackPressed()
+        }
     }
 
     override fun onResume() {
@@ -586,6 +606,7 @@ class MainActivity : Activity() {
 
     private fun buildHome() {
         homeScreenActive = true
+        previewScreenActive = false
         val pageBg = if (darkMode) 0xff121318.toInt() else Color.WHITE
         val pageText = if (darkMode) 0xfff2f2f5.toInt() else ink
         val panelSurface = if (darkMode) 0xff0B3D4A.toInt() else Color.WHITE
@@ -726,6 +747,11 @@ class MainActivity : Activity() {
             }.show()
         }}
         content.addView(sort)
+        sort.post {
+            val location = IntArray(2)
+            sort.getLocationOnScreen(location)
+            filterSwipeTopY = location[1].toFloat()
+        }
         // Three portrait phone-wallpaper cards per row (9:16 ratio).
         // Fixed three-column portrait grid. Each tile is cropped visually to a 9:16 phone-wallpaper frame.
         val tileWidthPx = ((resources.displayMetrics.widthPixels - dp(16)) / 3).coerceAtLeast(dp(72))
