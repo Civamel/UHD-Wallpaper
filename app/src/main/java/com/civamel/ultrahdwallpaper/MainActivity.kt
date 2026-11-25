@@ -677,7 +677,7 @@ class MainActivity : Activity() {
         previewScreenActive = false
         val pageBg = if (darkMode) 0xff121318.toInt() else Color.WHITE
         val pageText = if (darkMode) 0xfff2f2f5.toInt() else ink
-        val panelSurface = if (darkMode) 0xff0B3D4A.toInt() else Color.WHITE
+        val panelSurface = if (darkMode) Color.BLACK else Color.WHITE
         val root = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(pageBg) }
         val header = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(15),dp(6),dp(12),dp(5)); setBackgroundColor(panelSurface) }
         header.addView(text(if (showOnlyFavorites) "Favorit (${favorites.size})" else "4k Wallpaper",25,pageText,true).apply { if (!showOnlyFavorites) textSize = 22f }, LinearLayout.LayoutParams(0,dp(38),1f))
@@ -2366,7 +2366,7 @@ class MainActivity : Activity() {
     private fun toggleTheme(){ darkMode = !darkMode; preferences.edit().putBoolean("dark_mode", darkMode).apply(); buildHome(); Toast.makeText(this@MainActivity,if(darkMode) "Tema gelap aktif" else "Tema terang aktif",Toast.LENGTH_SHORT).show() }
     // Classic, restrained system icon set with a consistent Rose Gold accent.
     private fun modernIcon(glyph: String, size: Int): FrameLayout {
-        val roseGold = if (glyph == "☾" || glyph == "⌕" || glyph == "⚙") Color.BLACK else 0xffb76e79.toInt()
+        val roseGold = if (darkMode) Color.WHITE else if (glyph == "☾" || glyph == "⌕" || glyph == "⚙") Color.BLACK else 0xffb76e79.toInt()
         val icon = FrameLayout(this@MainActivity).apply {
             setBackgroundColor(Color.TRANSPARENT)
             clipToOutline = false
