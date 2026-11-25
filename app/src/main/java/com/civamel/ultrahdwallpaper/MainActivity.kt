@@ -655,10 +655,10 @@ class MainActivity : Activity() {
                 }
                 slide.addView(slideImage, FrameLayout.LayoutParams(-1, -1))
                 thumbnailUrls.getOrNull(wallpaperIndex)?.let { slideUrl ->
+                    slideImage.tag = slideUrl
                     loadImage(slideUrl) { bitmap ->
-                        if (bitmap != null && !bitmap.isRecycled && slideImage.isAttachedToWindow) {
-                            slideImage.setImageBitmap(bitmap)
-                        }
+                        // Cache hits can arrive before setContentView attaches this view.
+                        if (slideImage.tag == slideUrl && bitmap != null && !bitmap.isRecycled) slideImage.setImageBitmap(bitmap)
                     }
                 }
                 slide.addView(text(category, 13, 0xffD6C2A5.toInt(), true).apply {
@@ -777,20 +777,26 @@ class MainActivity : Activity() {
             }, FrameLayout.LayoutParams(dp(32), dp(32), Gravity.TOP or Gravity.START).apply {
                 setMargins(dp(7), dp(7), 0, 0)
             })
-            if (index < thumbnailUrls.size) loadImage(thumbnailUrls[index]) { bitmap ->
-                if (art.isAttachedToWindow) {
-                    if (bitmap != null && !bitmap.isRecycled) art.setImageBitmap(bitmap)
-                    else {
-                        // Never clear the tile when a network/cache request fails.
-                        // Keep a visible fallback instead of turning the wallpaper card blank.
-                        art.setImageDrawable(artDrawable(index))
-                        art.setBackgroundColor(0xff21151b.toInt())
-                        val failed = text("Gambar belum tersedia\nTarik ke bawah untuk mencoba lagi", 10, 0xfff2cbd8.toInt(), true).apply {
-                            gravity = Gravity.CENTER
-                            setPadding(dp(8), dp(8), dp(8), dp(8))
-                            setBackgroundColor(0x66000000)
+            if (index < thumbnailUrls.size) {
+                val tileUrl = thumbnailUrls[index]
+                art.tag = tileUrl
+                loadImage(tileUrl) { bitmap ->
+                    // Cache hits are synchronous; attachment state must not discard them.
+                    if (art.tag == tileUrl) {
+                        if (bitmap != null && !bitmap.isRecycled) art.setImageBitmap(bitmap)
+                        else {
+                            art.setImageDrawable(artDrawable(index))
+                            art.setBackgroundColor(0xff21151b.toInt())
+                            val failed = text("Gambar belum tersedia\\nTarik ke bawah untuk mencoba lagi", 10, 0xfff2cbd8.toInt(), true).apply {
+                                gravity = Gravity.CENTER
+                                setPadding(dp(8), dp(8), dp(8), dp(8))
+                                setBackgroundColor(0x66000000)
+                                tag = "image-load-failed"
+                            }
+                            (art.parent as? FrameLayout)?.let { parent ->
+                                if (parent.findViewWithTag<View>("image-load-failed") == null) parent.addView(failed, FrameLayout.LayoutParams(-1, -1))
+                            }
                         }
-                        (art.parent as? FrameLayout)?.addView(failed, FrameLayout.LayoutParams(-1, -1))
                     }
                 }
             }
@@ -921,15 +927,18 @@ class MainActivity : Activity() {
             val first = if (preferFull) full else thumb
             val second = if (preferFull) thumb else full
             if (first.isNotBlank()) {
+                target.tag = first
                 loadImage(first) { bitmap ->
-                    if (bitmap != null && !bitmap.isRecycled && target.isAttachedToWindow) {
-                        target.setImageBitmap(bitmap)
-                    } else if (second.isNotBlank() && second != first) {
+                    if (target.tag != first) return@loadImage
+                    if (bitmap != null && !bitmap.isRecycled) target.setImageBitmap(bitmap)
+                    else if (second.isNotBlank() && second != first) {
                         android.util.Log.w("WallpaperImage", "Primary preview source failed; trying fallback for ${names.getOrNull(itemIndex)}")
+                        target.tag = second
                         loadImage(second) { fallback ->
-                            if (fallback != null && !fallback.isRecycled && target.isAttachedToWindow) {
-                                target.setImageBitmap(fallback)
-                            } else {
+                            if (target.tag != second) return@loadImage
+                            if (fallback != null && !fallback.isRecycled) target.setImageBitmap(fallback)
+                            else {
+                                target.setImageDrawable(artDrawable(itemIndex))
                                 android.util.Log.e("WallpaperImage", "Both full and thumbnail sources failed for ${names.getOrNull(itemIndex)}")
                             }
                         }
@@ -1977,9 +1986,11 @@ class MainActivity : Activity() {
                 row.addView(text("›", 24, if (darkMode) 0xfff2f2f5.toInt() else ink, false))
                 list.addView(row, LinearLayout.LayoutParams(-1, dp(88)).apply { bottomMargin = dp(8) })
                 thumbnailUrls.getOrNull(index)?.let { url ->
+                    thumbnail.tag = url
                     loadImage(url) { bitmap ->
-                        if (bitmap != null && thumbnail.isAttachedToWindow) thumbnail.setImageBitmap(bitmap)
+                        if (thumbnail.tag == url && bitmap != null && !bitmap.isRecycled) thumbnail.setImageBitmap(bitmap)
                     }
+                }
                 }
             }
             scroll.addView(list)
