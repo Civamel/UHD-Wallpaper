@@ -929,17 +929,19 @@ class MainActivity : Activity() {
             if (first.isNotBlank()) {
                 target.tag = first
                 loadImage(first) { bitmap ->
-                    if (target.tag != first) return@loadImage
-                    if (bitmap != null && !bitmap.isRecycled) target.setImageBitmap(bitmap)
-                    else if (second.isNotBlank() && second != first) {
-                        android.util.Log.w("WallpaperImage", "Primary preview source failed; trying fallback for ${names.getOrNull(itemIndex)}")
-                        target.tag = second
-                        loadImage(second) { fallback ->
-                            if (target.tag != second) return@loadImage
-                            if (fallback != null && !fallback.isRecycled) target.setImageBitmap(fallback)
-                            else {
-                                target.setImageDrawable(artDrawable(itemIndex))
-                                android.util.Log.e("WallpaperImage", "Both full and thumbnail sources failed for ${names.getOrNull(itemIndex)}")
+                    if (target.tag == first) {
+                        if (bitmap != null && !bitmap.isRecycled) target.setImageBitmap(bitmap)
+                        else if (second.isNotBlank() && second != first) {
+                            android.util.Log.w("WallpaperImage", "Primary preview source failed; trying fallback for ${names.getOrNull(itemIndex)}")
+                            target.tag = second
+                            loadImage(second) { fallback ->
+                                if (target.tag == second) {
+                                    if (fallback != null && !fallback.isRecycled) target.setImageBitmap(fallback)
+                                    else {
+                                        target.setImageDrawable(artDrawable(itemIndex))
+                                        android.util.Log.e("WallpaperImage", "Both full and thumbnail sources failed for ${names.getOrNull(itemIndex)}")
+                                    }
+                                }
                             }
                         }
                     }
