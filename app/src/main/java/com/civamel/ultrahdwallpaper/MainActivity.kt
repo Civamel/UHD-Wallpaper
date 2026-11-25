@@ -163,29 +163,41 @@ class MainActivity : Activity() {
 
     @Suppress("DEPRECATION")
     override fun onBackPressed() {
-        if (!homeScreenActive) {
+        val isHomeRoot = homeScreenActive &&
+            !previewScreenActive &&
+            !showOnlyFavorites &&
+            selectedCategory == "All" &&
+            searchQuery.isBlank() &&
+            selectedTab == "Wallpaper"
+
+        if (!isHomeRoot) {
+            // Kembali dari halaman/kategori apa pun selalu menuju beranda utama.
+            backPressHandler.removeCallbacks(resetBackPress)
+            backPressedOnce = false
             previewScreenActive = false
             showOnlyFavorites = false
             selectedCategory = "All"
             searchQuery = ""
-            selectedTab = "Home"
+            selectedTab = "Wallpaper"
             preferences.edit()
                 .putString("selected_wallpaper_category", selectedCategory)
                 .putString("selected_wallpaper_tab", selectedTab)
                 .apply()
             visibleItemLimit = 24
             buildHome()
-        } else {
-            if (backPressedOnce) {
-                backPressHandler.removeCallbacks(resetBackPress)
-                super.onBackPressed()
-                return
-            }
-            backPressedOnce = true
-            Toast.makeText(this, "Tekan kembali sekali lagi untuk keluar", Toast.LENGTH_SHORT).show()
-            backPressHandler.removeCallbacks(resetBackPress)
-            backPressHandler.postDelayed(resetBackPress, 2000L)
+            return
         }
+
+        if (backPressedOnce) {
+            backPressHandler.removeCallbacks(resetBackPress)
+            backPressedOnce = false
+            super.onBackPressed()
+            return
+        }
+        backPressedOnce = true
+        Toast.makeText(this, "Tekan kembali sekali lagi untuk keluar", Toast.LENGTH_SHORT).show()
+        backPressHandler.removeCallbacks(resetBackPress)
+        backPressHandler.postDelayed(resetBackPress, 2000L)
     }
 
     override fun onResume() {
@@ -691,7 +703,13 @@ class MainActivity : Activity() {
         val panelSurface = if (darkMode) Color.BLACK else Color.WHITE
         val root = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(pageBg) }
         val header = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(15),dp(6),dp(12),dp(5)); setBackgroundColor(panelSurface) }
-        header.addView(text(if (showOnlyFavorites) "Favorit (${favorites.size})" else "Ultra HD Wallpaper",25,pageText,true).apply { if (!showOnlyFavorites) textSize = 12.65f }, LinearLayout.LayoutParams(0,dp(38),1f))
+        header.addView(text(if (showOnlyFavorites) "Favorit (${favorites.size})" else "Ultra HD\\nWallpaper",25,pageText,true).apply {
+            if (!showOnlyFavorites) {
+                textSize = 16.45f
+                gravity = Gravity.CENTER_VERTICAL
+                setLineSpacing(0f, 0.9f)
+            }
+        }, LinearLayout.LayoutParams(0,dp(48),1f))
         if (!showOnlyFavorites) header.addView(animatedDiamond(dp(38)))
         listOf("☾","⌕","♡","⚙").forEachIndexed { i,glyph ->
             val icon = modernIcon(glyph, 40)
