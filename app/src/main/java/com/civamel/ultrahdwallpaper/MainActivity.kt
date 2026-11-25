@@ -1099,7 +1099,7 @@ class MainActivity : Activity() {
     }
 
     private fun animatedDiamond(sizePx: Int): View {
-        val movie = Movie.decodeStream(resources.openRawResource(R.drawable.file_0000000011ec821195feef675e9307c8))
+        val movie = Movie.decodeStream(resources.openRawResource(R.drawable.file_0000000087f082118f963b729b6ee9ed))
         return object : View(this@MainActivity) {
             private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
             override fun onDraw(canvas: Canvas) {
