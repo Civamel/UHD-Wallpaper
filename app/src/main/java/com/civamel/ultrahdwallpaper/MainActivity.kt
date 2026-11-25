@@ -703,7 +703,7 @@ class MainActivity : Activity() {
         val panelSurface = if (darkMode) Color.BLACK else Color.WHITE
         val root = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(pageBg) }
         val header = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(15),dp(6),dp(12),dp(5)); setBackgroundColor(panelSurface) }
-        header.addView(text(if (showOnlyFavorites) "Favorit (${favorites.size})" else "Ultra HD\\nWallpaper",25,pageText,true).apply {
+        header.addView(text(if (showOnlyFavorites) "Favorit (${favorites.size})" else "Ultra HD\nWallpaper",25,pageText,true).apply {
             if (!showOnlyFavorites) {
                 textSize = 16.45f
                 gravity = Gravity.CENTER_VERTICAL
