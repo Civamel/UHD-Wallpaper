@@ -583,7 +583,7 @@ class MainActivity : Activity() {
         if (!showOnlyFavorites) header.addView(animatedDiamond(dp(42)))
         listOf("☾","⌕","⚙").forEachIndexed { i,glyph ->
             val icon = modernIcon(glyph, 40)
-            icon.contentDescription = listOf("Premium","Tema","Cari","Pengaturan")[i]
+            icon.contentDescription = listOf("Tema","Cari","Pengaturan")[i]
             icon.setOnClickListener {
                 when(i){0->toggleTheme();1->search();2->showSettings()}
             }
