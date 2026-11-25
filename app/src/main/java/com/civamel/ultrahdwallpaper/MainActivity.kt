@@ -1251,21 +1251,74 @@ class MainActivity : Activity() {
         dialog.window?.setGravity(Gravity.BOTTOM)
     }
 
+    /**
+     * Membuat wallpaper statis dengan ukuran tepat sebesar layar perangkat.
+     * Launcher tidak menerima bidang gambar ekstra di sisi kiri/kanan yang
+     * biasanya dipakai untuk efek geser/parallax antar-halaman Home.
+     */
+    private fun decodeScreenSizedWallpaper(file: File): Bitmap {
+        val metrics = resources.displayMetrics
+        val targetWidth = metrics.widthPixels.coerceAtLeast(1)
+        val targetHeight = metrics.heightPixels.coerceAtLeast(1)
+
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.absolutePath, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+            throw IllegalStateException("File gambar tidak dapat dibaca")
+        }
+
+        var sampleSize = 1
+        while (bounds.outWidth / (sampleSize * 2) >= targetWidth &&
+            bounds.outHeight / (sampleSize * 2) >= targetHeight) {
+            sampleSize *= 2
+        }
+        val options = BitmapFactory.Options().apply {
+            inSampleSize = sampleSize
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+        }
+        val decoded = BitmapFactory.decodeFile(file.absolutePath, options)
+            ?: throw IllegalStateException("Gagal membaca gambar wallpaper")
+
+        try {
+            val sourceRatio = decoded.width.toFloat() / decoded.height.toFloat()
+            val targetRatio = targetWidth.toFloat() / targetHeight.toFloat()
+            val sourceRect = if (sourceRatio > targetRatio) {
+                val cropWidth = (decoded.height * targetRatio).toInt().coerceAtLeast(1)
+                val left = ((decoded.width - cropWidth) / 2).coerceAtLeast(0)
+                Rect(left, 0, left + cropWidth, decoded.height)
+            } else {
+                val cropHeight = (decoded.width / targetRatio).toInt().coerceAtLeast(1)
+                val top = ((decoded.height - cropHeight) / 2).coerceAtLeast(0)
+                Rect(0, top, decoded.width, top + cropHeight)
+            }
+            val output = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
+            Canvas(output).drawBitmap(
+                decoded,
+                sourceRect,
+                Rect(0, 0, targetWidth, targetHeight),
+                Paint(Paint.FILTER_BITMAP_FLAG or Paint.DITHER_FLAG)
+            )
+            return output
+        } finally {
+            decoded.recycle()
+        }
+    }
+
     private fun applyWallpaperTarget(index: Int, flags: Int) {
         if (index !in fullUrls.indices) return
-        Toast.makeText(this@MainActivity, "Menyiapkan file UHD…", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this@MainActivity, "Menyiapkan wallpaper sesuai ukuran layar…", Toast.LENGTH_SHORT).show()
         loadWallpaperFile(fullUrls[index]) { file ->
             if (file == null) {
                 Toast.makeText(this@MainActivity, "Gambar gagal dimuat atau file tidak valid.", Toast.LENGTH_LONG).show()
                 return@loadWallpaperFile
             }
             Thread {
+                var bitmap: Bitmap? = null
                 try {
-                    FileInputStream(file).use { input ->
-                        val manager = WallpaperManager.getInstance(this@MainActivity)
-                        if (Build.VERSION.SDK_INT >= 24) manager.setStream(input, null, true, flags)
-                        else manager.setStream(input)
-                    }
+                    bitmap = decodeScreenSizedWallpaper(file)
+                    val manager = WallpaperManager.getInstance(this@MainActivity)
+                    if (Build.VERSION.SDK_INT >= 24) manager.setBitmap(bitmap, null, true, flags)
+                    else manager.setBitmap(bitmap)
                     runOnUiThread {
                         if (!isFinishing && !isDestroyed) Toast.makeText(this@MainActivity,
                             "Wallpaper berhasil diterapkan", Toast.LENGTH_LONG).show()
@@ -1273,8 +1326,10 @@ class MainActivity : Activity() {
                 } catch (e: Exception) {
                     runOnUiThread {
                         if (!isFinishing && !isDestroyed) Toast.makeText(this@MainActivity,
-                            "Gagal: " + e.localizedMessage, Toast.LENGTH_LONG).show()
+                            "Gagal: " + (e.localizedMessage ?: "kesalahan"), Toast.LENGTH_LONG).show()
                     }
+                } finally {
+                    bitmap?.recycle()
                 }
             }.start()
         }
@@ -1935,8 +1990,12 @@ class MainActivity : Activity() {
             Thread {
                 var bitmap: Bitmap? = null
                 try {
-                    bitmap = BitmapFactory.decodeFile(file.absolutePath) ?: throw IllegalStateException("File gambar tidak dapat dibaca")
-                    WallpaperManager.getInstance(this@MainActivity).setBitmap(bitmap, null, true, flags)
+                    bitmap = decodeScreenSizedWallpaper(file)
+                    if (Build.VERSION.SDK_INT >= 24) {
+                        WallpaperManager.getInstance(this@MainActivity).setBitmap(bitmap, null, true, flags)
+                    } else {
+                        WallpaperManager.getInstance(this@MainActivity).setBitmap(bitmap)
+                    }
                     runOnUiThread { Toast.makeText(this@MainActivity, "Wallpaper berhasil diterapkan", Toast.LENGTH_LONG).show() }
                 } catch (e: Exception) {
                     runOnUiThread { Toast.makeText(this@MainActivity, "Gagal menerapkan wallpaper: " + (e.localizedMessage ?: "kesalahan"), Toast.LENGTH_LONG).show() }
