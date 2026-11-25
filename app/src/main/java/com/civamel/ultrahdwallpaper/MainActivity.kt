@@ -604,6 +604,74 @@ class MainActivity : Activity() {
         super.onDestroy()
     }
 
+    private val homeBanners = listOf(
+        "Anime" to "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEicfF9-wrnVfMAuqu5VV12jVk3WSBye3dXzgdz200gzS_lZLcoUEJZO3MppRD8dPVY7CHqlEYUjDIdfMaZveUAusfb5ukrkqzsCMuubyhGt_Y3S7nU0bmXVerCBlCsCIreIxVwduQ8D3D8sUQ1yM2iZJsDJN8F3Mfjy__VcYaEVpg8BQS4MkW4wjaPubzs/s1652/slide%2001_Anime.png",
+        "Alam" to "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi0utvpF1HPiNHC3bYVra1U9duzhFcsLqExA_AZYxDcE1BL1ymo0I37g1tPKCWla15Yw7-2MBHQlHRRH426fVWgak5MRdGd6okO4b5cP6Teg_ogltu_MMDmbHUUiDjWYSp_qRuX3SSdojy2oO_5cuX6nnspslifevR_pFax8l4vmgfZKjMdi5SDcqA0-iM/s1660/slide%2002_Alam.png",
+        "Girls" to "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgXZqymuHI70KeeDyYxp1h9ILLJsELAo1mKICsvdiKy0z4LQ-Y5Glc8L1a1RuxQdu4rS_TteT9MB6qBKc15gjiWGzNTBxFsE_bLlYvYVaJcYR0t49FinAySHuP4BQMTBR-5y9ZeqEv_zRjETHPqmqzPvufL5jtG_HV_4VUt2JiikXjcMrLmYAOCyellJJM/s1652/slide%2003_Girls.png",
+        "Game" to "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiqj70pupE3IMt4r2fD9d9o9HtE8QihXoqDTgDRJOl68jzhFtIO5fl42K0rnuXLKIKb0RU56lKVg9FWfP9VERtd4KyG9BStLVQr0ReSP1K18YphhHB4D4IXagEYCTg5YFiLWYGFEvFUgjwJq_W6uDP19W4mJ0Qk4eDHjwjFmEIt69pGdMxc-FlrPs15tPg/s1660/slide%2004_Game.png",
+        "Super Hero" to "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjoXIMV9HIT7BPxBHWM__UcjcWe1eN7UgKvwVBS4ur86qwna7qhYLn3dEhjGsW4vwb8g8KDzm3PpJNH5_zXeRwJ0sRAMb4iDCFBPMH63KNCdnbYqp5ymZJ6T9vMgze2ADMIQt41uqSUNfV4WEzVRuVAdOFTZz81Qy7dxYzD5jpgBvO6sYOZerqYGDU4nbw/s1652/slide%2005_Super_Hero.png",
+        "Teknologi" to "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhqecIsGGc_eZpcZliBH83O6TUf2d5Qf1coPPBV0EP2VzueIUTY8iqAbNsf61g25DAJiQ1M9W6JY4gGwmjXBacqjPbYOQyBI41ZYSDrQZGqQQOlJ368VMhcOzuzPxVP95ZtMiqejjDtRk5x_T_1qic70488Cjxz8o86F8E-8PZ96p8_-jQQtkrFwLa117c/s1660/slide%2006_Teknologi.png",
+        "3D" to "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh78ya8FPyT2Kerg5FCEQAHGPl6402RvPM3qMVUWu5KH3DSK1pXPPMcKGbU6VBB4SbhyphenhyphenXbOW8xTpvTlW0o49sL9KM4Gi1PeTk21Z83aub1Bf0FkaYBpQZp_9kRUFeX0ivizht0_37302t18urEm0nx7yY6oIvnr17XRhf_NkyWn2JHOYUr2Vb5tYvb95sY/s1660/slide%2007_3D.png"
+    )
+
+    private fun bannerCacheFile(url: String): File {
+        val key = MessageDigest.getInstance("SHA-256").digest(url.toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+        val directory = File(filesDir, "home_banners").apply { if (!exists()) mkdirs() }
+        return File(directory, "$key.png")
+    }
+
+    private fun loadHomeBanner(url: String, target: ImageView) {
+        val file = bannerCacheFile(url)
+        target.tag = url
+        imageExecutor.execute {
+            var bitmap: Bitmap? = null
+            try {
+                if (!file.isFile || file.length() <= 0L) {
+                    var connection: HttpURLConnection? = null
+                    try {
+                        connection = (URL(url).openConnection() as HttpURLConnection).apply {
+                            connectTimeout = 15000
+                            readTimeout = 25000
+                            doInput = true
+                            instanceFollowRedirects = true
+                            requestMethod = "GET"
+                        }
+                        if (connection.responseCode !in 200..299) throw IllegalStateException("HTTP " + connection.responseCode)
+                        val temporary = File(file.parentFile, file.name + ".download")
+                        try {
+                            connection.inputStream.use { input ->
+                                FileOutputStream(temporary).use { output ->
+                                    val buffer = ByteArray(16 * 1024)
+                                    var total = 0L
+                                    while (true) {
+                                        val count = input.read(buffer)
+                                        if (count < 0) break
+                                        total += count
+                                        if (total > 12L * 1024L * 1024L) throw IllegalStateException("Banner terlalu besar")
+                                        output.write(buffer, 0, count)
+                                    }
+                                    output.fd.sync()
+                                }
+                            }
+                            if (BitmapFactory.decodeFile(temporary.absolutePath) == null) throw IllegalStateException("Banner tidak valid")
+                            if (!temporary.renameTo(file)) temporary.copyTo(file, overwrite = true)
+                        } finally { if (temporary.exists()) temporary.delete() }
+                    } finally { connection?.disconnect() }
+                }
+                bitmap = BitmapFactory.decodeFile(file.absolutePath)
+            } catch (error: Exception) {
+                android.util.Log.w("HomeBanner", "Banner gagal dimuat: $url", error)
+            }
+            val loaded = bitmap
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed && target.tag == url && loaded != null && !loaded.isRecycled) {
+                    target.setImageBitmap(loaded)
+                }
+            }
+        }
+    }
+
     private fun buildHome() {
         homeScreenActive = true
         previewScreenActive = false
@@ -651,12 +719,8 @@ class MainActivity : Activity() {
             val pp=LinearLayout.LayoutParams(-1,dp(38)); pp.setMargins(dp(12),dp(6),dp(12),dp(2)); content.addView(promo,pp)
         }
         val showDiscoverHeader = !showOnlyFavorites && (selectedTab == "Home" || selectedTab == "Wallpaper") && searchQuery.isBlank() && selectedCategory == "All"
-        if (showDiscoverHeader && names.isNotEmpty()) {
+        if (showDiscoverHeader) {
             categorySlideRunnable?.let { slideHandler.removeCallbacks(it) }
-            val categorySlides = categoryNames.filter { it != "All" }.mapNotNull { category ->
-                val index = itemCategories.indexOf(category)
-                if (index >= 0) category to index else null
-            }
             val slideScroll = HorizontalScrollView(this@MainActivity).apply {
                 isHorizontalScrollBarEnabled = false
                 isFillViewport = false
@@ -665,57 +729,41 @@ class MainActivity : Activity() {
             }
             val slideRow = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL }
             val slideWidth = resources.displayMetrics.widthPixels
-            categorySlides.forEach { pair ->
-                val category = pair.first
-                val wallpaperIndex = pair.second
+            homeBanners.forEach { (category, url) ->
                 val slide = FrameLayout(this@MainActivity).apply {
                     background = rounded(if (darkMode) 0xff0B3D4A.toInt() else 0xffe9e9ed.toInt(), 14)
                     clipToOutline = true
                     setOnClickListener {
-                        selectedCategory = category
+                        searchQuery = category
+                        selectedCategory = "All"
                         selectedTab = "Wallpaper"
-                        searchQuery = ""
                         showOnlyFavorites = false
-                        preferences.edit().putString("selected_wallpaper_category", category).putString("selected_wallpaper_tab", selectedTab).apply()
                         visibleItemLimit = 24
                         buildHome()
                     }
                 }
                 val slideImage = ImageView(this@MainActivity).apply {
                     scaleType = ImageView.ScaleType.CENTER_CROP
-                    setImageDrawable(artDrawable(wallpaperIndex))
-                    contentDescription = "Gambar slide sementara $category"
+                    contentDescription = "Banner $category"
+                    setImageDrawable(rounded(if (darkMode) 0xff0B3D4A.toInt() else 0xffe9e9ed.toInt(), 14))
                 }
                 slide.addView(slideImage, FrameLayout.LayoutParams(-1, -1))
-                thumbnailUrls.getOrNull(wallpaperIndex)?.let { slideUrl ->
-                    slideImage.tag = slideUrl
-                    loadImage(slideUrl) { bitmap ->
-                        // Cache hits can arrive before setContentView attaches this view.
-                        if (slideImage.tag == slideUrl && bitmap != null && !bitmap.isRecycled) slideImage.setImageBitmap(bitmap)
-                    }
-                }
-                slide.addView(text(category, 13, 0xffD6C2A5.toInt(), true).apply {
-                    gravity = Gravity.BOTTOM or Gravity.START
-                    setPadding(dp(12), 0, dp(12), dp(7))
-                    maxLines = 1
-                }, FrameLayout.LayoutParams(-1, dp(26), Gravity.BOTTOM))
+                loadHomeBanner(url, slideImage)
                 slideRow.addView(slide, LinearLayout.LayoutParams(slideWidth, dp(105)))
             }
             slideScroll.addView(slideRow)
             content.addView(slideScroll, LinearLayout.LayoutParams(-1, dp(105)))
-            if (categorySlides.size > 1) {
-                var slidePosition = 0
-                val autoAdvance = object : Runnable {
-                    override fun run() {
-                        if (isFinishing || isDestroyed || !slideScroll.isAttachedToWindow) return
-                        slidePosition = (slidePosition + 1) % categorySlides.size
-                        slideScroll.smoothScrollTo(slidePosition * slideWidth, 0)
-                        slideHandler.postDelayed(this, 4000L)
-                    }
+            var slidePosition = 0
+            val autoAdvance = object : Runnable {
+                override fun run() {
+                    if (isFinishing || isDestroyed || !slideScroll.isAttachedToWindow) return
+                    slidePosition = (slidePosition + 1) % homeBanners.size
+                    slideScroll.smoothScrollTo(slidePosition * slideWidth, 0)
+                    slideHandler.postDelayed(this, 4000L)
                 }
-                categorySlideRunnable = autoAdvance
-                slideHandler.postDelayed(autoAdvance, 4000L)
             }
+            categorySlideRunnable = autoAdvance
+            slideHandler.postDelayed(autoAdvance, 4000L)
             val popularPanel = LinearLayout(this@MainActivity).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER_VERTICAL
