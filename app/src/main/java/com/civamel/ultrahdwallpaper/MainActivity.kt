@@ -577,12 +577,12 @@ class MainActivity : Activity() {
         val header = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(15),dp(6),dp(12),dp(5)); setBackgroundColor(panelSurface) }
         header.addView(text(if (showOnlyFavorites) "Favorit (${favorites.size})" else "4k Ultra HD Wallpaper",25,0xfff4f7ff.toInt(),true).apply { if (!showOnlyFavorites) textSize = 16.25f }, LinearLayout.LayoutParams(0,dp(38),1f))
         listOf("✦","☾","⌕","⚙").forEachIndexed { i,glyph ->
-            val icon = modernIcon(glyph, 50)
+            val icon = modernIcon(glyph, 40)
             icon.contentDescription = listOf("Premium","Tema","Cari","Pengaturan")[i]
             icon.setOnClickListener {
                 when(i){0->Toast.makeText(this@MainActivity,"Wallpaper Premium",Toast.LENGTH_SHORT).show();1->toggleTheme();2->search();3->showSettings()}
             }
-            header.addView(icon,LinearLayout.LayoutParams(dp(50),dp(44)))
+            header.addView(icon,LinearLayout.LayoutParams(dp(40),dp(40)))
         }
         root.addView(header)
         val tabScroll=HorizontalScrollView(this@MainActivity).apply { isHorizontalScrollBarEnabled=false }
@@ -2015,8 +2015,9 @@ class MainActivity : Activity() {
         }
     }
     private fun toggleTheme(){ darkMode = !darkMode; preferences.edit().putBoolean("dark_mode", darkMode).apply(); buildHome(); Toast.makeText(this@MainActivity,if(darkMode) "Tema gelap aktif" else "Tema terang aktif",Toast.LENGTH_SHORT).show() }
+    // Classic, restrained system icon set with a consistent Rose Gold accent.
     private fun modernIcon(glyph: String, size: Int): FrameLayout {
-        val rubyRed = 0xffb76e79.toInt()
+        val roseGold = 0xffb76e79.toInt()
         val icon = FrameLayout(this@MainActivity).apply {
             setBackgroundColor(Color.TRANSPARENT)
             clipToOutline = false
@@ -2037,23 +2038,23 @@ class MainActivity : Activity() {
         if (resource != 0) {
             val standardIcon = ImageView(this@MainActivity).apply {
                 setImageResource(resource)
-                setColorFilter(rubyRed)
+                setColorFilter(roseGold)
                 scaleType = ImageView.ScaleType.FIT_CENTER
                 contentDescription = glyph
-                setPadding(dp(2), dp(2), dp(2), dp(2))
+                setPadding(dp(3), dp(3), dp(3), dp(3))
             }
             icon.addView(standardIcon, FrameLayout.LayoutParams(-1, -1))
         } else {
-            icon.addView(text(glyph, (size * 0.86f).toInt().coerceAtLeast(24), rubyRed, true).apply {
+            icon.addView(text(glyph, (size * 0.68f).toInt().coerceAtLeast(18), roseGold, true).apply {
                 gravity = Gravity.CENTER
             }, FrameLayout.LayoutParams(-1, -1))
         }
         return icon
     }
 
-    private fun circle(symbol:String, action:()->Unit):View = modernIcon(symbol,48).apply {
+    private fun circle(symbol:String, action:()->Unit):View = modernIcon(symbol,40).apply {
         setOnClickListener { action() }
-    }.also { it.layoutParams=LinearLayout.LayoutParams(dp(48),dp(48)).apply { setMargins(dp(4),0,dp(4),0) } }
+    }.also { it.layoutParams=LinearLayout.LayoutParams(dp(40),dp(40)).apply { setMargins(dp(3),0,dp(3),0) } }
     private fun artDrawable(index:Int):GradientDrawable { val a=palettes[index%palettes.size]; return GradientDrawable(GradientDrawable.Orientation.TL_BR,a).apply { cornerRadius=dp(2).toFloat() } }
     private fun rounded(color:Int,radius:Int)=GradientDrawable().apply { setColor(color); cornerRadius=dp(radius).toFloat() }
     private fun text(s:String,size:Int,color:Int,bold:Boolean)=TextView(this@MainActivity).apply { text=s; textSize=size.toFloat(); setTextColor(color); if(bold) typeface=Typeface.DEFAULT_BOLD }
