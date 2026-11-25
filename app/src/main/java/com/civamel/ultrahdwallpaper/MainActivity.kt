@@ -66,7 +66,7 @@ class MainActivity : Activity() {
     private val pendingWallpaperFileCallbacks = mutableMapOf<String, MutableList<(File?) -> Unit>>()
     private val previewCallbackLock = Any()
     private val pendingPreviewCallbacks = mutableMapOf<String, MutableList<(Bitmap?) -> Unit>>()
-    private val imageCache = object : LruCache<String, Bitmap>(24 * 1024) {
+    private val imageCache = object : LruCache<String, Bitmap>(48 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount / 1024
     }
     private var selectedTab = "Wallpaper"
@@ -222,7 +222,7 @@ class MainActivity : Activity() {
         return File(directory, key + ".img")
     }
 
-    private fun trimWallpaperDiskCache(maxBytes: Long = 180L * 1024L * 1024L) {
+    private fun trimWallpaperDiskCache(maxBytes: Long = 512L * 1024L * 1024L) {
         try {
             val directory = File(filesDir, "wallpaper_images")
             val files = directory.listFiles()?.filter { it.isFile && it.extension == "img" } ?: return
@@ -572,7 +572,7 @@ class MainActivity : Activity() {
         homeScreenActive = true
         val pageBg = if (darkMode) 0xff121318.toInt() else Color.WHITE
         val pageText = if (darkMode) 0xfff2f2f5.toInt() else ink
-        val panelSurface = if (darkMode) 0xff77736e.toInt() else 0xff050608.toInt()
+        val panelSurface = if (darkMode) 0xff0B3D4A.toInt() else 0xff050608.toInt()
         val root = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(pageBg) }
         val header = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(15),dp(6),dp(12),dp(5)); setBackgroundColor(panelSurface) }
         header.addView(text(if (showOnlyFavorites) "Favorit (${favorites.size})" else "4k Ultra HD Wallpaper",25,0xfff4f7ff.toInt(),true).apply { if (!showOnlyFavorites) textSize = 16.25f }, LinearLayout.LayoutParams(0,dp(38),1f))
@@ -610,7 +610,7 @@ class MainActivity : Activity() {
             val promo=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(dp(14),0,dp(12),0); background=rounded(0xff70434b.toInt(),28) }
             promo.addView(text("♛   Get All Wallpaper Pro!",17,Color.WHITE,true),LinearLayout.LayoutParams(0,dp(36),1f))
             promo.addView(text("×",25,Color.WHITE,false).apply { gravity=Gravity.CENTER; setOnClickListener { promoVisible=false; buildHome() } },LinearLayout.LayoutParams(dp(30),dp(34)))
-            val pp=LinearLayout.LayoutParams(-1,dp(38)); pp.setMargins(dp(12),dp(8),dp(12),dp(3)); content.addView(promo,pp)
+            val pp=LinearLayout.LayoutParams(-1,dp(38)); pp.setMargins(dp(12),dp(6),dp(12),dp(2)); content.addView(promo,pp)
         }
         val showDiscoverHeader = !showOnlyFavorites && (selectedTab == "Home" || selectedTab == "Wallpaper") && searchQuery.isBlank() && selectedCategory == "All"
         if (showDiscoverHeader && names.isNotEmpty()) {
@@ -631,7 +631,7 @@ class MainActivity : Activity() {
                 val category = pair.first
                 val wallpaperIndex = pair.second
                 val slide = FrameLayout(this@MainActivity).apply {
-                    background = rounded(if (darkMode) 0xff77736e.toInt() else 0xffe9e9ed.toInt(), 14)
+                    background = rounded(if (darkMode) 0xff0B3D4A.toInt() else 0xffe9e9ed.toInt(), 14)
                     clipToOutline = true
                     setOnClickListener {
                         selectedCategory = category
@@ -643,29 +643,26 @@ class MainActivity : Activity() {
                         buildHome()
                     }
                 }
-                val image = ImageView(this@MainActivity).apply {
-                    scaleType = ImageView.ScaleType.CENTER_CROP
-                    setImageDrawable(artDrawable(wallpaperIndex))
-                }
-                slide.addView(image, FrameLayout.LayoutParams(-1, -1))
-                slide.addView(View(this@MainActivity).apply {
-                    background = android.graphics.drawable.GradientDrawable(
-                        android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-                        intArrayOf(0x11000000, 0xdd000000.toInt())
+                val placeholder = LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    background = GradientDrawable(
+                        GradientDrawable.Orientation.TL_BR,
+                        intArrayOf(0xff0B3D4A.toInt(), 0xff164F5B.toInt())
                     )
-                }, FrameLayout.LayoutParams(-1, dp(68), Gravity.BOTTOM))
-                slide.addView(text(category, 21, Color.WHITE, true).apply {
-                    gravity = Gravity.BOTTOM or Gravity.START
-                    setPadding(dp(18), 0, dp(16), dp(8))
-                    maxLines = 1
-                    setShadowLayer(1.2f, 0f, dp(1).toFloat(), 0x99000000.toInt())
-                }, FrameLayout.LayoutParams(-1, dp(38), Gravity.BOTTOM))
-                slideRow.addView(slide, LinearLayout.LayoutParams(slideWidth, dp(105)))
-                thumbnailUrls.getOrNull(wallpaperIndex)?.let { imageUrl ->
-                    loadImage(imageUrl) { bitmap ->
-                        if (bitmap != null && image.isAttachedToWindow) image.setImageBitmap(bitmap)
-                    }
                 }
+                placeholder.addView(text("▧", 30, 0xffD6C2A5.toInt(), true).apply { gravity = Gravity.CENTER })
+                placeholder.addView(text("Gambar slide akan ditambahkan", 12, Color.WHITE, true).apply {
+                    gravity = Gravity.CENTER
+                    setPadding(dp(8), dp(2), dp(8), 0)
+                })
+                slide.addView(placeholder, FrameLayout.LayoutParams(-1, -1))
+                slide.addView(text(category, 13, 0xffD6C2A5.toInt(), true).apply {
+                    gravity = Gravity.BOTTOM or Gravity.START
+                    setPadding(dp(12), 0, dp(12), dp(7))
+                    maxLines = 1
+                }, FrameLayout.LayoutParams(-1, dp(26), Gravity.BOTTOM))
+                slideRow.addView(slide, LinearLayout.LayoutParams(slideWidth, dp(105)))
             }
             slideScroll.addView(slideRow)
             content.addView(slideScroll, LinearLayout.LayoutParams(-1, dp(105)))
@@ -685,7 +682,7 @@ class MainActivity : Activity() {
             val popularPanel = LinearLayout(this@MainActivity).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(10), dp(4), dp(10), dp(4))
+                setPadding(dp(10), dp(3), dp(10), dp(3))
                 background = rounded(0xff70434b.toInt(), 10)
             }
             popularPanel.addView(text("Popular Tags", 11, Color.WHITE, true).apply { setPadding(dp(2), 0, 0, dp(2)) })
@@ -701,9 +698,9 @@ class MainActivity : Activity() {
             }
             tagScroll.addView(tagRow)
             popularPanel.addView(tagScroll, LinearLayout.LayoutParams(-1, dp(25)))
-            content.addView(popularPanel, LinearLayout.LayoutParams(-1, dp(56)).apply { setMargins(dp(12), dp(1), dp(12), dp(5)) })
+            content.addView(popularPanel, LinearLayout.LayoutParams(-1, dp(52)).apply { setMargins(dp(12), dp(1), dp(12), dp(3)) })
         }
-        val sort=TextView(this@MainActivity).apply { text="Filter : "+sortMode+"   ▾"; textSize=13f; setTextColor(0xff50c878.toInt()); setTypeface(typeface, android.graphics.Typeface.BOLD); setPadding(dp(18),dp(2),dp(12),dp(6)); setOnClickListener {
+        val sort=TextView(this@MainActivity).apply { text="Filter : "+sortMode+"   ▾"; textSize=13f; setTextColor(0xff0B3D4A.toInt()); setTypeface(typeface, android.graphics.Typeface.BOLD); setPadding(dp(18),dp(1),dp(12),dp(4)); setOnClickListener {
             val options = arrayOf("Paling populer", "Terbaru", "A-Z", "Acak")
             AlertDialog.Builder(this@MainActivity).setTitle("Urutkan berdasarkan").setItems(options) { _, w ->
                 sortMode = options[w]
@@ -715,7 +712,8 @@ class MainActivity : Activity() {
         content.addView(sort)
         // Three portrait phone-wallpaper cards per row (9:16 ratio).
         val screenWidthDp = resources.displayMetrics.widthPixels / resources.displayMetrics.density
-        val tileHeight = (screenWidthDp / 3f * (16f / 9f)).toInt().coerceAtLeast(150)
+        val tileWidthDp = (screenWidthDp - 8f) / 3f
+        val tileHeight = (tileWidthDp * (16f / 9f)).toInt().coerceAtLeast(150)
         val grid=GridLayout(this@MainActivity).apply { columnCount=3; useDefaultMargins=false }
         val filteredIndexes = names.indices.filter { index ->
             val categoryMatch = selectedCategory == "All" || itemCategories[index] == selectedCategory
@@ -2042,11 +2040,11 @@ class MainActivity : Activity() {
                 setColorFilter(rubyRed)
                 scaleType = ImageView.ScaleType.FIT_CENTER
                 contentDescription = glyph
-                setPadding(dp(5), dp(5), dp(5), dp(5))
+                setPadding(dp(2), dp(2), dp(2), dp(2))
             }
             icon.addView(standardIcon, FrameLayout.LayoutParams(-1, -1))
         } else {
-            icon.addView(text(glyph, (size * 0.72f).toInt().coerceAtLeast(20), rubyRed, true).apply {
+            icon.addView(text(glyph, (size * 0.86f).toInt().coerceAtLeast(24), rubyRed, true).apply {
                 gravity = Gravity.CENTER
             }, FrameLayout.LayoutParams(-1, -1))
         }
