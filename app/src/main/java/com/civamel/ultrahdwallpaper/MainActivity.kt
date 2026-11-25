@@ -1360,11 +1360,9 @@ class MainActivity : Activity() {
                 try {
                     bitmap = decodeScreenSizedWallpaper(file)
                     val manager = WallpaperManager.getInstance(this@MainActivity)
-                    // Explicitly tell the wallpaper host that this image is intended for
-                    // one screen-sized viewport, rather than a multi-page panorama.
-                    manager.setDesiredMinimumWidth(bitmap.width)
-                    manager.setDesiredMinimumHeight(bitmap.height)
-                    manager.setWallpaperOffsetSteps(0f, 0f)
+                    // WallpaperManager does not expose launcher offset controls.
+                    // Keep the bitmap cropped to the display viewport; launcher parallax
+                    // is controlled by the home-screen app, not by this activity.
                     if (Build.VERSION.SDK_INT >= 24) {
                         val fullBitmap = Rect(0, 0, bitmap.width, bitmap.height)
                         manager.setBitmap(bitmap, fullBitmap, true, flags)
