@@ -739,7 +739,7 @@ class MainActivity : Activity() {
                 setLineSpacing(0f, 0.9f)
             }
         }, LinearLayout.LayoutParams(0,dp(48),1f))
-        if (!showOnlyFavorites) header.addView(animatedDiamond(dp(38)))
+        if (!showOnlyFavorites) header.addView(animatedDiamond(dp(34)))
         listOf("☾","⌕","♡","⚙").forEachIndexed { i,glyph ->
             val icon = modernIcon(glyph, 40)
             icon.contentDescription = listOf("Tema","Cari","Favorit","Pengaturan")[i]
@@ -959,11 +959,7 @@ class MainActivity : Activity() {
             val hasVisibleRemainder = visibleIndexes.size > visibleItemLimit
             val remaining = (visibleIndexes.size - visibleItemLimit).coerceAtLeast(0)
             val moreButton = Button(this@MainActivity).apply {
-                text = when {
-                    shardLoading -> "Memuat halaman katalog…"
-                    hasVisibleRemainder -> "Muat lebih banyak ($remaining tersisa)"
-                    else -> "Berikutnya"
-                }
+                text = if (shardLoading) "Memuat halaman katalog…" else "Berikutnya"
                 isAllCaps = false
                 isEnabled = !shardLoading
                 setTextColor(Color.WHITE)
@@ -1189,13 +1185,31 @@ class MainActivity : Activity() {
             setOnClickListener { action() }
             contentDescription = symbol
         }
-        button.addView(TextView(this@MainActivity).apply {
-            text = symbol
-            textSize = 24f
-            gravity = Gravity.CENTER
-            setTextColor(0xff111111.toInt())
-            typeface = Typeface.DEFAULT
-        }, FrameLayout.LayoutParams(-1, -1))
+        val iconRes = when (symbol) {
+            "‹" -> android.R.drawable.ic_media_previous
+            "⚑" -> android.R.drawable.ic_menu_report_image
+            "ⓘ" -> android.R.drawable.ic_menu_info_details
+            "↗" -> android.R.drawable.ic_menu_share
+            "♥", "♡" -> android.R.drawable.btn_star_big_off
+            "⇩" -> android.R.drawable.stat_sys_download_done
+            else -> 0
+        }
+        if (iconRes != 0) {
+            button.addView(ImageView(this@MainActivity).apply {
+                setImageResource(iconRes)
+                setColorFilter(0xff70434b.toInt())
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                setPadding(dp(9), dp(9), dp(9), dp(9))
+            }, FrameLayout.LayoutParams(-1, -1))
+        } else {
+            button.addView(TextView(this@MainActivity).apply {
+                text = symbol
+                textSize = 24f
+                gravity = Gravity.CENTER
+                setTextColor(0xff111111.toInt())
+                typeface = Typeface.DEFAULT
+            }, FrameLayout.LayoutParams(-1, -1))
+        }
         return button.also {
             it.layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply {
                 setMargins(dp(3), 0, dp(3), 0)
