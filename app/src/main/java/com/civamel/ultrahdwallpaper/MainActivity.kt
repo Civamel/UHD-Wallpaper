@@ -1099,10 +1099,25 @@ class MainActivity : Activity() {
     }
 
     private fun animatedDiamond(sizePx: Int): View {
-        return ImageView(this@MainActivity).apply {
-            setImageResource(R.drawable.crown_premium)
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            contentDescription = "Mahkota premium 3D"
+        val movie = Movie.decodeStream(resources.openRawResource(R.drawable.file_0000000011ec821195feef675e9307c8))
+        return object : View(this@MainActivity) {
+            private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+            override fun onDraw(canvas: Canvas) {
+                super.onDraw(canvas)
+                val duration = movie?.duration()?.takeIf { it > 0 } ?: 1000
+                movie?.let {
+                    val scale = minOf(width.toFloat() / it.width(), height.toFloat() / it.height())
+                    val save = canvas.save()
+                    canvas.translate((width - it.width() * scale) / 2f, (height - it.height() * scale) / 2f)
+                    canvas.scale(scale, scale)
+                    it.setTime((android.os.SystemClock.uptimeMillis() % duration).toInt())
+                    it.draw(canvas, 0f, 0f, paint)
+                    canvas.restoreToCount(save)
+                    postInvalidateOnAnimation()
+                }
+            }
+        }.apply {
+            contentDescription = "Permata biru animasi"
             layoutParams = LinearLayout.LayoutParams(sizePx, sizePx)
         }
     }
