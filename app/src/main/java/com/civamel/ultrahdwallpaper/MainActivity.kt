@@ -1034,32 +1034,52 @@ class MainActivity : Activity() {
         setContentView(root)
     }
 
-    private fun animatedDiamond(sizePx: Int): TextView {
-        val diamond = TextView(this@MainActivity).apply {
-            text = "💎✨"
-            textSize = 25f
-            gravity = Gravity.CENTER
+    private fun animatedDiamond(sizePx: Int): View {
+        val reducedSize = (sizePx * 0.9f).toInt()
+        val container = FrameLayout(this@MainActivity).apply {
+            clipChildren = true
+            clipToPadding = true
             contentDescription = "Diamond premium"
         }
-        val pulse = android.animation.ValueAnimator.ofFloat(0.88f, 1.12f).apply {
-            duration = 850L
-            repeatMode = android.animation.ValueAnimator.REVERSE
+        // The diamond stays completely still; only the shine passes over it.
+        val diamond = TextView(this@MainActivity).apply {
+            text = "💎"
+            textSize = 22.5f
+            gravity = Gravity.CENTER
+        }
+        container.addView(diamond, FrameLayout.LayoutParams(-1, -1))
+
+        val shine = TextView(this@MainActivity).apply {
+            text = "✦"
+            textSize = 15f
+            gravity = Gravity.CENTER
+            setTextColor(0xfffff3a6.toInt())
+            alpha = 0f
+        }
+        container.addView(shine, FrameLayout.LayoutParams(dp(20), dp(20), Gravity.CENTER_VERTICAL or Gravity.START))
+
+        val shimmer = android.animation.ValueAnimator.ofFloat(-dp(12).toFloat(), (reducedSize + dp(12)).toFloat()).apply {
+            duration = 1250L
             repeatCount = android.animation.ValueAnimator.INFINITE
-            addUpdateListener { value ->
-                val scale = value.animatedValue as Float
-                diamond.scaleX = scale
-                diamond.scaleY = scale
-                diamond.alpha = 0.78f + (scale - 0.88f) * 1.35f
+            repeatMode = android.animation.ValueAnimator.RESTART
+            interpolator = android.view.animation.LinearInterpolator()
+            addUpdateListener { animator ->
+                shine.translationX = animator.animatedValue as Float
+                val progress = animator.animatedFraction
+                shine.alpha = if (progress < 0.12f || progress > 0.88f) 0f
+                    else (1f - kotlin.math.abs(progress - 0.5f) * 1.5f).coerceIn(0f, 1f)
             }
         }
-        diamond.tag = pulse
-        diamond.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-            override fun onViewAttachedToWindow(view: View) { if (!pulse.isStarted) pulse.start() }
-            override fun onViewDetachedFromWindow(view: View) { pulse.cancel() }
+        container.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(view: View) {
+                if (!shimmer.isStarted) shimmer.start()
+            }
+            override fun onViewDetachedFromWindow(view: View) {
+                shimmer.cancel()
+            }
         })
-        pulse.start()
-        diamond.layoutParams = LinearLayout.LayoutParams(sizePx, sizePx)
-        return diamond
+        container.layoutParams = LinearLayout.LayoutParams(reducedSize, reducedSize)
+        return container
     }
 
     private fun previewCircle(symbol: String, action: () -> Unit): View {
