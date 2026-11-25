@@ -1346,24 +1346,16 @@ class MainActivity : Activity() {
                 try {
                     bitmap = decodeScreenSizedWallpaper(file)
                     val manager = WallpaperManager.getInstance(this@MainActivity)
-                    // Keep the wallpaper viewport fixed to the exact screen-sized bitmap.
-                    // The full visible crop hint prevents the system from choosing a wider
-                    // crop that could introduce horizontal movement between home pages.
+                    // Explicitly tell the wallpaper host that this image is intended for
+                    // one screen-sized viewport, rather than a multi-page panorama.
+                    manager.setDesiredMinimumWidth(bitmap.width)
+                    manager.setDesiredMinimumHeight(bitmap.height)
                     manager.setWallpaperOffsetSteps(0f, 0f)
                     if (Build.VERSION.SDK_INT >= 24) {
                         val fullBitmap = Rect(0, 0, bitmap.width, bitmap.height)
                         manager.setBitmap(bitmap, fullBitmap, true, flags)
                     } else {
                         manager.setBitmap(bitmap)
-                    }
-                    if (Build.VERSION.SDK_INT >= 24) {
-                        window.decorView.post {
-                            try {
-                                manager.setWallpaperOffsets(window.decorView.windowToken, 0.5f, 0.5f)
-                            } catch (_: Exception) {
-                                // Some launchers do not expose or honor wallpaper offsets.
-                            }
-                        }
                     }
                     runOnUiThread {
                         if (!isFinishing && !isDestroyed) Toast.makeText(this@MainActivity,
