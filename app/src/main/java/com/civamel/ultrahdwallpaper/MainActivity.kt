@@ -2293,7 +2293,7 @@ class MainActivity : Activity() {
     private fun toggleTheme(){ darkMode = !darkMode; preferences.edit().putBoolean("dark_mode", darkMode).apply(); buildHome(); Toast.makeText(this@MainActivity,if(darkMode) "Tema gelap aktif" else "Tema terang aktif",Toast.LENGTH_SHORT).show() }
     // Classic, restrained system icon set with a consistent Rose Gold accent.
     private fun modernIcon(glyph: String, size: Int): FrameLayout {
-        val roseGold = if (darkMode) Color.WHITE else if (glyph == "☾" || glyph == "⌕" || glyph == "⚙") Color.BLACK else 0xffb76e79.toInt()
+        val iconColor = if (darkMode) Color.WHITE else Color.BLACK
         val icon = FrameLayout(this@MainActivity).apply {
             setBackgroundColor(Color.TRANSPARENT)
             clipToOutline = false
@@ -2301,7 +2301,7 @@ class MainActivity : Activity() {
         }
         val resource = when (glyph) {
             "⌕" -> android.R.drawable.ic_menu_search
-            "⚙" -> android.R.drawable.ic_menu_preferences
+            "⚙" -> 0
             "▦", "▧" -> android.R.drawable.ic_menu_gallery
             "⇩" -> android.R.drawable.ic_menu_save
             "↗" -> android.R.drawable.ic_menu_share
@@ -2314,14 +2314,14 @@ class MainActivity : Activity() {
         if (resource != 0) {
             val standardIcon = ImageView(this@MainActivity).apply {
                 setImageResource(resource)
-                setColorFilter(roseGold)
+                setColorFilter(iconColor)
                 scaleType = ImageView.ScaleType.FIT_CENTER
                 contentDescription = glyph
                 setPadding(dp(3), dp(3), dp(3), dp(3))
             }
             icon.addView(standardIcon, FrameLayout.LayoutParams(-1, -1))
         } else {
-            icon.addView(text(glyph, (size * 0.68f).toInt().coerceAtLeast(18), roseGold, true).apply {
+            icon.addView(text(glyph, (size * 0.68f).toInt().coerceAtLeast(18), iconColor, true).apply {
                 gravity = Gravity.CENTER
             }, FrameLayout.LayoutParams(-1, -1))
         }
