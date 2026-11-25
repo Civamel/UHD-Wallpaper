@@ -105,6 +105,9 @@ class MainActivity : Activity() {
     private var filterSwipeTopY = Float.MAX_VALUE
     private var previewScreenActive = false
     private var previewIndex = 0
+    private var backPressedOnce = false
+    private val backPressHandler = Handler(Looper.getMainLooper())
+    private val resetBackPress = Runnable { backPressedOnce = false }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -173,7 +176,15 @@ class MainActivity : Activity() {
             visibleItemLimit = 24
             buildHome()
         } else {
-            super.onBackPressed()
+            if (backPressedOnce) {
+                backPressHandler.removeCallbacks(resetBackPress)
+                super.onBackPressed()
+                return
+            }
+            backPressedOnce = true
+            Toast.makeText(this, "Tekan kembali sekali lagi untuk keluar", Toast.LENGTH_SHORT).show()
+            backPressHandler.removeCallbacks(resetBackPress)
+            backPressHandler.postDelayed(resetBackPress, 2000L)
         }
     }
 
@@ -715,7 +726,7 @@ class MainActivity : Activity() {
         if(promoVisible) {
             val promo=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(dp(14),0,dp(12),0); background=rounded(0xff70434b.toInt(),28) }
             promo.addView(ImageView(this@MainActivity).apply { setImageResource(R.drawable.crown_premium); scaleType=ImageView.ScaleType.FIT_CENTER; setPadding(0,0,dp(7),0); contentDescription="Pro" },LinearLayout.LayoutParams(dp(29),dp(36)))
-            promo.addView(text("Get All Wallpaper Pro!",17,Color.WHITE,true),LinearLayout.LayoutParams(0,dp(36),1f))
+            promo.addView(text("Get All Wallpaper Pro!",17,Color.WHITE,true).apply { gravity = Gravity.CENTER },LinearLayout.LayoutParams(0,dp(36),1f))
             promo.addView(text("×",25,Color.WHITE,false).apply { gravity=Gravity.CENTER; setOnClickListener { promoVisible=false; buildHome() } },LinearLayout.LayoutParams(dp(30),dp(34)))
             val pp=LinearLayout.LayoutParams(-1,dp(38)); pp.setMargins(dp(12),dp(6),dp(12),dp(2)); content.addView(promo,pp)
         }
@@ -791,7 +802,7 @@ class MainActivity : Activity() {
             popularPanel.addView(tagScroll, LinearLayout.LayoutParams(-1, dp(25)))
             content.addView(popularPanel, LinearLayout.LayoutParams(-1, dp(52)).apply { setMargins(dp(12), dp(1), dp(12), dp(3)) })
         }
-        val sort=TextView(this@MainActivity).apply { text="Filter : "+sortMode+"   ▾"; textSize=13f; setTextColor(0xff0B3D4A.toInt()); setTypeface(typeface, android.graphics.Typeface.BOLD); setPadding(dp(18),dp(1),dp(12),dp(4)); setOnClickListener {
+        val sort=TextView(this@MainActivity).apply { text="Filter : "+sortMode+"   ▾"; textSize=13f; setTextColor(if (darkMode) Color.WHITE else Color.BLACK); setTypeface(typeface, android.graphics.Typeface.BOLD); setPadding(dp(18),dp(1),dp(12),dp(4)); setOnClickListener {
             val options = arrayOf("Paling populer", "Terbaru", "A-Z", "Acak")
             AlertDialog.Builder(this@MainActivity).setTitle("Urutkan berdasarkan").setItems(options) { _, w ->
                 sortMode = options[w]
