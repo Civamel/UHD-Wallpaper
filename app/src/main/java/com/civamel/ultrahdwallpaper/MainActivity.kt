@@ -576,16 +576,16 @@ class MainActivity : Activity() {
         homeScreenActive = true
         val pageBg = if (darkMode) 0xff121318.toInt() else Color.WHITE
         val pageText = if (darkMode) 0xfff2f2f5.toInt() else ink
-        val panelSurface = if (darkMode) 0xff0B3D4A.toInt() else 0xff050608.toInt()
+        val panelSurface = if (darkMode) 0xff0B3D4A.toInt() else Color.WHITE
         val root = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(pageBg) }
         val header = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(15),dp(6),dp(12),dp(5)); setBackgroundColor(panelSurface) }
-        header.addView(text(if (showOnlyFavorites) "Favorit (${favorites.size})" else "4k Wallpaper",25,0xfff4f7ff.toInt(),true).apply { if (!showOnlyFavorites) textSize = 22f }, LinearLayout.LayoutParams(0,dp(38),1f))
+        header.addView(text(if (showOnlyFavorites) "Favorit (${favorites.size})" else "4k Wallpaper",25,pageText,true).apply { if (!showOnlyFavorites) textSize = 22f }, LinearLayout.LayoutParams(0,dp(38),1f))
         if (!showOnlyFavorites) header.addView(animatedDiamond(dp(42)))
-        listOf("✦","☾","⌕","⚙").forEachIndexed { i,glyph ->
+        listOf("☾","⌕","⚙").forEachIndexed { i,glyph ->
             val icon = modernIcon(glyph, 40)
             icon.contentDescription = listOf("Premium","Tema","Cari","Pengaturan")[i]
             icon.setOnClickListener {
-                when(i){0->Toast.makeText(this@MainActivity,"Wallpaper Premium",Toast.LENGTH_SHORT).show();1->toggleTheme();2->search();3->showSettings()}
+                when(i){0->toggleTheme();1->search();2->showSettings()}
             }
             header.addView(icon,LinearLayout.LayoutParams(dp(40),dp(40)))
         }
@@ -604,7 +604,7 @@ class MainActivity : Activity() {
                     buildHome()
                 }
             }
-            item.addView(text(tab,16,if(tab==selectedTab) blue else Color.WHITE,true).apply { gravity=Gravity.CENTER; setPadding(dp(15),dp(12),dp(15),dp(12)) })
+            item.addView(text(tab,16,if(tab==selectedTab) blue else pageText,true).apply { gravity=Gravity.CENTER; setPadding(dp(15),dp(12),dp(15),dp(12)) })
             item.addView(View(this@MainActivity).apply { setBackgroundColor(if(tab==selectedTab) blue else Color.TRANSPARENT) },LinearLayout.LayoutParams(-1,dp(3)))
             tabRow.addView(item)
         }
@@ -866,7 +866,7 @@ class MainActivity : Activity() {
                 }
             }
             navItem.addView(modernIcon(item.first, 36), LinearLayout.LayoutParams(dp(44),dp(29)))
-            navItem.addView(text(item.second,10,if(i==0) blue else Color.WHITE,true).apply {
+            navItem.addView(text(item.second,10,if(i==0) blue else pageText,true).apply {
                 gravity=Gravity.CENTER
                 setTypeface(typeface, android.graphics.Typeface.BOLD)
                 setPadding(0,0,0,0)
@@ -1053,6 +1053,10 @@ class MainActivity : Activity() {
             }
         }
         diamond.tag = pulse
+        diamond.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(view: View) { if (!pulse.isStarted) pulse.start() }
+            override fun onViewDetachedFromWindow(view: View) { pulse.cancel() }
+        })
         pulse.start()
         diamond.layoutParams = LinearLayout.LayoutParams(sizePx, sizePx)
         return diamond
@@ -2243,7 +2247,7 @@ class MainActivity : Activity() {
     private fun toggleTheme(){ darkMode = !darkMode; preferences.edit().putBoolean("dark_mode", darkMode).apply(); buildHome(); Toast.makeText(this@MainActivity,if(darkMode) "Tema gelap aktif" else "Tema terang aktif",Toast.LENGTH_SHORT).show() }
     // Classic, restrained system icon set with a consistent Rose Gold accent.
     private fun modernIcon(glyph: String, size: Int): FrameLayout {
-        val roseGold = 0xffb76e79.toInt()
+        val roseGold = if (glyph == "☾" || glyph == "⌕" || glyph == "⚙") Color.BLACK else 0xffb76e79.toInt()
         val icon = FrameLayout(this@MainActivity).apply {
             setBackgroundColor(Color.TRANSPARENT)
             clipToOutline = false
