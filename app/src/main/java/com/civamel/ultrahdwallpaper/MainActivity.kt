@@ -713,8 +713,10 @@ class MainActivity : Activity() {
             }.show()
         }}
         content.addView(sort)
-        val tileHeight = ((resources.displayMetrics.widthPixels / resources.displayMetrics.density) / 2f * 1.48f).toInt().coerceAtLeast(190)
-        val grid=GridLayout(this@MainActivity).apply { columnCount=2; useDefaultMargins=false }
+        // Three portrait phone-wallpaper cards per row (9:16 ratio).
+        val screenWidthDp = resources.displayMetrics.widthPixels / resources.displayMetrics.density
+        val tileHeight = (screenWidthDp / 3f * (16f / 9f)).toInt().coerceAtLeast(150)
+        val grid=GridLayout(this@MainActivity).apply { columnCount=3; useDefaultMargins=false }
         val filteredIndexes = names.indices.filter { index ->
             val categoryMatch = selectedCategory == "All" || itemCategories[index] == selectedCategory
             val searchMatch = searchQuery.isBlank() || names[index].contains(searchQuery, true) || itemCategories[index].contains(searchQuery, true) || itemTags.getOrNull(index).orEmpty().any { it.contains(searchQuery, true) }
@@ -784,7 +786,7 @@ class MainActivity : Activity() {
                 }
             }
             if(index%5==1) cell.addView(text("♛",20,Color.WHITE,true).apply { gravity=Gravity.TOP or Gravity.END; setPadding(dp(5),dp(4),dp(8),0) })
-            val params=GridLayout.LayoutParams().apply { width=0; height=dp(tileHeight); columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); setMargins(dp(3),dp(3),dp(3),dp(3)) }
+            val params=GridLayout.LayoutParams().apply { width=0; height=dp(tileHeight); columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); setMargins(dp(2),dp(2),dp(2),dp(2)) }
             grid.addView(cell,params)
         }
         content.addView(grid)
