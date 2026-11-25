@@ -2032,10 +2032,17 @@ class MainActivity : Activity() {
                 var bitmap: Bitmap? = null
                 try {
                     bitmap = decodeScreenSizedWallpaper(file)
+                    val manager = WallpaperManager.getInstance(this@MainActivity)
                     if (Build.VERSION.SDK_INT >= 24) {
-                        WallpaperManager.getInstance(this@MainActivity).setBitmap(bitmap, null, true, flags)
+                        manager.setWallpaperOffsetSteps(0f, 0f)
+                        manager.setBitmap(bitmap, null, true, flags)
+                        window.decorView.post {
+                            try {
+                                manager.setWallpaperOffsets(window.decorView.windowToken, 0.5f, 0.5f)
+                            } catch (_: Exception) { }
+                        }
                     } else {
-                        WallpaperManager.getInstance(this@MainActivity).setBitmap(bitmap)
+                        manager.setBitmap(bitmap)
                     }
                     runOnUiThread { Toast.makeText(this@MainActivity, "Wallpaper berhasil diterapkan", Toast.LENGTH_LONG).show() }
                 } catch (e: Exception) {
