@@ -44,13 +44,13 @@ class MainActivity : Activity() {
         val thumbnails: MutableList<String>,
         val images: MutableList<String>
     )
-    private val blue = Color.rgb(224, 17, 95)
+    private val blue = Color.rgb(183, 110, 121)
     private val purple = Color.rgb(158, 67, 238)
     private val ink = Color.rgb(28, 28, 30)
     private val tabs = listOf("Home", "Live", "Parallax", "Wallpaper", "Double", "Charging Live")
     private val names = mutableListOf<String>()
     private val palettes = listOf(
-        intArrayOf(0xff09090f.toInt(),0xffb20d34.toInt()), intArrayOf(0xfff5d8b4.toInt(),0xff00a9c7.toInt()),
+        intArrayOf(0xff09090f.toInt(),0xffb76e79.toInt()), intArrayOf(0xfff5d8b4.toInt(),0xff00a9c7.toInt()),
         intArrayOf(0xff260000.toInt(),0xffff3428.toInt()), intArrayOf(0xff080808.toInt(),0xffe8e8e8.toInt()),
         intArrayOf(0xff00334b.toInt(),0xff80d8e9.toInt()), intArrayOf(0xff11131a.toInt(),0xff087bb5.toInt()),
         intArrayOf(0xff005b9b.toInt(),0xff53d8ef.toInt()), intArrayOf(0xff00152d.toInt(),0xff00b6df.toInt()),
@@ -607,7 +607,7 @@ class MainActivity : Activity() {
         val scroll=ScrollView(this@MainActivity)
         val content=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL; setBackgroundColor(pageBg) }
         if(promoVisible) {
-            val promo=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(dp(14),0,dp(12),0); background=rounded(0xff733044.toInt(),28) }
+            val promo=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(dp(14),0,dp(12),0); background=rounded(0xff70434b.toInt(),28) }
             promo.addView(text("♛   Get All Wallpaper Pro!",17,Color.WHITE,true),LinearLayout.LayoutParams(0,dp(36),1f))
             promo.addView(text("×",25,Color.WHITE,false).apply { gravity=Gravity.CENTER; setOnClickListener { promoVisible=false; buildHome() } },LinearLayout.LayoutParams(dp(30),dp(34)))
             val pp=LinearLayout.LayoutParams(-1,dp(38)); pp.setMargins(dp(12),dp(8),dp(12),dp(3)); content.addView(promo,pp)
@@ -686,13 +686,13 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(10), dp(4), dp(10), dp(4))
-                background = rounded(0xff733044.toInt(), 10)
+                background = rounded(0xff70434b.toInt(), 10)
             }
             popularPanel.addView(text("Popular Tags", 11, Color.WHITE, true).apply { setPadding(dp(2), 0, 0, dp(2)) })
             val tagScroll = HorizontalScrollView(this@MainActivity).apply { isHorizontalScrollBarEnabled = false; clipToPadding = false }
             val tagRow = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
             listOf("Anime", "Cartoon", "Girl", "Nature", "Neon & Fireworks", "Tourism", "Vehicles", "Fantasy", "AI Generated").forEach { tag ->
-                tagRow.addView(text(tag, 10, 0xff542332.toInt(), true).apply {
+                tagRow.addView(text(tag, 10, 0xff70434b.toInt(), true).apply {
                     gravity = Gravity.CENTER
                     setPadding(dp(10), dp(3), dp(10), dp(3))
                     background = rounded(0xffffe8ee.toInt(), 16)
@@ -759,7 +759,7 @@ class MainActivity : Activity() {
                 setOnClickListener { showPreview(index) }
             }
             cell.addView(art,FrameLayout.LayoutParams(-1,dp(tileHeight)))
-            cell.addView(text(if ((itemIds.getOrNull(index) ?: names[index]) in favorites) "♥" else "♡", 21, 0xffe0115f.toInt(), true).apply {
+            cell.addView(text(if ((itemIds.getOrNull(index) ?: names[index]) in favorites) "♥" else "♡", 21, 0xffb76e79.toInt(), true).apply {
                 gravity = Gravity.CENTER
                 background = rounded(0xcc000000.toInt(), 18)
                 setOnClickListener {
@@ -802,7 +802,7 @@ class MainActivity : Activity() {
                 isAllCaps = false
                 isEnabled = !shardLoading
                 setTextColor(Color.WHITE)
-                background = rounded(0xff733044.toInt(), 28)
+                background = rounded(0xff70434b.toInt(), 28)
                 setOnClickListener {
                     if (visibleIndexes.size > visibleItemLimit) {
                         visibleItemLimit += 24
@@ -818,7 +818,7 @@ class MainActivity : Activity() {
         }
         scroll.addView(content)
         val swipeRefresh = SwipeRefreshLayout(this@MainActivity).apply {
-            setColorSchemeColors(0xff8f3048.toInt(), 0xffe0115f.toInt())
+            setColorSchemeColors(0xff8c5961.toInt(), 0xffb76e79.toInt())
             setOnRefreshListener {
                 loadFirestoreWallpapers { isRefreshing = false }
             }
@@ -881,20 +881,31 @@ class MainActivity : Activity() {
         top.addView(circle("ⓘ"){ AlertDialog.Builder(this@MainActivity).setTitle(names[index]).setMessage("Kategori: "+itemCategories.getOrNull(index).orEmpty()+"\nJenis: "+(itemTypes.getOrNull(index) ?: "wallpaper")+"\n\nWallpaper Ultra HD. Pilih Terapkan untuk memasang wallpaper atau Unduh untuk menyimpan gambar.").setPositiveButton("Mengerti",null).show() })
         top.addView(circle("↗"){shareWallpaper(index)})
         root.addView(top,FrameLayout.LayoutParams(-1,dp(76),Gravity.TOP))
-        val bottom=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(dp(20),dp(12),dp(20),dp(20)) }
+        val bottom=LinearLayout(this@MainActivity).apply {
+            orientation=LinearLayout.VERTICAL
+            gravity=Gravity.CENTER_VERTICAL
+            setPadding(dp(18),dp(7),dp(18),dp(9))
+            setBackgroundColor(0x99000000.toInt())
+        }
         val details=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER_VERTICAL }
-        details.addView(text(names[index],15,Color.WHITE,true))
-        details.addView(text(itemCategories.getOrNull(index).orEmpty(),12,0xffcccccc.toInt(),false))
-        bottom.addView(details,LinearLayout.LayoutParams(0,dp(54),1f))
-        bottom.addView(circle(if((itemIds.getOrNull(index) ?: names[index]) in favorites) "♥" else "♡"){ val favoriteId = itemIds.getOrNull(index) ?: names[index]; if(!favorites.add(favoriteId)) favorites.remove(favoriteId); preferences.edit().putStringSet("favorite_ids", favorites.toSet()).putStringSet("favorite_titles", emptySet()).apply(); showPreview(index) })
-        bottom.addView(View(this@MainActivity),LinearLayout.LayoutParams(0,1,1f))
-        val apply=Button(this@MainActivity).apply { text="Terapkan"; isAllCaps=false; textSize=16f; setTextColor(Color.WHITE); background=rounded(blue,32); setOnClickListener { if(itemTypes.getOrNull(index) == "live") applyLiveWallpaper(index) else applyWallpaper(index) } }
-        bottom.addView(apply,LinearLayout.LayoutParams(dp(150),dp(54)))
-        bottom.addView(View(this@MainActivity),LinearLayout.LayoutParams(dp(20),1))
-        bottom.addView(circle("⇩"){ requestDownload(index) })
-        root.addView(bottom,FrameLayout.LayoutParams(-1,dp(90),Gravity.BOTTOM))
+        val title = text(names[index],14,Color.WHITE,true).apply {
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+        }
+        details.addView(title,LinearLayout.LayoutParams(-1,dp(23)))
+        details.addView(text(itemCategories.getOrNull(index).orEmpty(),11,0xffe4d4d6.toInt(),false).apply { maxLines = 1 },LinearLayout.LayoutParams(-1,dp(18)))
+        bottom.addView(details,LinearLayout.LayoutParams(-1,dp(42)))
+        val controls=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL }
+        controls.addView(circle(if((itemIds.getOrNull(index) ?: names[index]) in favorites) "♥" else "♡"){ val favoriteId = itemIds.getOrNull(index) ?: names[index]; if(!favorites.add(favoriteId)) favorites.remove(favoriteId); preferences.edit().putStringSet("favorite_ids", favorites.toSet()).putStringSet("favorite_titles", emptySet()).apply(); showPreview(index) },LinearLayout.LayoutParams(dp(42),dp(42)))
+        controls.addView(View(this@MainActivity),LinearLayout.LayoutParams(0,1,1f))
+        val apply=Button(this@MainActivity).apply { text="Terapkan"; isAllCaps=false; textSize=15f; setTextColor(Color.WHITE); background=rounded(blue,32); setOnClickListener { if(itemTypes.getOrNull(index) == "live") applyLiveWallpaper(index) else applyWallpaper(index) } }
+        controls.addView(apply,LinearLayout.LayoutParams(dp(128),dp(46)))
+        controls.addView(View(this@MainActivity),LinearLayout.LayoutParams(0,1,1f))
+        controls.addView(circle("⇩"){ requestDownload(index) },LinearLayout.LayoutParams(dp(42),dp(42)))
+        bottom.addView(controls,LinearLayout.LayoutParams(-1,dp(46)))
+        root.addView(bottom,FrameLayout.LayoutParams(-1,dp(96),Gravity.BOTTOM))
         val ad=text("ADVERTISEMENT  •  Ultra HD Wallpaper",10,Color.WHITE,false).apply { gravity=Gravity.CENTER; setBackgroundColor(0xff292929.toInt()) }
-        root.addView(ad,FrameLayout.LayoutParams(-1,dp(42),Gravity.BOTTOM).apply { bottomMargin=dp(90) })
+        root.addView(ad,FrameLayout.LayoutParams(-1,dp(42),Gravity.BOTTOM).apply { bottomMargin=dp(96) })
         setContentView(root)
     }
 
@@ -2007,7 +2018,7 @@ class MainActivity : Activity() {
     }
     private fun toggleTheme(){ darkMode = !darkMode; preferences.edit().putBoolean("dark_mode", darkMode).apply(); buildHome(); Toast.makeText(this@MainActivity,if(darkMode) "Tema gelap aktif" else "Tema terang aktif",Toast.LENGTH_SHORT).show() }
     private fun modernIcon(glyph: String, size: Int): FrameLayout {
-        val rubyRed = 0xffe0115f.toInt()
+        val rubyRed = 0xffb76e79.toInt()
         val icon = FrameLayout(this@MainActivity).apply {
             setBackgroundColor(Color.TRANSPARENT)
             clipToOutline = false
