@@ -1346,8 +1346,20 @@ class MainActivity : Activity() {
                 try {
                     bitmap = decodeScreenSizedWallpaper(file)
                     val manager = WallpaperManager.getInstance(this@MainActivity)
+                    // Request a fixed wallpaper position so home-screen page swipes do not
+                    // shift the image when the launcher honors wallpaper offset settings.
+                    manager.setWallpaperOffsetSteps(0f, 0f)
                     if (Build.VERSION.SDK_INT >= 24) manager.setBitmap(bitmap, null, true, flags)
                     else manager.setBitmap(bitmap)
+                    if (Build.VERSION.SDK_INT >= 24) {
+                        window.decorView.post {
+                            try {
+                                manager.setWallpaperOffsets(window.decorView.windowToken, 0.5f, 0.5f)
+                            } catch (_: Exception) {
+                                // Some launchers do not expose or honor wallpaper offsets.
+                            }
+                        }
+                    }
                     runOnUiThread {
                         if (!isFinishing && !isDestroyed) Toast.makeText(this@MainActivity,
                             "Wallpaper berhasil diterapkan", Toast.LENGTH_LONG).show()
