@@ -865,8 +865,23 @@ class MainActivity : Activity() {
                     }
                 }
             }
-            navItem.addView(modernIcon(item.first, 36), LinearLayout.LayoutParams(dp(44),dp(29)))
-            navItem.addView(text(item.second,10,if(i==0) blue else pageText,true).apply {
+            val isSelected = if (i == 3) showOnlyFavorites else (i == 0 && !showOnlyFavorites)
+            val iconSurface = FrameLayout(this@MainActivity).apply {
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(if (isSelected) (if (darkMode) 0xff244e5a.toInt() else 0xffffffff.toInt()) else Color.TRANSPARENT)
+                }
+                if (isSelected) {
+                    elevation = dp(7).toFloat()
+                    translationZ = dp(2).toFloat()
+                } else {
+                    elevation = 0f
+                    translationZ = 0f
+                }
+                addView(modernIcon(item.first, 36), FrameLayout.LayoutParams(dp(44),dp(29),Gravity.CENTER))
+            }
+            navItem.addView(iconSurface, LinearLayout.LayoutParams(dp(50),dp(34)))
+            navItem.addView(text(item.second,10,if(isSelected) blue else pageText,true).apply {
                 gravity=Gravity.CENTER
                 setTypeface(typeface, android.graphics.Typeface.BOLD)
                 setPadding(0,0,0,0)
