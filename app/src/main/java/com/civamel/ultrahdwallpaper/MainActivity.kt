@@ -125,29 +125,32 @@ class MainActivity : Activity() {
         showStartupLoadingScreen()
         initializeAds()
         // Start with a clean catalog: only wallpapers added by the owner in Admin are shown.
-        loadFirestoreWallpapers { if (!isFinishing && !isDestroyed) buildHome() }
+        loadFirestoreWallpapers { /* Startup screen duration is fixed below. */ }
+        Handler(Looper.getMainLooper()).postDelayed({
+            if (!isFinishing && !isDestroyed) buildHome()
+        }, 5000L)
     }
 
     private fun showStartupLoadingScreen() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setBackgroundColor(if (darkMode) 0xff121318.toInt() else Color.WHITE)
-            setPadding(dp(24), dp(24), dp(24), dp(24))
+            setBackgroundColor(Color.BLACK)
+            setPadding(dp(24), dp(24), dp(24), dp(28))
         }
         val logo = ImageView(this).apply {
             setImageResource(R.mipmap.ic_launcher)
             scaleType = ImageView.ScaleType.FIT_CENTER
             contentDescription = "Ultra HD Wallpaper"
         }
-        root.addView(logo, LinearLayout.LayoutParams(dp(112), dp(112)))
-        val title = text("Ultra HD Wallpaper", 22, if (darkMode) Color.WHITE else ink, true).apply {
+        root.addView(logo, LinearLayout.LayoutParams(dp(160), dp(160)))
+        root.addView(text("Ultra HD Wallpaper", 22, Color.WHITE, true).apply {
             gravity = Gravity.CENTER
             setPadding(0, dp(18), 0, dp(8))
-        }
-        root.addView(title)
+        })
+        root.addView(Space(this), LinearLayout.LayoutParams(1, 0, 1f))
         root.addView(ProgressBar(this).apply { isIndeterminate = true }, LinearLayout.LayoutParams(dp(42), dp(42)).apply { gravity = Gravity.CENTER })
-        root.addView(text("Memuat wallpaper…", 14, if (darkMode) 0xffcccccc.toInt() else 0xff666666.toInt(), false).apply {
+        root.addView(text("Memuat wallpaper…", 14, 0xffcccccc.toInt(), false).apply {
             gravity = Gravity.CENTER
             setPadding(0, dp(12), 0, 0)
         })
