@@ -1346,11 +1346,16 @@ class MainActivity : Activity() {
                 try {
                     bitmap = decodeScreenSizedWallpaper(file)
                     val manager = WallpaperManager.getInstance(this@MainActivity)
-                    // Request a fixed wallpaper position so home-screen page swipes do not
-                    // shift the image when the launcher honors wallpaper offset settings.
+                    // Keep the wallpaper viewport fixed to the exact screen-sized bitmap.
+                    // The full visible crop hint prevents the system from choosing a wider
+                    // crop that could introduce horizontal movement between home pages.
                     manager.setWallpaperOffsetSteps(0f, 0f)
-                    if (Build.VERSION.SDK_INT >= 24) manager.setBitmap(bitmap, null, true, flags)
-                    else manager.setBitmap(bitmap)
+                    if (Build.VERSION.SDK_INT >= 24) {
+                        val fullBitmap = Rect(0, 0, bitmap.width, bitmap.height)
+                        manager.setBitmap(bitmap, fullBitmap, true, flags)
+                    } else {
+                        manager.setBitmap(bitmap)
+                    }
                     if (Build.VERSION.SDK_INT >= 24) {
                         window.decorView.post {
                             try {
