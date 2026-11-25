@@ -643,20 +643,19 @@ class MainActivity : Activity() {
                         buildHome()
                     }
                 }
-                val placeholder = LinearLayout(this@MainActivity).apply {
-                    orientation = LinearLayout.VERTICAL
-                    gravity = Gravity.CENTER
-                    background = GradientDrawable(
-                        GradientDrawable.Orientation.TL_BR,
-                        intArrayOf(0xff0B3D4A.toInt(), 0xff164F5B.toInt())
-                    )
+                val slideImage = ImageView(this@MainActivity).apply {
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    setImageDrawable(artDrawable(wallpaperIndex))
+                    contentDescription = "Gambar slide sementara $category"
                 }
-                placeholder.addView(text("▧", 30, 0xffD6C2A5.toInt(), true).apply { gravity = Gravity.CENTER })
-                placeholder.addView(text("Gambar slide akan ditambahkan", 12, Color.WHITE, true).apply {
-                    gravity = Gravity.CENTER
-                    setPadding(dp(8), dp(2), dp(8), 0)
-                })
-                slide.addView(placeholder, FrameLayout.LayoutParams(-1, -1))
+                slide.addView(slideImage, FrameLayout.LayoutParams(-1, -1))
+                thumbnailUrls.getOrNull(wallpaperIndex)?.let { slideUrl ->
+                    loadImage(slideUrl) { bitmap ->
+                        if (bitmap != null && !bitmap.isRecycled && slideImage.isAttachedToWindow) {
+                            slideImage.setImageBitmap(bitmap)
+                        }
+                    }
+                }
                 slide.addView(text(category, 13, 0xffD6C2A5.toInt(), true).apply {
                     gravity = Gravity.BOTTOM or Gravity.START
                     setPadding(dp(12), 0, dp(12), dp(7))
@@ -777,11 +776,14 @@ class MainActivity : Activity() {
                 if (art.isAttachedToWindow) {
                     if (bitmap != null && !bitmap.isRecycled) art.setImageBitmap(bitmap)
                     else {
-                        art.setImageDrawable(null)
+                        // Never clear the tile when a network/cache request fails.
+                        // Keep a visible fallback instead of turning the wallpaper card blank.
+                        art.setImageDrawable(artDrawable(index))
                         art.setBackgroundColor(0xff21151b.toInt())
-                        val failed = text("Gambar gagal dimuat · tarik ke bawah untuk mencoba lagi", 11, 0xfff2cbd8.toInt(), true).apply {
+                        val failed = text("Gambar belum tersedia\nTarik ke bawah untuk mencoba lagi", 10, 0xfff2cbd8.toInt(), true).apply {
                             gravity = Gravity.CENTER
                             setPadding(dp(8), dp(8), dp(8), dp(8))
+                            setBackgroundColor(0x66000000)
                         }
                         (art.parent as? FrameLayout)?.addView(failed, FrameLayout.LayoutParams(-1, -1))
                     }
@@ -827,7 +829,7 @@ class MainActivity : Activity() {
         }
         swipeRefresh.addView(scroll, ViewGroup.LayoutParams(-1, -1))
         root.addView(swipeRefresh, LinearLayout.LayoutParams(-1, 0, 1f))
-        val bottom=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER; setPadding(0,dp(4),0,dp(3)); setBackgroundColor(panelSurface) }
+        val bottom=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER; setPadding(0,dp(1),0,dp(1)); setBackgroundColor(panelSurface) }
         listOf("⌂" to "Wallpaper","▦" to "Category","✦" to "Quotes","♡" to "Favorit").forEachIndexed { i,item ->
             val navItem = LinearLayout(this@MainActivity).apply {
                 orientation = LinearLayout.VERTICAL
@@ -858,9 +860,14 @@ class MainActivity : Activity() {
                     }
                 }
             }
-            navItem.addView(modernIcon(item.first, 40), LinearLayout.LayoutParams(dp(48),dp(38)))
-            navItem.addView(text(item.second,11,if(i==0) blue else Color.WHITE,true).apply { gravity=Gravity.CENTER; setTypeface(typeface, android.graphics.Typeface.BOLD); setPadding(0,dp(2),0,0) })
-            bottom.addView(navItem,LinearLayout.LayoutParams(0,dp(48),1f))
+            navItem.addView(modernIcon(item.first, 36), LinearLayout.LayoutParams(dp(44),dp(29)))
+            navItem.addView(text(item.second,10,if(i==0) blue else Color.WHITE,true).apply {
+                gravity=Gravity.CENTER
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setPadding(0,0,0,0)
+                includeFontPadding = false
+            }, LinearLayout.LayoutParams(-2,dp(15)))
+            bottom.addView(navItem,LinearLayout.LayoutParams(0,dp(46),1f))
         }
         root.addView(bottom)
         val adContainer = FrameLayout(this@MainActivity).apply {
