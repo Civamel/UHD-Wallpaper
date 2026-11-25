@@ -102,6 +102,8 @@ class MainActivity : Activity() {
     private var homeScreenActive = false
     private var gestureStartX = 0f
     private var gestureStartY = 0f
+    private var previewScreenActive = false
+    private var previewIndex = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -129,7 +131,17 @@ class MainActivity : Activity() {
                 val dx = event.x - gestureStartX
                 val dy = event.y - gestureStartY
                 val threshold = dp(72).toFloat()
-                if (homeScreenActive && kotlin.math.abs(dx) > threshold && kotlin.math.abs(dx) > kotlin.math.abs(dy) * 1.25f) {
+                val horizontalSwipe = kotlin.math.abs(dx) > threshold && kotlin.math.abs(dx) > kotlin.math.abs(dy) * 1.25f
+                if (previewScreenActive && horizontalSwipe && names.isNotEmpty()) {
+                    val next = (previewIndex + if (dx < 0) 1 else -1 + names.size) % names.size
+                    // Keep navigation within the available catalog and refresh the preview after
+                    // the current touch has been delivered to its original view.
+                    val target = if (dx < 0) (previewIndex + 1) % names.size else (previewIndex - 1 + names.size) % names.size
+                    val handled = super.dispatchTouchEvent(event)
+                    showPreview(target)
+                    return handled
+                }
+                if (homeScreenActive && horizontalSwipe) {
                     val current = tabs.indexOf(selectedTab).coerceAtLeast(0)
                     val next = (current + if (dx < 0) 1 else -1).coerceIn(0, tabs.lastIndex)
                     if (next != current) {
@@ -912,6 +924,8 @@ class MainActivity : Activity() {
     private fun showPreview(index: Int) {
         if (index !in names.indices) return
         homeScreenActive = false
+        previewScreenActive = true
+        previewIndex = index
         recordRecentlyViewed(index)
 
         val root = FrameLayout(this@MainActivity).apply {
@@ -994,7 +1008,7 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(18), dp(18), dp(18), 0)
         }
-        top.addView(previewCircle("‹") { buildHome() })
+        top.addView(previewCircle("‹") { previewScreenActive = false; buildHome() })
         top.addView(View(this@MainActivity), LinearLayout.LayoutParams(0, 1, 1f))
         top.addView(animatedDiamond(dp(48)))
         top.addView(View(this@MainActivity), LinearLayout.LayoutParams(0, 1, 1f))
