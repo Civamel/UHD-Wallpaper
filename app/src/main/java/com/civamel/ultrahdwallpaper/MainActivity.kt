@@ -680,7 +680,7 @@ class MainActivity : Activity() {
         val panelSurface = if (darkMode) Color.BLACK else Color.WHITE
         val root = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(pageBg) }
         val header = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(15),dp(6),dp(12),dp(5)); setBackgroundColor(panelSurface) }
-        header.addView(text(if (showOnlyFavorites) "Favorit (${favorites.size})" else "Ultra HD Wallpaper",25,pageText,true).apply { if (!showOnlyFavorites) textSize = 22f }, LinearLayout.LayoutParams(0,dp(38),1f))
+        header.addView(text(if (showOnlyFavorites) "Favorit (${favorites.size})" else "Ultra HD Wallpaper",25,pageText,true).apply { if (!showOnlyFavorites) textSize = 11f }, LinearLayout.LayoutParams(0,dp(38),1f))
         if (!showOnlyFavorites) header.addView(animatedDiamond(dp(42)))
         listOf("☾","⌕","♡","⚙").forEachIndexed { i,glyph ->
             val icon = modernIcon(glyph, 40)
@@ -1099,86 +1099,13 @@ class MainActivity : Activity() {
     }
 
     private fun animatedDiamond(sizePx: Int): View {
-        val reducedSize = (sizePx * 0.9f).toInt()
-        val container = FrameLayout(this@MainActivity).apply {
-            clipChildren = true
-            clipToPadding = true
-            contentDescription = "Diamond premium"
-        }
-        // The diamond stays completely still; only the shine passes over it.
-        val diamond = TextView(this@MainActivity).apply {
-            text = "💎"
-            textSize = 22.5f
+        val crown = TextView(this@MainActivity).apply {
+            text = "👑"
+            textSize = 27f
             gravity = Gravity.CENTER
+            contentDescription = "Mahkota premium"
         }
-        container.addView(diamond, FrameLayout.LayoutParams(-1, -1))
-
-        val shine = TextView(this@MainActivity).apply {
-            text = "✦"
-            textSize = 15f
-            gravity = Gravity.CENTER
-            setTextColor(0xfffff3a6.toInt())
-            alpha = 0f
-        }
-        container.addView(shine, FrameLayout.LayoutParams(dp(20), dp(20), Gravity.CENTER_VERTICAL or Gravity.START))
-
-        val sparkles = listOf("✦", "✧", "✦", "✧").map { glyph ->
-            TextView(this@MainActivity).apply {
-                text = glyph
-                textSize = 10f
-                gravity = Gravity.CENTER
-                setTextColor(0xffffdf55.toInt())
-                alpha = 0f
-            }.also { sparkle ->
-                container.addView(sparkle, FrameLayout.LayoutParams(dp(14), dp(14)))
-            }
-        }
-        val sparkleAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 1800L
-            repeatCount = android.animation.ValueAnimator.INFINITE
-            interpolator = android.view.animation.LinearInterpolator()
-            addUpdateListener { animator ->
-                val p = animator.animatedFraction
-                sparkles.forEachIndexed { index, sparkle ->
-                    val phase = (p + index * 0.25f) % 1f
-                    val positions = listOf(
-                        Pair(reducedSize * 0.78f, reducedSize * 0.42f),
-                        Pair(reducedSize * 0.42f, reducedSize * 0.12f),
-                        Pair(reducedSize * 0.18f, reducedSize * 0.58f),
-                        Pair(reducedSize * 0.55f, reducedSize * 0.82f)
-                    )
-                    sparkle.x = positions[index].first
-                    sparkle.y = positions[index].second
-                    sparkle.alpha = if (phase < 0.18f || phase > 0.78f) 0f else (1f - kotlin.math.abs(phase - 0.48f) * 2.2f).coerceIn(0f, 1f)
-                    sparkle.scaleX = 0.65f + sparkle.alpha * 0.45f
-                    sparkle.scaleY = sparkle.scaleX
-                }
-            }
-        }
-        val shimmer = android.animation.ValueAnimator.ofFloat(-dp(12).toFloat(), (reducedSize + dp(12)).toFloat()).apply {
-            duration = 1250L
-            repeatCount = android.animation.ValueAnimator.INFINITE
-            repeatMode = android.animation.ValueAnimator.RESTART
-            interpolator = android.view.animation.LinearInterpolator()
-            addUpdateListener { animator ->
-                shine.translationX = animator.animatedValue as Float
-                val progress = animator.animatedFraction
-                shine.alpha = if (progress < 0.12f || progress > 0.88f) 0f
-                    else (1f - kotlin.math.abs(progress - 0.5f) * 1.5f).coerceIn(0f, 1f)
-            }
-        }
-        container.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-            override fun onViewAttachedToWindow(view: View) {
-                if (!shimmer.isStarted) shimmer.start()
-                if (!sparkleAnimator.isStarted) sparkleAnimator.start()
-            }
-            override fun onViewDetachedFromWindow(view: View) {
-                shimmer.cancel()
-                sparkleAnimator.cancel()
-            }
-        })
-        container.layoutParams = LinearLayout.LayoutParams(reducedSize, reducedSize)
-        return container
+        return crown
     }
 
     private fun previewCircle(symbol: String, action: () -> Unit): View {
