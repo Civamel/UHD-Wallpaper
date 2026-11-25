@@ -577,12 +577,12 @@ class MainActivity : Activity() {
         val header = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(15),dp(6),dp(12),dp(5)); setBackgroundColor(panelSurface) }
         header.addView(text(if (showOnlyFavorites) "Favorit (${favorites.size})" else "4k Ultra HD Wallpaper",25,0xfff4f7ff.toInt(),true).apply { if (!showOnlyFavorites) textSize = 16.25f }, LinearLayout.LayoutParams(0,dp(38),1f))
         listOf("✦","☾","⌕","⚙").forEachIndexed { i,glyph ->
-            val icon = modernIcon(glyph, 44)
+            val icon = modernIcon(glyph, 50)
             icon.contentDescription = listOf("Premium","Tema","Cari","Pengaturan")[i]
             icon.setOnClickListener {
                 when(i){0->Toast.makeText(this@MainActivity,"Wallpaper Premium",Toast.LENGTH_SHORT).show();1->toggleTheme();2->search();3->showSettings()}
             }
-            header.addView(icon,LinearLayout.LayoutParams(dp(44),dp(40)))
+            header.addView(icon,LinearLayout.LayoutParams(dp(50),dp(44)))
         }
         root.addView(header)
         val tabScroll=HorizontalScrollView(this@MainActivity).apply { isHorizontalScrollBarEnabled=false }
@@ -847,7 +847,7 @@ class MainActivity : Activity() {
                     }
                 }
             }
-            navItem.addView(modernIcon(item.first, 34), LinearLayout.LayoutParams(dp(42),dp(32)))
+            navItem.addView(modernIcon(item.first, 40), LinearLayout.LayoutParams(dp(48),dp(38)))
             navItem.addView(text(item.second,11,if(i==0) blue else Color.WHITE,true).apply { gravity=Gravity.CENTER; setTypeface(typeface, android.graphics.Typeface.BOLD); setPadding(0,dp(2),0,0) })
             bottom.addView(navItem,LinearLayout.LayoutParams(0,dp(48),1f))
         }
