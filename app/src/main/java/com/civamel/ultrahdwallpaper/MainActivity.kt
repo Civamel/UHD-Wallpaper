@@ -1993,7 +1993,6 @@ class MainActivity : Activity() {
                         if (thumbnail.tag == url && bitmap != null && !bitmap.isRecycled) thumbnail.setImageBitmap(bitmap)
                     }
                 }
-                }
             }
             scroll.addView(list)
             root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
