@@ -711,10 +711,14 @@ class MainActivity : Activity() {
         }}
         content.addView(sort)
         // Three portrait phone-wallpaper cards per row (9:16 ratio).
-        val screenWidthDp = resources.displayMetrics.widthPixels / resources.displayMetrics.density
-        val tileWidthDp = (screenWidthDp - 8f) / 3f
-        val tileHeight = (tileWidthDp * (16f / 9f)).toInt().coerceAtLeast(150)
-        val grid=GridLayout(this@MainActivity).apply { columnCount=3; useDefaultMargins=false }
+        // Fixed three-column portrait grid. Each tile is cropped visually to a 9:16 phone-wallpaper frame.
+        val tileWidthPx = ((resources.displayMetrics.widthPixels - dp(16)) / 3).coerceAtLeast(dp(72))
+        val tileHeightPx = (tileWidthPx * (16f / 9f)).toInt()
+        val grid=GridLayout(this@MainActivity).apply {
+            columnCount = 3
+            useDefaultMargins = false
+            alignmentMode = GridLayout.ALIGN_BOUNDS
+        }
         val filteredIndexes = names.indices.filter { index ->
             val categoryMatch = selectedCategory == "All" || itemCategories[index] == selectedCategory
             val searchMatch = searchQuery.isBlank() || names[index].contains(searchQuery, true) || itemCategories[index].contains(searchQuery, true) || itemTags.getOrNull(index).orEmpty().any { it.contains(searchQuery, true) }
@@ -756,7 +760,7 @@ class MainActivity : Activity() {
                 setImageDrawable(artDrawable(index))
                 setOnClickListener { showPreview(index) }
             }
-            cell.addView(art,FrameLayout.LayoutParams(-1,dp(tileHeight)))
+            cell.addView(art,FrameLayout.LayoutParams(-1, -1))
             cell.addView(text(if ((itemIds.getOrNull(index) ?: names[index]) in favorites) "♥" else "♡", 21, 0xffb76e79.toInt(), true).apply {
                 gravity = Gravity.CENTER
                 background = rounded(0xcc000000.toInt(), 18)
@@ -784,7 +788,7 @@ class MainActivity : Activity() {
                 }
             }
             if(index%5==1) cell.addView(text("♛",20,Color.WHITE,true).apply { gravity=Gravity.TOP or Gravity.END; setPadding(dp(5),dp(4),dp(8),0) })
-            val params=GridLayout.LayoutParams().apply { width=0; height=dp(tileHeight); columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); setMargins(dp(2),dp(2),dp(2),dp(2)) }
+            val params=GridLayout.LayoutParams().apply { width=tileWidthPx; height=tileHeightPx; setMargins(dp(2),dp(2),dp(2),dp(2)) }
             grid.addView(cell,params)
         }
         content.addView(grid)
@@ -824,7 +828,7 @@ class MainActivity : Activity() {
         swipeRefresh.addView(scroll, ViewGroup.LayoutParams(-1, -1))
         root.addView(swipeRefresh, LinearLayout.LayoutParams(-1, 0, 1f))
         val bottom=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER; setPadding(0,dp(4),0,dp(3)); setBackgroundColor(panelSurface) }
-        listOf("⌂" to "Wallpaper","▦" to "Category","✦" to "Quotes","▧" to "Stock").forEachIndexed { i,item ->
+        listOf("⌂" to "Wallpaper","▦" to "Category","✦" to "Quotes","♡" to "Favorit").forEachIndexed { i,item ->
             val navItem = LinearLayout(this@MainActivity).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
@@ -843,7 +847,14 @@ class MainActivity : Activity() {
                         }
                         1 -> showCategories()
                         2 -> showQuotes()
-                        3 -> startActivity(Intent(this@MainActivity, StockActivity::class.java))
+                        3 -> {
+                            showOnlyFavorites = true
+                            selectedCategory = "All"
+                            searchQuery = ""
+                            selectedTab = "Wallpaper"
+                            visibleItemLimit = 24
+                            buildHome()
+                        }
                     }
                 }
             }
