@@ -682,11 +682,11 @@ class MainActivity : Activity() {
         val header = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(15),dp(6),dp(12),dp(5)); setBackgroundColor(panelSurface) }
         header.addView(text(if (showOnlyFavorites) "Favorit (${favorites.size})" else "4k Wallpaper",25,pageText,true).apply { if (!showOnlyFavorites) textSize = 22f }, LinearLayout.LayoutParams(0,dp(38),1f))
         if (!showOnlyFavorites) header.addView(animatedDiamond(dp(42)))
-        listOf("☾","⌕","⚙").forEachIndexed { i,glyph ->
+        listOf("☾","⌕","♡","⚙").forEachIndexed { i,glyph ->
             val icon = modernIcon(glyph, 40)
-            icon.contentDescription = listOf("Tema","Cari","Pengaturan")[i]
+            icon.contentDescription = listOf("Tema","Cari","Favorit","Pengaturan")[i]
             icon.setOnClickListener {
-                when(i){0->toggleTheme();1->search();2->showSettings()}
+                when(i){0->toggleTheme();1->search();2->{showOnlyFavorites=true;selectedCategory="All";searchQuery="";selectedTab="Wallpaper";visibleItemLimit=24;buildHome()};3->showSettings()}
             }
             header.addView(icon,LinearLayout.LayoutParams(dp(40),dp(40)))
         }
@@ -748,6 +748,11 @@ class MainActivity : Activity() {
                     setImageDrawable(rounded(if (darkMode) 0xff0B3D4A.toInt() else 0xffe9e9ed.toInt(), 14))
                 }
                 slide.addView(slideImage, FrameLayout.LayoutParams(-1, -1))
+                slide.addView(text(category, 15, Color.BLACK, true).apply {
+                    setPadding(dp(10), dp(5), dp(10), dp(5))
+                    background = rounded(0x99ffffff.toInt(), 8)
+                    gravity = Gravity.CENTER
+                }, FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.START).apply { setMargins(dp(8), 0, 0, dp(8)) })
                 loadHomeBanner(url, slideImage)
                 slideRow.addView(slide, LinearLayout.LayoutParams(slideWidth, dp(105)))
             }
@@ -926,62 +931,6 @@ class MainActivity : Activity() {
         }
         swipeRefresh.addView(scroll, ViewGroup.LayoutParams(-1, -1))
         root.addView(swipeRefresh, LinearLayout.LayoutParams(-1, 0, 1f))
-        val bottom=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER; setPadding(0,dp(1),0,dp(1)); setBackgroundColor(panelSurface) }
-        listOf("⌂" to "Wallpaper","▦" to "Category","✦" to "Quotes","♡" to "Favorit").forEachIndexed { i,item ->
-            val navItem = LinearLayout(this@MainActivity).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER
-                setOnClickListener {
-                    when(i) {
-                        0 -> {
-                            showOnlyFavorites = false
-                            selectedCategory = "All"
-                            selectedTab = "Wallpaper"
-                            preferences.edit()
-                                .putString("selected_wallpaper_category", selectedCategory)
-                                .putString("selected_wallpaper_tab", selectedTab)
-                                .apply()
-                            visibleItemLimit = 24
-                            buildHome()
-                        }
-                        1 -> showCategories()
-                        2 -> showQuotes()
-                        3 -> {
-                            showOnlyFavorites = true
-                            selectedCategory = "All"
-                            searchQuery = ""
-                            selectedTab = "Wallpaper"
-                            visibleItemLimit = 24
-                            buildHome()
-                        }
-                    }
-                }
-            }
-            val isSelected = if (i == 3) showOnlyFavorites else (i == 0 && !showOnlyFavorites)
-            val iconSurface = FrameLayout(this@MainActivity).apply {
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(if (isSelected) (if (darkMode) 0xff244e5a.toInt() else 0xffffffff.toInt()) else Color.TRANSPARENT)
-                }
-                if (isSelected) {
-                    elevation = dp(7).toFloat()
-                    translationZ = dp(2).toFloat()
-                } else {
-                    elevation = 0f
-                    translationZ = 0f
-                }
-                addView(modernIcon(item.first, 36), FrameLayout.LayoutParams(dp(44),dp(29),Gravity.CENTER))
-            }
-            navItem.addView(iconSurface, LinearLayout.LayoutParams(dp(50),dp(34)))
-            navItem.addView(text(item.second,10,if(isSelected) blue else pageText,true).apply {
-                gravity=Gravity.CENTER
-                setTypeface(typeface, android.graphics.Typeface.BOLD)
-                setPadding(0,0,0,0)
-                includeFontPadding = false
-            }, LinearLayout.LayoutParams(-2,dp(15)))
-            bottom.addView(navItem,LinearLayout.LayoutParams(0,dp(46),1f))
-        }
-        root.addView(bottom)
         val adContainer = FrameLayout(this@MainActivity).apply {
             setBackgroundColor(if (darkMode) 0xff202127.toInt() else Color.rgb(245, 245, 245))
         }
@@ -1172,6 +1121,39 @@ class MainActivity : Activity() {
         }
         container.addView(shine, FrameLayout.LayoutParams(dp(20), dp(20), Gravity.CENTER_VERTICAL or Gravity.START))
 
+        val sparkles = listOf("✦", "✧", "✦", "✧").map { glyph ->
+            TextView(this@MainActivity).apply {
+                text = glyph
+                textSize = 10f
+                gravity = Gravity.CENTER
+                setTextColor(0xffffdf55.toInt())
+                alpha = 0f
+            }.also { sparkle ->
+                container.addView(sparkle, FrameLayout.LayoutParams(dp(14), dp(14)))
+            }
+        }
+        val sparkleAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 1800L
+            repeatCount = android.animation.ValueAnimator.INFINITE
+            interpolator = android.view.animation.LinearInterpolator()
+            addUpdateListener { animator ->
+                val p = animator.animatedFraction
+                sparkles.forEachIndexed { index, sparkle ->
+                    val phase = (p + index * 0.25f) % 1f
+                    val positions = listOf(
+                        Pair(reducedSize * 0.78f, reducedSize * 0.42f),
+                        Pair(reducedSize * 0.42f, reducedSize * 0.12f),
+                        Pair(reducedSize * 0.18f, reducedSize * 0.58f),
+                        Pair(reducedSize * 0.55f, reducedSize * 0.82f)
+                    )
+                    sparkle.x = positions[index].first
+                    sparkle.y = positions[index].second
+                    sparkle.alpha = if (phase < 0.18f || phase > 0.78f) 0f else (1f - kotlin.math.abs(phase - 0.48f) * 2.2f).coerceIn(0f, 1f)
+                    sparkle.scaleX = 0.65f + sparkle.alpha * 0.45f
+                    sparkle.scaleY = sparkle.scaleX
+                }
+            }
+        }
         val shimmer = android.animation.ValueAnimator.ofFloat(-dp(12).toFloat(), (reducedSize + dp(12)).toFloat()).apply {
             duration = 1250L
             repeatCount = android.animation.ValueAnimator.INFINITE
@@ -1187,9 +1169,11 @@ class MainActivity : Activity() {
         container.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
             override fun onViewAttachedToWindow(view: View) {
                 if (!shimmer.isStarted) shimmer.start()
+                if (!sparkleAnimator.isStarted) sparkleAnimator.start()
             }
             override fun onViewDetachedFromWindow(view: View) {
                 shimmer.cancel()
+                sparkleAnimator.cancel()
             }
         })
         container.layoutParams = LinearLayout.LayoutParams(reducedSize, reducedSize)
