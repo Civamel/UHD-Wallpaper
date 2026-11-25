@@ -714,7 +714,8 @@ class MainActivity : Activity() {
         val content=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL; setBackgroundColor(pageBg) }
         if(promoVisible) {
             val promo=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(dp(14),0,dp(12),0); background=rounded(0xff70434b.toInt(),28) }
-            promo.addView(text("♛   Get All Wallpaper Pro!",17,Color.WHITE,true),LinearLayout.LayoutParams(0,dp(36),1f))
+            promo.addView(text("♛",15,0xffD4AF37.toInt(),true).apply { gravity=Gravity.CENTER_VERTICAL; setPadding(0,0,dp(7),0) },LinearLayout.LayoutParams(-2,dp(36)))
+            promo.addView(text("Get All Wallpaper Pro!",17,Color.WHITE,true),LinearLayout.LayoutParams(0,dp(36),1f))
             promo.addView(text("×",25,Color.WHITE,false).apply { gravity=Gravity.CENTER; setOnClickListener { promoVisible=false; buildHome() } },LinearLayout.LayoutParams(dp(30),dp(34)))
             val pp=LinearLayout.LayoutParams(-1,dp(38)); pp.setMargins(dp(12),dp(6),dp(12),dp(2)); content.addView(promo,pp)
         }
@@ -891,7 +892,7 @@ class MainActivity : Activity() {
                     }
                 }
             }
-            if(index%5==1) cell.addView(text("♛",20,Color.WHITE,true).apply { gravity=Gravity.TOP or Gravity.END; setPadding(dp(5),dp(4),dp(8),0) })
+            if(index%5==1) cell.addView(text("♛",16,0xffD4AF37.toInt(),true).apply { gravity=Gravity.TOP or Gravity.END; setPadding(dp(5),dp(4),dp(8),0) })
             val params=GridLayout.LayoutParams().apply { width=tileWidthPx; height=tileHeightPx; setMargins(dp(2),dp(2),dp(2),dp(2)) }
             grid.addView(cell,params)
         }
