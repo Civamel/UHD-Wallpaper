@@ -1099,13 +1099,12 @@ class MainActivity : Activity() {
     }
 
     private fun animatedDiamond(sizePx: Int): View {
-        val crown = TextView(this@MainActivity).apply {
-            text = "👑"
-            textSize = 27f
-            gravity = Gravity.CENTER
-            contentDescription = "Mahkota premium"
+        return ImageView(this@MainActivity).apply {
+            setImageResource(R.drawable.crown_premium)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            contentDescription = "Mahkota premium 3D"
+            layoutParams = LinearLayout.LayoutParams(sizePx, sizePx)
         }
-        return crown
     }
 
     private fun previewCircle(symbol: String, action: () -> Unit): View {
