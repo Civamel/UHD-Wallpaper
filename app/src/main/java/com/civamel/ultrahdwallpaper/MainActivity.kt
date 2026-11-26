@@ -931,6 +931,7 @@ class MainActivity : Activity() {
                     setOnPreparedListener { mp ->
                         mp.isLooping = true
                         mp.setVolume(0f, 0f)
+                        tag = true
                         if (isShown) start()
                     }
                     setOnErrorListener { _, _, _ ->
@@ -988,7 +989,7 @@ class MainActivity : Activity() {
                 val visibleNow = tile.isShown && tile.getLocalVisibleRect(android.graphics.Rect())
                 try {
                     if (visibleNow) {
-                        if (video.isPreparedForPlayback() && !video.isPlaying) video.start()
+                        if (video.tag == true && !video.isPlaying) video.start()
                     } else if (video.isPlaying) {
                         video.pause()
                     }
