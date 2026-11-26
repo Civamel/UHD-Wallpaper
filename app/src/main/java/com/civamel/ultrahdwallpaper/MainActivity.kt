@@ -18,6 +18,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.FileInputStream
 import java.security.MessageDigest
+import kotlin.random.Random
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -180,7 +181,7 @@ class MainActivity : Activity() {
     private val wallpaperTagChoices = listOf(
         "Nature", "City", "Cars", "Technology", "Gaming", "Space", "Minimalist",
         "Abstract", "AMOLED", "Dark", "3D", "Anime", "Architecture", "Animals",
-        "Girl", "Fantasy", "Superheroes", "Art", "Luxury", "Aesthetic"
+        "Girl", "Fantasy", "Superheroes", "Foods", "Luxury", "Aesthetic"
     )
     private val itemCategories = mutableListOf<String>()
     private val itemTypes = mutableListOf<String>()
@@ -992,12 +993,22 @@ class MainActivity : Activity() {
                 "3D" -> itemTags.getOrNull(index).orEmpty().any { it.equals("3D", ignoreCase = true) }
                 "Aesthetic" -> itemTags.getOrNull(index).orEmpty().any { it.equals("Aesthetic", ignoreCase = true) }
                 // Wallpaper is the complete collection: standard, live, and 3D.
-                "Wallpaper" -> true
+                "Wallpaper" -> type != "live"
+                "Home" -> true
                 else -> true
             }
             categoryMatch && searchMatch && favoriteMatch && tabMatch
         }
-        val visibleIndexes = when (sortMode) {
+        val visibleIndexes = if (selectedTab == "Home") {
+            val now = System.currentTimeMillis()
+            val lastShuffle = preferences.getLong("home_shuffle_time", 0L)
+            var seed = preferences.getLong("home_shuffle_seed", 0L)
+            if (seed == 0L || now - lastShuffle >= 12L * 60L * 60L * 1000L) {
+                seed = Random.nextLong()
+                preferences.edit().putLong("home_shuffle_seed", seed).putLong("home_shuffle_time", now).apply()
+            }
+            filteredIndexes.shuffled(Random(seed))
+        } else when (sortMode) {
             "Newest" -> filteredIndexes.reversed()
             "A-Z" -> filteredIndexes.sortedBy { names[it].lowercase() }
             "Acak" -> filteredIndexes.shuffled()
@@ -1877,7 +1888,7 @@ class MainActivity : Activity() {
         val bg = if (dark) 0xff121318.toInt() else Color.WHITE
         val fg = if (dark) 0xfff2f2f5.toInt() else ink
         val muted = if (dark) 0xffa6a6ad.toInt() else Color.GRAY
-        val tags = listOf("Nature", "City", "Cars", "Technology", "Gaming", "Space", "Minimalist", "Abstract", "AMOLED", "Dark", "3D", "Anime", "Architecture", "Animals", "Girl", "Fantasy", "Superheroes", "Art", "Luxury", "Aesthetic")
+        val tags = listOf("Nature", "City", "Cars", "Technology", "Gaming", "Space", "Minimalist", "Abstract", "AMOLED", "Dark", "3D", "Anime", "Architecture", "Animals", "Girl", "Fantasy", "Superheroes", "Foods", "Luxury", "Aesthetic")
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(16), dp(16), dp(20))
