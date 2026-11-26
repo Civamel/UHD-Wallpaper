@@ -837,14 +837,13 @@ class MainActivity : Activity() {
             popularPanel.addView(text("Popular Tags", 11, Color.WHITE, true).apply { setPadding(dp(2), 0, 0, dp(2)) })
             val tagScroll = HorizontalScrollView(this@MainActivity).apply { isHorizontalScrollBarEnabled = false; clipToPadding = false }
             val tagRow = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-            val popularTags = itemTags.flatten()
-                .map { it.trim() }
-                .filter { it.isNotEmpty() }
-                .groupBy { it.lowercase(java.util.Locale.ROOT) }
-                .map { (_, values) -> values.first() to values.size }
-                .sortedWith(compareByDescending<Pair<String, Int>> { it.second }.thenBy { it.first.lowercase(java.util.Locale.ROOT) })
-                .take(15)
-            popularTags.forEach { (tag, _) ->
+            val popularTags = listOf(
+                "Nature", "City", "Cars", "Technology", "Gaming",
+                "Space", "Minimalist", "Abstract", "AMOLED", "Dark",
+                "3D", "Anime", "Architecture", "Animals", "Flowers",
+                "Fantasy", "Superheroes", "Art", "Luxury", "Aesthetic"
+            )
+            popularTags.forEach { tag ->
                 tagRow.addView(text(tag, 10, 0xff70434b.toInt(), true).apply {
                     gravity = Gravity.CENTER
                     setPadding(dp(10), dp(3), dp(10), dp(3))
