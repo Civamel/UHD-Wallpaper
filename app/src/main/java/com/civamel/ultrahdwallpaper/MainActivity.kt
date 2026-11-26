@@ -912,15 +912,37 @@ class MainActivity : Activity() {
             }
             content.addView(emptyState, LinearLayout.LayoutParams(-1, -2))
         }
+        val liveTilePlayers = mutableListOf<Pair<VideoView, FrameLayout>>()
         visibleIndexes.take(visibleItemLimit).forEach { index ->
             val name = names[index]
             val cell=FrameLayout(this@MainActivity)
+            val isLiveTile = itemTypes.getOrNull(index) == "live"
             val art=ImageView(this@MainActivity).apply {
                 scaleType=ImageView.ScaleType.CENTER_CROP
                 setImageDrawable(artDrawable(index))
                 setOnClickListener { showPreview(index) }
             }
-            cell.addView(art,FrameLayout.LayoutParams(-1, -1))
+            if (isLiveTile) {
+                val videoUrl = fullUrls.getOrNull(index).orEmpty()
+                val liveVideo = VideoView(this@MainActivity).apply {
+                    setBackgroundColor(Color.BLACK)
+                    setOnClickListener { showPreview(index) }
+                    setVideoURI(Uri.parse(videoUrl))
+                    setOnPreparedListener { mp ->
+                        mp.isLooping = true
+                        mp.setVolume(0f, 0f)
+                        if (isShown) start()
+                    }
+                    setOnErrorListener { _, _, _ ->
+                        android.util.Log.w("LiveTile", "Unable to play live tile: $name")
+                        true
+                    }
+                }
+                cell.addView(liveVideo, FrameLayout.LayoutParams(-1, -1))
+                liveTilePlayers.add(liveVideo to cell)
+            } else {
+                cell.addView(art,FrameLayout.LayoutParams(-1, -1))
+            }
             cell.addView(text(if ((itemIds.getOrNull(index) ?: names[index]) in favorites) "♥" else "♡", 15, Color.WHITE, true).apply {
                 gravity = Gravity.CENTER
                 background = rounded(0xcc000000.toInt(), 18)
@@ -933,7 +955,7 @@ class MainActivity : Activity() {
             }, FrameLayout.LayoutParams(dp(22), dp(22), Gravity.TOP or Gravity.START).apply {
                 setMargins(dp(7), dp(7), 0, 0)
             })
-            if (index < thumbnailUrls.size) {
+            if (!isLiveTile && index < thumbnailUrls.size) {
                 val tileUrl = thumbnailUrls[index]
                 art.tag = tileUrl
                 loadImage(tileUrl) { bitmap ->
@@ -961,6 +983,20 @@ class MainActivity : Activity() {
             grid.addView(cell,params)
         }
         content.addView(grid)
+        fun updateVisibleLiveTiles() {
+            liveTilePlayers.forEach { (video, tile) ->
+                val visibleNow = tile.isShown && tile.getLocalVisibleRect(android.graphics.Rect())
+                try {
+                    if (visibleNow) {
+                        if (video.isPreparedForPlayback() && !video.isPlaying) video.start()
+                    } else if (video.isPlaying) {
+                        video.pause()
+                    }
+                } catch (_: Exception) { }
+            }
+        }
+        scroll.setOnScrollChangeListener { _, _, _, _, _ -> updateVisibleLiveTiles() }
+        scroll.post { updateVisibleLiveTiles() }
         if (visibleIndexes.size > visibleItemLimit || hasMoreCatalogShards()) {
             val hasVisibleRemainder = visibleIndexes.size > visibleItemLimit
             val remaining = (visibleIndexes.size - visibleItemLimit).coerceAtLeast(0)
@@ -1574,7 +1610,7 @@ class MainActivity : Activity() {
             inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
         }
         val thumbnailUrl = EditText(this).apply {
-            hint = "URL thumbnail / sampul (https://...)"
+            hint = "URL thumbnail gambar (khusus wallpaper biasa)"
             setTextColor(fg)
             inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
         }
@@ -1585,7 +1621,7 @@ class MainActivity : Activity() {
                 override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
                     val live = selectedItem?.toString() == "live"
                     imageUrl.hint = if (live) "URL video MP4 langsung (https://...mp4)" else "URL gambar (https://...)"
-                    thumbnailUrl.visibility = if (live) View.VISIBLE else View.GONE
+                    thumbnailUrl.visibility = if (live) View.GONE else View.VISIBLE
                 }
             }
         }
@@ -1632,7 +1668,7 @@ class MainActivity : Activity() {
         root.addView(text("Jenis konten", 13, muted, false).apply { setPadding(0, dp(10), 0, 0) })
         root.addView(wallpaperTypeSpinner)
         root.addView(save)
-        root.addView(text("Pilih beberapa tag dengan mencentang kotaknya. Untuk Live, masukkan URL MP4 langsung dan URL gambar thumbnail. Video diputar berulang tanpa suara.", 12, muted, false).apply {
+        root.addView(text("Pilih beberapa tag dengan mencentang kotaknya. Untuk Live, cukup masukkan URL MP4 langsung. Video akan otomatis bergerak di kartu beranda dan diputar berulang tanpa suara.", 12, muted, false).apply {
             setPadding(0, dp(12), 0, 0)
         })
         save.setOnClickListener {
@@ -1640,10 +1676,10 @@ class MainActivity : Activity() {
             val group = category.text.toString().trim()
             val url = imageUrl.text.toString().trim()
             val isLive = wallpaperTypeSpinner.selectedItem.toString() == "live"
-            val thumb = thumbnailUrl.text.toString().trim().ifBlank { if (isLive) "" else url }
+            val thumb = if (isLive) url else thumbnailUrl.text.toString().trim().ifBlank { url }
             if (name.isBlank() || group.isBlank() || !url.startsWith("https://", ignoreCase = true) ||
-                (isLive && (!url.substringBefore("?").lowercase().endsWith(".mp4") || !thumb.startsWith("https://", ignoreCase = true)))) {
-                Toast.makeText(this, if (isLive) "Isi judul, kategori, URL MP4 langsung, dan URL thumbnail HTTPS" else "Isi judul, kategori, dan URL gambar HTTPS yang valid", Toast.LENGTH_LONG).show()
+                (isLive && !url.substringBefore("?").lowercase().endsWith(".mp4"))) {
+                Toast.makeText(this, if (isLive) "Isi judul, kategori, dan URL MP4 langsung yang valid" else "Isi judul, kategori, dan URL gambar HTTPS yang valid", Toast.LENGTH_LONG).show()
                 return@setOnClickListener
             }
             save.isEnabled = false
