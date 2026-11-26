@@ -1300,9 +1300,11 @@ class MainActivity : Activity() {
      * biasanya dipakai untuk efek geser/parallax antar-halaman Home.
      */
     private fun decodeScreenSizedWallpaper(file: File): Bitmap {
-        val metrics = resources.displayMetrics
-        val targetWidth = metrics.widthPixels.coerceAtLeast(1)
-        val targetHeight = metrics.heightPixels.coerceAtLeast(1)
+        // Standard portrait output: intentionally smaller than common phone
+        // display resolutions so WallpaperManager/launcher can scale it as needed.
+        // Keep this fixed across devices; the source is center-cropped to 9:20.
+        val targetWidth = 900
+        val targetHeight = 2000
 
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(file.absolutePath, bounds)
