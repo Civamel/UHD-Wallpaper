@@ -1022,8 +1022,9 @@ class MainActivity : Activity() {
         fun loadCard(target: ImageView, itemIndex: Int, preferFull: Boolean) {
             val full = fullUrls.getOrNull(itemIndex).orEmpty()
             val thumb = thumbnailUrls.getOrNull(itemIndex).orEmpty()
-            val first = if (preferFull) full else thumb
-            val second = if (preferFull) thumb else full
+            val isLiveItem = itemTypes.getOrNull(itemIndex) == "live"
+            val first = if (preferFull && !isLiveItem) full else thumb
+            val second = if (preferFull && !isLiveItem) thumb else full
             if (first.isNotBlank()) {
                 target.tag = first
                 loadImage(first) { bitmap ->
@@ -1086,6 +1087,24 @@ class MainActivity : Activity() {
         })
         // Full-resolution URL is preferred; thumbnail is a real fallback if it fails.
         loadCard(art, index, true)
+        if (itemTypes.getOrNull(index) == "live") {
+            val videoPreview = VideoView(this@MainActivity).apply {
+                setBackgroundColor(Color.BLACK)
+                setVideoURI(Uri.parse(fullUrls.getOrNull(index).orEmpty()))
+                setOnPreparedListener { player ->
+                    player.isLooping = true
+                    player.setVolume(0f, 0f)
+                    start()
+                }
+                setOnErrorListener { _, _, _ ->
+                    Toast.makeText(this@MainActivity, "Video preview gagal diputar. Periksa URL MP4 langsung.", Toast.LENGTH_SHORT).show()
+                    true
+                }
+            }
+            root.addView(videoPreview, FrameLayout.LayoutParams(-1, -1).apply {
+                setMargins(dp(55), dp(118), dp(55), dp(112))
+            })
+        }
 
         val top = LinearLayout(this@MainActivity).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -1550,12 +1569,25 @@ class MainActivity : Activity() {
         val title = EditText(this).apply { hint = "Judul wallpaper"; setTextColor(fg) }
         val category = EditText(this).apply { hint = "Kategori, contoh: Nature"; setTextColor(fg) }
         val imageUrl = EditText(this).apply {
-            hint = "URL gambar (https://...)"
+            hint = "URL gambar / video MP4 (https://...)"
+            setTextColor(fg)
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
+        }
+        val thumbnailUrl = EditText(this).apply {
+            hint = "URL thumbnail / sampul (https://...)"
             setTextColor(fg)
             inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
         }
         val wallpaperTypeSpinner = Spinner(this).apply {
             adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, listOf("wallpaper", "live"))
+            onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+                override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                    val live = selectedItem?.toString() == "live"
+                    imageUrl.hint = if (live) "URL video MP4 langsung (https://...mp4)" else "URL gambar (https://...)"
+                    thumbnailUrl.visibility = if (live) View.VISIBLE else View.GONE
+                }
+            }
         }
         val tagChoices = listOf(
             "Nature", "City", "Cars", "Technology", "Gaming",
@@ -1596,18 +1628,22 @@ class MainActivity : Activity() {
         })
         root.addView(tagGrid)
         root.addView(imageUrl)
+        root.addView(thumbnailUrl)
         root.addView(text("Jenis konten", 13, muted, false).apply { setPadding(0, dp(10), 0, 0) })
         root.addView(wallpaperTypeSpinner)
         root.addView(save)
-        root.addView(text("Pilih beberapa tag dengan mencentang kotaknya. Tag 3D akan menampilkan wallpaper ini di menu 3D. Gunakan URL gambar HTTPS yang dapat dibuka publik.", 12, muted, false).apply {
+        root.addView(text("Pilih beberapa tag dengan mencentang kotaknya. Untuk Live, masukkan URL MP4 langsung dan URL gambar thumbnail. Video diputar berulang tanpa suara.", 12, muted, false).apply {
             setPadding(0, dp(12), 0, 0)
         })
         save.setOnClickListener {
             val name = title.text.toString().trim()
             val group = category.text.toString().trim()
             val url = imageUrl.text.toString().trim()
-            if (name.isBlank() || group.isBlank() || !url.startsWith("https://", ignoreCase = true)) {
-                Toast.makeText(this, "Isi judul, kategori, dan URL HTTPS yang valid", Toast.LENGTH_LONG).show()
+            val isLive = wallpaperTypeSpinner.selectedItem.toString() == "live"
+            val thumb = thumbnailUrl.text.toString().trim().ifBlank { if (isLive) "" else url }
+            if (name.isBlank() || group.isBlank() || !url.startsWith("https://", ignoreCase = true) ||
+                (isLive && (!url.substringBefore("?").lowercase().endsWith(".mp4") || !thumb.startsWith("https://", ignoreCase = true)))) {
+                Toast.makeText(this, if (isLive) "Isi judul, kategori, URL MP4 langsung, dan URL thumbnail HTTPS" else "Isi judul, kategori, dan URL gambar HTTPS yang valid", Toast.LENGTH_LONG).show()
                 return@setOnClickListener
             }
             save.isEnabled = false
@@ -1617,7 +1653,7 @@ class MainActivity : Activity() {
                 "id" to id,
                 "title" to name,
                 "category" to group,
-                "thumbnail" to url,
+                "thumbnail" to thumb,
                 "image" to url,
                 "type" to wallpaperTypeSpinner.selectedItem.toString(),
                 "tags" to selectedTags.toList(),
@@ -1631,7 +1667,7 @@ class MainActivity : Activity() {
                     itemTypes.add(wallpaperTypeSpinner.selectedItem.toString())
                     @Suppress("UNCHECKED_CAST")
                     itemTags.add(data["tags"] as? List<String> ?: emptyList())
-                    thumbnailUrls.add(url)
+                    thumbnailUrls.add(thumb)
                     fullUrls.add(url)
                     title.text.clear()
                     category.text.clear()
@@ -1643,6 +1679,7 @@ class MainActivity : Activity() {
                         }
                     }
                     imageUrl.text.clear()
+                    thumbnailUrl.text.clear()
                     Toast.makeText(this, "Wallpaper berhasil disimpan", Toast.LENGTH_LONG).show()
                     save.isEnabled = true
                     save.text = "Simpan wallpaper"
