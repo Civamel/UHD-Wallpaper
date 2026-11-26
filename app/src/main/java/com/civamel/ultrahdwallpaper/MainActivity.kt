@@ -1894,6 +1894,29 @@ class MainActivity : Activity() {
         FirebaseFirestore.getInstance().collection("wallpapers").get()
             .addOnSuccessListener { snapshot ->
                 if (isFinishing || isDestroyed) return@addOnSuccessListener
+                val legacyDocs = snapshot.documents.filter { (it.getLong("tagSchemaVersion") ?: 0L) < 2L }
+                if (legacyDocs.isNotEmpty()) {
+                    status.text = "Membersihkan kategori dan tag lama..."
+                    val commits = legacyDocs.chunked(450).map { chunk ->
+                        val batch = FirebaseFirestore.getInstance().batch()
+                        chunk.forEach { oldDoc ->
+                            batch.update(oldDoc.reference, mapOf(
+                                "category" to com.google.firebase.firestore.FieldValue.delete(),
+                                "tags" to emptyList<String>(),
+                                "tagSchemaVersion" to 2
+                            ))
+                        }
+                        batch.commit()
+                    }
+                    com.google.android.gms.tasks.Tasks.whenAll(commits)
+                        .addOnSuccessListener {
+                            if (!isFinishing && !isDestroyed) showAdminWallpaperManager()
+                        }
+                        .addOnFailureListener { error ->
+                            status.text = "Gagal membersihkan tag lama: " + (error.localizedMessage ?: "unknown")
+                        }
+                    return@addOnSuccessListener
+                }
                 list.removeAllViews()
                 status.text = if (snapshot.isEmpty) "Belum ada wallpaper yang diunggah." else "Pilih wallpaper untuk mengedit judul dan tag."
                 for (doc in snapshot.documents) {
@@ -1999,38 +2022,10 @@ class MainActivity : Activity() {
     }
 
     private fun loadFirestoreWallpapers(onComplete: (() -> Unit)? = null) {
-        val db = FirebaseFirestore.getInstance()
-        db.collection("wallpapers").get()
+        FirebaseFirestore.getInstance().collection("wallpapers").get()
             .addOnSuccessListener { snapshot ->
                 if (isFinishing || isDestroyed) { onComplete?.invoke(); return@addOnSuccessListener }
                 if (snapshot.isEmpty) { onComplete?.invoke(); return@addOnSuccessListener }
-
-                // One-time, per-document migration: remove the legacy category field and
-                // clear pre-checkbox tags. New/edited records carry schema version 2.
-                val legacyDocs = snapshot.documents.filter { doc ->
-                    (doc.getLong("tagSchemaVersion") ?: 0L) < 2L
-                }
-                if (legacyDocs.isNotEmpty()) {
-                    val batch = db.batch()
-                    legacyDocs.forEach { doc ->
-                        batch.update(doc.reference, mapOf(
-                            "category" to com.google.firebase.firestore.FieldValue.delete(),
-                            "tags" to emptyList<String>(),
-                            "tagSchemaVersion" to 2
-                        ))
-                    }
-                    batch.commit()
-                        .addOnSuccessListener {
-                            if (!isFinishing && !isDestroyed) loadFirestoreWallpapers(onComplete)
-                        }
-                        .addOnFailureListener { error ->
-                            android.util.Log.e("WallpaperTags", "Legacy tag migration failed", error)
-                            Toast.makeText(this, "Unable to reset old tags. Please refresh and try again.", Toast.LENGTH_LONG).show()
-                            onComplete?.invoke()
-                        }
-                    return@addOnSuccessListener
-                }
-
                 var changed = false
                 for (doc in snapshot.documents) {
                     val id = doc.getString("id") ?: doc.id
@@ -2040,8 +2035,11 @@ class MainActivity : Activity() {
                     if (title.isBlank() || !thumb.startsWith("https://") || !image.startsWith("https://")) continue
 
                     val type = doc.getString("type")?.lowercase() ?: "wallpaper"
-                    val tags = (doc.get("tags") as? List<*>)?.mapNotNull { it?.toString()?.trim() }
-                        ?.filter { it in wallpaperTagChoices } ?: emptyList()
+                    // Never surface pre-checkbox metadata; Admin performs the one-time database cleanup.
+                    val tags = if ((doc.getLong("tagSchemaVersion") ?: 0L) >= 2L) {
+                        (doc.get("tags") as? List<*>)?.mapNotNull { it?.toString()?.trim() }
+                            ?.filter { it in wallpaperTagChoices } ?: emptyList()
+                    } else emptyList()
                     val existingIndex = itemIds.indexOf(id)
                     if (existingIndex >= 0) {
                         names[existingIndex] = title
