@@ -175,7 +175,13 @@ class MainActivity : Activity() {
     }
     private var darkMode = false
     private val categoryNames: List<String>
-        get() = listOf("All") + itemCategories.map { it.trim() }.filter { it.isNotEmpty() }.distinct().sorted()
+        get() = listOf("All") + itemTags.flatten().map { it.trim() }
+            .filter { it in wallpaperTagChoices }.distinct().sorted()
+    private val wallpaperTagChoices = listOf(
+        "Nature", "City", "Cars", "Technology", "Gaming", "Space", "Minimalist",
+        "Abstract", "AMOLED", "Dark", "3D", "Anime", "Architecture", "Animals",
+        "Girl", "Fantasy", "Superheroes", "Art", "Luxury", "Aesthetic"
+    )
     private val itemCategories = mutableListOf<String>()
     private val itemTypes = mutableListOf<String>()
     private val itemTags = mutableListOf<List<String>>()
@@ -975,8 +981,9 @@ class MainActivity : Activity() {
             alignmentMode = GridLayout.ALIGN_BOUNDS
         }
         val filteredIndexes = names.indices.filter { index ->
-            val categoryMatch = selectedCategory == "All" || itemCategories[index] == selectedCategory
-            val searchMatch = searchQuery.isBlank() || names[index].contains(searchQuery, true) || itemCategories[index].contains(searchQuery, true) || itemTags.getOrNull(index).orEmpty().any { it.contains(searchQuery, true) }
+            val currentTags = itemTags.getOrNull(index).orEmpty()
+            val categoryMatch = selectedCategory == "All" || currentTags.any { it.equals(selectedCategory, ignoreCase = true) }
+            val searchMatch = searchQuery.isBlank() || names[index].contains(searchQuery, true) || currentTags.any { it.contains(searchQuery, true) }
             val favoriteMatch = !showOnlyFavorites || favorites.contains(itemIds.getOrNull(index) ?: names[index])
             val type = itemTypes.getOrNull(index) ?: "wallpaper"
             val tabMatch = when (selectedTab) {
@@ -1284,7 +1291,7 @@ class MainActivity : Activity() {
         top.addView(previewCircle("ⓘ") {
             AlertDialog.Builder(this@MainActivity)
                 .setTitle(names[index])
-                .setMessage("Category: " + itemCategories.getOrNull(index).orEmpty() +
+                .setMessage("Tags: " + itemTags.getOrNull(index).orEmpty().joinToString(", ").ifBlank { "None" } +
                     "\nType: " + (itemTypes.getOrNull(index) ?: "wallpaper"))
                 .setPositiveButton("Mengerti", null)
                 .show()
@@ -1809,7 +1816,6 @@ class MainActivity : Activity() {
         })
         save.setOnClickListener {
             val name = title.text.toString().trim()
-            val group = selectedTags.firstOrNull() ?: "Abstract"
             val url = imageUrl.text.toString().trim()
             val isLive = wallpaperTypeSpinner.selectedItem.toString() == "live"
             val thumb = if (isLive) url else thumbnailUrl.text.toString().trim().ifBlank { url }
@@ -1824,18 +1830,18 @@ class MainActivity : Activity() {
             val data = hashMapOf(
                 "id" to id,
                 "title" to name,
-                "category" to group,
                 "thumbnail" to thumb,
                 "image" to url,
                 "type" to wallpaperTypeSpinner.selectedItem.toString(),
                 "tags" to selectedTags.toList(),
+                "tagSchemaVersion" to 2,
                 "createdAt" to com.google.firebase.Timestamp.now()
             )
             FirebaseFirestore.getInstance().collection("wallpapers").document(id).set(data)
                 .addOnSuccessListener {
                     names.add(name)
                     itemIds.add(id)
-                    itemCategories.add(group)
+                    itemCategories.add("")
                     itemTypes.add(wallpaperTypeSpinner.selectedItem.toString())
                     @Suppress("UNCHECKED_CAST")
                     itemTags.add(data["tags"] as? List<String> ?: emptyList())
@@ -1961,8 +1967,19 @@ class MainActivity : Activity() {
                                 }
                                 val updatedTags = tags.filter { selected.contains(it) }
                                 dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
-                                doc.reference.update(mapOf("title" to newTitle, "tags" to updatedTags, "category" to (updatedTags.firstOrNull() ?: "Abstract")))
+                                doc.reference.update(mapOf(
+                                    "title" to newTitle,
+                                    "tags" to updatedTags,
+                                    "category" to com.google.firebase.firestore.FieldValue.delete(),
+                                    "tagSchemaVersion" to 2
+                                ))
                                     .addOnSuccessListener {
+                                        val index = itemIds.indexOf(doc.id)
+                                        if (index >= 0) {
+                                            names[index] = newTitle
+                                            itemTags[index] = updatedTags
+                                            itemCategories[index] = ""
+                                        }
                                         Toast.makeText(this, "Judul dan tag berhasil diperbarui", Toast.LENGTH_SHORT).show()
                                         dialog.dismiss()
                                         showAdminWallpaperManager()
@@ -1982,24 +1999,66 @@ class MainActivity : Activity() {
     }
 
     private fun loadFirestoreWallpapers(onComplete: (() -> Unit)? = null) {
-        FirebaseFirestore.getInstance().collection("wallpapers").get()
+        val db = FirebaseFirestore.getInstance()
+        db.collection("wallpapers").get()
             .addOnSuccessListener { snapshot ->
                 if (isFinishing || isDestroyed) { onComplete?.invoke(); return@addOnSuccessListener }
                 if (snapshot.isEmpty) { onComplete?.invoke(); return@addOnSuccessListener }
+
+                // One-time, per-document migration: remove the legacy category field and
+                // clear pre-checkbox tags. New/edited records carry schema version 2.
+                val legacyDocs = snapshot.documents.filter { doc ->
+                    (doc.getLong("tagSchemaVersion") ?: 0L) < 2L
+                }
+                if (legacyDocs.isNotEmpty()) {
+                    val batch = db.batch()
+                    legacyDocs.forEach { doc ->
+                        batch.update(doc.reference, mapOf(
+                            "category" to com.google.firebase.firestore.FieldValue.delete(),
+                            "tags" to emptyList<String>(),
+                            "tagSchemaVersion" to 2
+                        ))
+                    }
+                    batch.commit()
+                        .addOnSuccessListener {
+                            if (!isFinishing && !isDestroyed) loadFirestoreWallpapers(onComplete)
+                        }
+                        .addOnFailureListener { error ->
+                            android.util.Log.e("WallpaperTags", "Legacy tag migration failed", error)
+                            Toast.makeText(this, "Unable to reset old tags. Please refresh and try again.", Toast.LENGTH_LONG).show()
+                            onComplete?.invoke()
+                        }
+                    return@addOnSuccessListener
+                }
+
                 var changed = false
                 for (doc in snapshot.documents) {
                     val id = doc.getString("id") ?: doc.id
                     val title = doc.getString("title")?.trim().orEmpty()
                     val thumb = doc.getString("thumbnail")?.trim().orEmpty()
                     val image = doc.getString("image")?.trim().orEmpty()
-                    if (title.isBlank() || !thumb.startsWith("https://") || !image.startsWith("https://") || itemIds.contains(id)) continue
-                    names.add(title)
-                    itemIds.add(id)
-                    itemCategories.add(doc.getString("category")?.ifBlank { "Abstract" } ?: "Abstract")
-                    itemTypes.add(doc.getString("type")?.lowercase() ?: "wallpaper")
-                    itemTags.add(doc.get("tags") as? List<String> ?: emptyList())
-                    thumbnailUrls.add(thumb)
-                    fullUrls.add(image)
+                    if (title.isBlank() || !thumb.startsWith("https://") || !image.startsWith("https://")) continue
+
+                    val type = doc.getString("type")?.lowercase() ?: "wallpaper"
+                    val tags = (doc.get("tags") as? List<*>)?.mapNotNull { it?.toString()?.trim() }
+                        ?.filter { it in wallpaperTagChoices } ?: emptyList()
+                    val existingIndex = itemIds.indexOf(id)
+                    if (existingIndex >= 0) {
+                        names[existingIndex] = title
+                        itemCategories[existingIndex] = ""
+                        itemTypes[existingIndex] = type
+                        itemTags[existingIndex] = tags
+                        thumbnailUrls[existingIndex] = thumb
+                        fullUrls[existingIndex] = image
+                    } else {
+                        names.add(title)
+                        itemIds.add(id)
+                        itemCategories.add("")
+                        itemTypes.add(type)
+                        itemTags.add(tags)
+                        thumbnailUrls.add(thumb)
+                        fullUrls.add(image)
+                    }
                     changed = true
                 }
                 if (changed) {
@@ -2554,9 +2613,9 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
             setOnClickListener { buildHome() }
         }, LinearLayout.LayoutParams(dp(48), dp(52)))
-        header.addView(text("Category", 23, if(darkMode) 0xfff2f2f5.toInt() else ink, true))
+        header.addView(text("Tags", 23, if(darkMode) 0xfff2f2f5.toInt() else ink, true))
         root.addView(header)
-        root.addView(text("Explore wallpapers by category", 14, if(darkMode) 0xffaaaaaa.toInt() else Color.GRAY, false).apply {
+        root.addView(text("Explore wallpapers by tag", 14, if(darkMode) 0xffaaaaaa.toInt() else Color.GRAY, false).apply {
             setPadding(dp(4), dp(4), 0, dp(18))
         })
         val scroll = ScrollView(this@MainActivity)
@@ -2583,7 +2642,7 @@ class MainActivity : Activity() {
             row.addView(modernIcon(symbols.getOrElse(index) { "✧" },38),
                 LinearLayout.LayoutParams(dp(48), dp(48)))
             row.addView(text(category, 16, if(darkMode) 0xfff2f2f5.toInt() else ink, true), LinearLayout.LayoutParams(0, -2, 1f))
-            val count = if (category == "All") names.size else itemCategories.count { it == category }
+            val count = if (category == "All") names.size else itemTags.count { tags -> tags.any { it.equals(category, ignoreCase = true) } }
             row.addView(text(count.toString(), 13, if(darkMode) 0xffaaaaaa.toInt() else Color.GRAY, false))
             row.addView(text("›", 25, if(darkMode) 0xfff2f2f5.toInt() else ink, false))
             val params = LinearLayout.LayoutParams(-1, dp(64))
