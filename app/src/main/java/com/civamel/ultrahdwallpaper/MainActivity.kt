@@ -84,6 +84,67 @@ class MainActivity : Activity() {
     private var downloadsSearchQuery = ""
     private var downloadSelectionMode = false
     private val selectedDownloadRecords = mutableSetOf<String>()
+    private var appLanguage = "en"
+    private val supportedLanguages = listOf(
+        "🇬🇧 English" to "en", "🇮🇩 Indonesia" to "id", "🇪🇸 Español" to "es",
+        "🇳🇱 Nederlands" to "nl", "🇵🇹 Português" to "pt", "🇨🇳 中文（普通话）" to "zh",
+        "🇰🇷 한국어" to "ko", "🇧🇷 Português (Brasil)" to "pt-BR", "🇷🇺 Русский" to "ru",
+        "🇰🇿 Қазақша" to "kk", "🇫🇮 Suomi" to "fi", "🇸🇦 العربية" to "ar",
+        "🇷🇴 Română" to "ro", "🇵🇦 Español (Panamá)" to "es-PA", "🇯🇵 日本語" to "ja",
+        "🇩🇯 Français" to "fr", "🇨🇭 Deutsch" to "de", "🇧🇻 Norsk" to "no",
+        "🇦🇷 Español (Argentina)" to "es-AR", "🇮🇹 Italiano" to "it"
+    )
+    private val translations = mapOf(
+        "en" to mapOf("Pengaturan" to "Settings","Bahasa Aplikasi" to "App Language","Notifikasi" to "Notifications","Favorit" to "Favorites","Riwayat dilihat" to "Recently Viewed","Unduh" to "Downloads","Bagikan Aplikasi" to "Share App","Nilai kami" to "Rate Us","Umpan Balik" to "Feedback","Kelola Cache" to "Manage Cache","Admin" to "Admin","Beranda" to "Home","Wallpaper" to "Wallpaper","Kategori" to "Categories","Cari" to "Search","Semua" to "All","Belum ada wallpaper" to "No wallpapers yet","Memuat wallpaper…" to "Loading wallpapers…","Simpan" to "Save","Batal" to "Cancel","Tutup" to "Close","Pilih Bahasa" to "Choose Language","Tekan kembali sekali lagi untuk keluar" to "Press back again to exit"),
+        "id" to mapOf("Pengaturan" to "Pengaturan","Bahasa Aplikasi" to "Bahasa Aplikasi","Notifikasi" to "Notifikasi","Favorit" to "Favorit","Riwayat dilihat" to "Riwayat dilihat","Unduh" to "Unduhan","Bagikan Aplikasi" to "Bagikan Aplikasi","Nilai kami" to "Nilai Kami","Umpan Balik" to "Masukan","Kelola Cache" to "Kelola Cache","Beranda" to "Beranda","Kategori" to "Kategori","Cari" to "Cari","Semua" to "Semua","Belum ada wallpaper" to "Belum ada wallpaper","Simpan" to "Simpan","Batal" to "Batal","Tutup" to "Tutup","Pilih Bahasa" to "Pilih Bahasa"),
+        "es" to mapOf("Pengaturan" to "Ajustes","Bahasa Aplikasi" to "Idioma de la aplicación","Notifikasi" to "Notificaciones","Favorit" to "Favoritos","Riwayat dilihat" to "Vistos recientemente","Unduh" to "Descargas","Bagikan Aplikasi" to "Compartir aplicación","Nilai kami" to "Califícanos","Umpan Balik" to "Comentarios","Kelola Cache" to "Gestionar caché","Simpan" to "Guardar","Batal" to "Cancelar","Tutup" to "Cerrar","Pilih Bahasa" to "Elegir idioma"),
+        "nl" to mapOf("Pengaturan" to "Instellingen","Bahasa Aplikasi" to "App-taal","Notifikasi" to "Meldingen","Favorit" to "Favorieten","Riwayat dilihat" to "Recent bekeken","Unduh" to "Downloads","Bagikan Aplikasi" to "App delen","Nilai kami" to "Beoordeel ons","Umpan Balik" to "Feedback","Kelola Cache" to "Cache beheren","Simpan" to "Opslaan","Batal" to "Annuleren","Tutup" to "Sluiten","Pilih Bahasa" to "Kies taal"),
+        "pt" to mapOf("Pengaturan" to "Configurações","Bahasa Aplikasi" to "Idioma do aplicativo","Notifikasi" to "Notificações","Favorit" to "Favoritos","Riwayat dilihat" to "Vistos recentemente","Unduh" to "Downloads","Bagikan Aplikasi" to "Compartilhar aplicativo","Nilai kami" to "Avalie-nos","Umpan Balik" to "Feedback","Kelola Cache" to "Gerenciar cache","Simpan" to "Salvar","Batal" to "Cancelar","Tutup" to "Fechar","Pilih Bahasa" to "Escolher idioma"),
+        "pt-BR" to mapOf("Pengaturan" to "Configurações","Bahasa Aplikasi" to "Idioma do aplicativo","Notifikasi" to "Notificações","Favorit" to "Favoritos","Riwayat dilihat" to "Vistos recentemente","Unduh" to "Downloads","Bagikan Aplikasi" to "Compartilhar aplicativo","Nilai kami" to "Avalie-nos","Umpan Balik" to "Comentários","Kelola Cache" to "Gerenciar cache","Simpan" to "Salvar","Batal" to "Cancelar","Tutup" to "Fechar","Pilih Bahasa" to "Escolher idioma"),
+        "zh" to mapOf("Pengaturan" to "设置","Bahasa Aplikasi" to "应用语言","Notifikasi" to "通知","Favorit" to "收藏","Riwayat dilihat" to "最近查看","Unduh" to "下载","Bagikan Aplikasi" to "分享应用","Nilai kami" to "评价我们","Umpan Balik" to "反馈","Kelola Cache" to "管理缓存","Simpan" to "保存","Batal" to "取消","Tutup" to "关闭","Pilih Bahasa" to "选择语言"),
+        "ko" to mapOf("Pengaturan" to "설정","Bahasa Aplikasi" to "앱 언어","Notifikasi" to "알림","Favorit" to "즐겨찾기","Riwayat dilihat" to "최근 본 항목","Unduh" to "다운로드","Bagikan Aplikasi" to "앱 공유","Nilai kami" to "평가하기","Umpan Balik" to "피드백","Kelola Cache" to "캐시 관리","Simpan" to "저장","Batal" to "취소","Tutup" to "닫기","Pilih Bahasa" to "언어 선택"),
+        "ru" to mapOf("Pengaturan" to "Настройки","Bahasa Aplikasi" to "Язык приложения","Notifikasi" to "Уведомления","Favorit" to "Избранное","Riwayat dilihat" to "Недавно просмотренные","Unduh" to "Загрузки","Bagikan Aplikasi" to "Поделиться приложением","Nilai kami" to "Оцените нас","Umpan Balik" to "Отзывы","Kelola Cache" to "Управление кэшем","Simpan" to "Сохранить","Batal" to "Отмена","Tutup" to "Закрыть","Pilih Bahasa" to "Выбрать язык"),
+        "kk" to mapOf("Pengaturan" to "Баптаулар","Bahasa Aplikasi" to "Қолданба тілі","Notifikasi" to "Хабарландырулар","Favorit" to "Таңдаулылар","Unduh" to "Жүктеулер","Simpan" to "Сақтау","Batal" to "Болдырмау","Tutup" to "Жабу","Pilih Bahasa" to "Тілді таңдау"),
+        "fi" to mapOf("Pengaturan" to "Asetukset","Bahasa Aplikasi" to "Sovelluksen kieli","Notifikasi" to "Ilmoitukset","Favorit" to "Suosikit","Unduh" to "Lataukset","Simpan" to "Tallenna","Batal" to "Peruuta","Tutup" to "Sulje","Pilih Bahasa" to "Valitse kieli"),
+        "ar" to mapOf("Pengaturan" to "الإعدادات","Bahasa Aplikasi" to "لغة التطبيق","Notifikasi" to "الإشعارات","Favorit" to "المفضلة","Unduh" to "التنزيلات","Simpan" to "حفظ","Batal" to "إلغاء","Tutup" to "إغلاق","Pilih Bahasa" to "اختر اللغة"),
+        "ro" to mapOf("Pengaturan" to "Setări","Bahasa Aplikasi" to "Limba aplicației","Notifikasi" to "Notificări","Favorit" to "Favorite","Unduh" to "Descărcări","Simpan" to "Salvează","Batal" to "Anulează","Tutup" to "Închide","Pilih Bahasa" to "Alege limba"),
+        "ja" to mapOf("Pengaturan" to "設定","Bahasa Aplikasi" to "アプリの言語","Notifikasi" to "通知","Favorit" to "お気に入り","Unduh" to "ダウンロード","Simpan" to "保存","Batal" to "キャンセル","Tutup" to "閉じる","Pilih Bahasa" to "言語を選択"),
+        "fr" to mapOf("Pengaturan" to "Paramètres","Bahasa Aplikasi" to "Langue de l’application","Notifikasi" to "Notifications","Favorit" to "Favoris","Unduh" to "Téléchargements","Simpan" to "Enregistrer","Batal" to "Annuler","Tutup" to "Fermer","Pilih Bahasa" to "Choisir la langue"),
+        "de" to mapOf("Pengaturan" to "Einstellungen","Bahasa Aplikasi" to "App-Sprache","Notifikasi" to "Benachrichtigungen","Favorit" to "Favoriten","Unduh" to "Downloads","Simpan" to "Speichern","Batal" to "Abbrechen","Tutup" to "Schließen","Pilih Bahasa" to "Sprache wählen"),
+        "no" to mapOf("Pengaturan" to "Innstillinger","Bahasa Aplikasi" to "Appspråk","Notifikasi" to "Varsler","Favorit" to "Favoritter","Unduh" to "Nedlastinger","Simpan" to "Lagre","Batal" to "Avbryt","Tutup" to "Lukk","Pilih Bahasa" to "Velg språk"),
+        "it" to mapOf("Pengaturan" to "Impostazioni","Bahasa Aplikasi" to "Lingua dell'app","Notifikasi" to "Notifiche","Favorit" to "Preferiti","Riwayat dilihat" to "Visualizzati di recente","Unduh" to "Download","Bagikan Aplikasi" to "Condividi app","Nilai kami" to "Valutaci","Umpan Balik" to "Feedback","Kelola Cache" to "Gestisci cache","Simpan" to "Salva","Batal" to "Annulla","Tutup" to "Chiudi","Pilih Bahasa" to "Scegli la lingua")
+    )
+    private fun localized(value: String): String {
+        val langMap = translations[appLanguage] ?: translations[appLanguage.substringBefore("-")] ?: translations["en"]!!
+        return langMap[value] ?: if (appLanguage == "en") englishFallback(value) else value
+    }
+    private fun englishFallback(value: String): String = when (value) {
+        "Memuat wallpaper…" -> "Loading wallpapers…"
+        "Belum ada wallpaper" -> "No wallpapers yet"
+        "Paling populer" -> "Most popular"
+        "Nama A-Z" -> "Name A-Z"
+        "Tekan kembali sekali lagi untuk keluar" -> "Press back again to exit"
+        "Katalog bawaan gagal dibaca" -> "Unable to read the built-in catalog"
+        "Katalog online kosong" -> "Online catalog is empty"
+        "Simpan" -> "Save"
+        "Batal" -> "Cancel"
+        "Tutup" -> "Close"
+        else -> value
+    }
+    private fun showLanguagePicker() {
+        val labels = supportedLanguages.map { it.first }.toTypedArray()
+        val selected = supportedLanguages.indexOfFirst { it.second == appLanguage }.coerceAtLeast(0)
+        AlertDialog.Builder(this)
+            .setTitle(localized("Pilih Bahasa"))
+            .setSingleChoiceItems(labels, selected) { dialog, which ->
+                appLanguage = supportedLanguages[which].second
+                preferences.edit().putString("app_language", appLanguage).apply()
+                dialog.dismiss()
+                buildHome()
+            }
+            .setNegativeButton(localized("Tutup"), null)
+            .show()
+    }
     private var darkMode = false
     private val categoryNames: List<String>
         get() = listOf("All") + itemCategories.map { it.trim() }.filter { it.isNotEmpty() }.distinct().sorted()
@@ -118,6 +179,7 @@ class MainActivity : Activity() {
         favorites.addAll(preferences.getStringSet("favorite_ids", emptySet()) ?: emptySet())
         legacyFavoriteTitles.addAll(preferences.getStringSet("favorite_titles", emptySet()) ?: emptySet())
         darkMode = preferences.getBoolean("dark_mode", false)
+        appLanguage = preferences.getString("app_language", "en") ?: "en"
         sortMode = preferences.getString("wallpaper_sort_mode", "Paling populer") ?: "Paling populer"
         downloadSortMode = preferences.getString("download_sort_mode", "Nama A-Z") ?: "Nama A-Z"
         selectedTab = preferences.getString("selected_wallpaper_tab", "Wallpaper") ?: "Wallpaper"
@@ -1526,11 +1588,11 @@ class MainActivity : Activity() {
         val settingsBg = if (darkMode) 0xff121318.toInt() else Color.WHITE
         val settingsText = if (darkMode) 0xfff2f2f5.toInt() else ink
         val root=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL; setBackgroundColor(settingsBg); setPadding(dp(22),dp(22),dp(22),dp(12)) }
-        root.addView(text("‹   Pengaturan",22,settingsText,true).apply { setOnClickListener { buildHome() } })
-        root.addView(space(28)); root.addView(text("Pengaturan",24,settingsText,true)); root.addView(space(12))
+        root.addView(text("‹   " + localized("Pengaturan"),22,settingsText,true).apply { setOnClickListener { buildHome() } })
+        root.addView(space(28)); root.addView(text(localized("Pengaturan"),24,settingsText,true)); root.addView(space(12))
         listOf(
-            "bell-modern" to "Notifikasi","♡" to "Favorit","◷" to "Riwayat dilihat","language-dual" to "Bahasa Aplikasi",
-            "⇩" to "Unduh","share-arrow" to "Bagikan Aplikasi","☆" to "Nilai kami","✉" to "Umpan Balik","cache-modern" to "Kelola Cache"
+            "bell-modern" to localized("Notifikasi"),"♡" to localized("Favorit"),"◷" to localized("Riwayat dilihat"),"language-dual" to localized("Bahasa Aplikasi"),
+            "⇩" to localized("Unduh"),"share-arrow" to localized("Bagikan Aplikasi"),"☆" to localized("Nilai kami"),"✉" to localized("Umpan Balik"),"cache-modern" to localized("Kelola Cache")
         ).forEach { (glyph,item) ->
             val row = LinearLayout(this@MainActivity).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -1539,6 +1601,13 @@ class MainActivity : Activity() {
                 background = rounded(if(darkMode) 0xff24262d.toInt() else 0xfff7f8fc.toInt(),16)
                 setOnClickListener {
                     when {
+                        glyph == "language-dual" -> showLanguagePicker()
+                        glyph == "♡" -> showFavorites()
+                        glyph == "◷" -> showRecentlyViewed()
+                        glyph == "⇩" -> showDownloads()
+                        glyph == "cache-modern" -> showCacheManager()
+                        glyph == "share-arrow" -> shareApplication()
+                        glyph == "✉" -> sendFeedback()
                         item.contains("Favorit") -> showFavorites()
                         item.contains("Riwayat") -> showRecentlyViewed()
                         item.contains("Unduh") -> showDownloads()
@@ -2926,7 +2995,7 @@ class MainActivity : Activity() {
     }.also { it.layoutParams=LinearLayout.LayoutParams(dp(40),dp(40)).apply { setMargins(dp(3),0,dp(3),0) } }
     private fun artDrawable(index:Int):GradientDrawable { val a=palettes[index%palettes.size]; return GradientDrawable(GradientDrawable.Orientation.TL_BR,a).apply { cornerRadius=dp(2).toFloat() } }
     private fun rounded(color:Int,radius:Int)=GradientDrawable().apply { setColor(color); cornerRadius=dp(radius).toFloat() }
-    private fun text(s:String,size:Int,color:Int,bold:Boolean)=TextView(this@MainActivity).apply { text=s; textSize=size.toFloat(); setTextColor(color); if(bold) typeface=Typeface.DEFAULT_BOLD }
+    private fun text(s:String,size:Int,color:Int,bold:Boolean)=TextView(this@MainActivity).apply { text=localized(s); textSize=size.toFloat(); setTextColor(color); if(bold) typeface=Typeface.DEFAULT_BOLD }
     private fun space(h:Int)=View(this@MainActivity).apply { layoutParams=LinearLayout.LayoutParams(1,dp(h)) }
     private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
 
