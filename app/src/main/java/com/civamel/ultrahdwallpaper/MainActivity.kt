@@ -2520,8 +2520,53 @@ class MainActivity : Activity() {
                     val path = Path().apply { moveTo(24f, 41f); cubicTo(19f,36f,5f,27f,5f,16f); cubicTo(5f,5f,19f,3f,24f,13f); cubicTo(29f,3f,43f,5f,43f,16f); cubicTo(43f,27f,29f,36f,24f,41f) }
                     canvas.drawPath(path,p)
                 }
+                "♟" -> {
+                    canvas.drawCircle(24f,12f,6f,p)
+                    canvas.drawPath(Path().apply { moveTo(15f,22f); lineTo(33f,22f); lineTo(37f,38f); lineTo(11f,38f); close() },p)
+                    canvas.drawLine(9f,42f,39f,42f,p)
+                }
+                "◷" -> {
+                    canvas.drawCircle(24f,24f,18f,p)
+                    canvas.drawLine(24f,24f,24f,12f,p)
+                    canvas.drawLine(24f,24f,34f,29f,p)
+                }
+                "文" -> {
+                    canvas.drawCircle(24f,24f,19f,p)
+                    canvas.drawLine(8f,24f,40f,24f,p)
+                    canvas.drawOval(17f,5f,31f,43f,p)
+                    canvas.drawLine(12f,14f,36f,14f,p)
+                    canvas.drawLine(12f,34f,36f,34f,p)
+                }
+                "▧" -> {
+                    canvas.drawRoundRect(6f,7f,42f,41f,4f,4f,p)
+                    canvas.drawLine(6f,17f,42f,17f,p)
+                    canvas.drawLine(6f,31f,42f,31f,p)
+                    canvas.drawLine(18f,7f,18f,41f,p)
+                    canvas.drawLine(30f,7f,30f,41f,p)
+                    canvas.drawLine(12f,12f,36f,36f,p)
+                }
                 "⇩", "⬇" -> { canvas.drawLine(24f,5f,24f,33f,p); canvas.drawLine(13f,23f,24f,34f,p); canvas.drawLine(35f,23f,24f,34f,p); canvas.drawRoundRect(7f,38f,41f,44f,3f,3f,p) }
+                "▤" -> {
+                    canvas.drawRoundRect(6f,5f,42f,43f,4f,4f,p)
+                    canvas.drawLine(13f,15f,35f,15f,p)
+                    canvas.drawLine(13f,24f,35f,24f,p)
+                    canvas.drawLine(13f,33f,35f,33f,p)
+                }
                 "↗" -> { canvas.drawLine(9f,39f,39f,9f,p); canvas.drawLine(20f,9f,39f,9f,p); canvas.drawLine(39f,9f,39f,28f,p) }
+                "☆" -> {
+                    val star=Path().apply { for(i in 0..9){ val a=Math.toRadians(-90.0+i*36.0); val r=if(i%2==0)20.0 else 9.0; val x=(24+ r*kotlin.math.cos(a)).toFloat(); val y=(24+r*kotlin.math.sin(a)).toFloat(); if(i==0) moveTo(x,y) else lineTo(x,y) }; close() }
+                    canvas.drawPath(star,p)
+                }
+                "✉" -> {
+                    canvas.drawRoundRect(5f,10f,43f,38f,4f,4f,p)
+                    canvas.drawLine(6f,12f,24f,27f,p)
+                    canvas.drawLine(42f,12f,24f,27f,p)
+                }
+                "▣" -> {
+                    canvas.drawRoundRect(5f,5f,43f,43f,5f,5f,p)
+                    canvas.drawRoundRect(12f,12f,36f,36f,3f,3f,p)
+                    canvas.drawLine(17f,24f,31f,24f,p)
+                }
                 "‹", "›" -> { val path=Path().apply { if(glyph=="‹"){moveTo(30f,8f);lineTo(14f,24f);lineTo(30f,40f)}else{moveTo(18f,8f);lineTo(34f,24f);lineTo(18f,40f)} }; canvas.drawPath(path,p) }
                 "⌂" -> { val path=Path().apply{moveTo(4f,22f);lineTo(24f,5f);lineTo(44f,22f);moveTo(10f,19f);lineTo(10f,43f);lineTo(38f,43f);lineTo(38f,19f);moveTo(20f,43f);lineTo(20f,29f);lineTo(28f,29f);lineTo(28f,43f)};canvas.drawPath(path,p) }
                 "▦", "▧", "▤" -> { canvas.drawRoundRect(5f,5f,43f,43f,4f,4f,p); canvas.drawLine(5f,19f,43f,19f,p); canvas.drawLine(5f,31f,43f,31f,p); if(glyph=="▦"){canvas.drawLine(19f,5f,19f,43f,p);canvas.drawLine(31f,5f,31f,43f,p)} }
