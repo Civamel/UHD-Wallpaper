@@ -888,7 +888,9 @@ class MainActivity : Activity() {
             val tabMatch = when (selectedTab) {
                 "Live" -> type == "live"
                 "Parallax" -> type == "parallax"
-                "Wallpaper" -> type == "wallpaper"
+                "3D" -> itemTags.getOrNull(index).orEmpty().any { it.equals("3D", ignoreCase = true) }
+                // Wallpaper is the complete collection: standard, live, and 3D.
+                "Wallpaper" -> true
                 else -> true
             }
             categoryMatch && searchMatch && favoriteMatch && tabMatch
@@ -1561,12 +1563,18 @@ class MainActivity : Activity() {
         val wallpaperTypeSpinner = Spinner(this).apply {
             adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, listOf("wallpaper", "live"))
         }
+        val showIn3D = CheckBox(this).apply {
+            text = "Tambahkan ke menu 3D"
+            setTextColor(fg)
+            isChecked = false
+        }
         val save = Button(this).apply { text = "Simpan wallpaper" }
         root.addView(title)
         root.addView(category)
         root.addView(tagsInput)
         root.addView(imageUrl)
         root.addView(wallpaperTypeSpinner)
+        root.addView(showIn3D)
         root.addView(save)
         root.addView(text("Gunakan URL gambar HTTPS yang dapat dibuka publik. Data wallpaper disimpan di Cloud Firestore.", 12,
             if (darkMode) 0xffa6a6ad.toInt() else Color.GRAY, false).apply { setPadding(0, dp(12), 0, 0) })
@@ -1588,11 +1596,14 @@ class MainActivity : Activity() {
                 "thumbnail" to url,
                 "image" to url,
                 "type" to wallpaperTypeSpinner.selectedItem.toString(),
-                "tags" to tagsInput.text.toString()
+                "tags" to (tagsInput.text.toString()
                     .split(',', ';', '\n')
                     .map { it.trim() }
                     .filter { it.isNotEmpty() }
-                    .distinctBy { it.lowercase(java.util.Locale.ROOT) },
+                    .toMutableList().apply {
+                        if (showIn3D.isChecked && none { it.equals("3D", ignoreCase = true) }) add("3D")
+                    }
+                    .distinctBy { it.lowercase(java.util.Locale.ROOT) }),
                 "createdAt" to com.google.firebase.Timestamp.now()
             )
             FirebaseFirestore.getInstance().collection("wallpapers").document(id).set(data)
@@ -1608,6 +1619,7 @@ class MainActivity : Activity() {
                     title.text.clear()
                     category.text.clear()
                     tagsInput.text.clear()
+                    showIn3D.isChecked = false
                     imageUrl.text.clear()
                     Toast.makeText(this, "Wallpaper berhasil disimpan", Toast.LENGTH_LONG).show()
                     save.isEnabled = true
