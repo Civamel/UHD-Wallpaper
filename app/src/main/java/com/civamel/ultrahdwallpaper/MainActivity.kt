@@ -80,7 +80,7 @@ class MainActivity : Activity() {
     private var visibleItemLimit = 24
     private val slideHandler = Handler(Looper.getMainLooper())
     private var categorySlideRunnable: Runnable? = null
-    private var downloadSortMode = "Nama A-Z"
+    private var downloadSortMode = "Name A-Z"
     private var downloadsSearchQuery = ""
     private var downloadSelectionMode = false
     private val selectedDownloadRecords = mutableSetOf<String>()
@@ -96,35 +96,35 @@ class MainActivity : Activity() {
         "🇦🇷 Español (Argentina)" to "es-AR", "🇮🇹 Italiano" to "it"
     )
     private val translations = mapOf(
-        "en" to mapOf("Pengaturan" to "Settings","Bahasa Aplikasi" to "App Language","Notifikasi" to "Notifications","Favorit" to "Favorites","Riwayat dilihat" to "Recently Viewed","Unduh" to "Downloads","Bagikan Aplikasi" to "Share App","Nilai kami" to "Rate Us","Umpan Balik" to "Feedback","Manage Cache" to "Manage Cache","Admin" to "Admin","Beranda" to "Home","Wallpaper" to "Wallpaper","Kategori" to "Categories","Cari" to "Search","Semua" to "All","Belum ada wallpaper" to "No wallpapers yet","Memuat wallpaper…" to "Loading wallpapers…","Simpan" to "Save","Batal" to "Cancel","Tutup" to "Close","Pilih Bahasa" to "Choose Language","Tekan kembali sekali lagi untuk keluar" to "Press back again to exit"),
-        "id" to mapOf("Pengaturan" to "Pengaturan","Bahasa Aplikasi" to "Bahasa Aplikasi","Notifikasi" to "Notifikasi","Favorit" to "Favorit","Riwayat dilihat" to "Riwayat dilihat","Unduh" to "Unduhan","Bagikan Aplikasi" to "Bagikan Aplikasi","Nilai kami" to "Nilai Kami","Umpan Balik" to "Masukan","Manage Cache" to "Manage Cache","Beranda" to "Beranda","Kategori" to "Kategori","Cari" to "Cari","Semua" to "Semua","Belum ada wallpaper" to "Belum ada wallpaper","Simpan" to "Simpan","Batal" to "Batal","Tutup" to "Tutup","Pilih Bahasa" to "Pilih Bahasa"),
-        "es" to mapOf("Pengaturan" to "Ajustes","Bahasa Aplikasi" to "Idioma de la aplicación","Notifikasi" to "Notificaciones","Favorit" to "Favoritos","Riwayat dilihat" to "Vistos recientemente","Unduh" to "Descargas","Bagikan Aplikasi" to "Compartir aplicación","Nilai kami" to "Califícanos","Umpan Balik" to "Comentarios","Manage Cache" to "Gestionar caché","Simpan" to "Guardar","Batal" to "Cancelar","Tutup" to "Cerrar","Pilih Bahasa" to "Elegir idioma"),
-        "nl" to mapOf("Pengaturan" to "Instellingen","Bahasa Aplikasi" to "App-taal","Notifikasi" to "Meldingen","Favorit" to "Favorieten","Riwayat dilihat" to "Recent bekeken","Unduh" to "Downloads","Bagikan Aplikasi" to "App delen","Nilai kami" to "Beoordeel ons","Umpan Balik" to "Feedback","Manage Cache" to "Cache beheren","Simpan" to "Opslaan","Batal" to "Annuleren","Tutup" to "Sluiten","Pilih Bahasa" to "Kies taal"),
-        "pt" to mapOf("Pengaturan" to "Configurações","Bahasa Aplikasi" to "Idioma do aplicativo","Notifikasi" to "Notificações","Favorit" to "Favoritos","Riwayat dilihat" to "Vistos recentemente","Unduh" to "Downloads","Bagikan Aplikasi" to "Compartilhar aplicativo","Nilai kami" to "Avalie-nos","Umpan Balik" to "Feedback","Manage Cache" to "Gerenciar cache","Simpan" to "Salvar","Batal" to "Cancelar","Tutup" to "Fechar","Pilih Bahasa" to "Escolher idioma"),
-        "pt-BR" to mapOf("Pengaturan" to "Configurações","Bahasa Aplikasi" to "Idioma do aplicativo","Notifikasi" to "Notificações","Favorit" to "Favoritos","Riwayat dilihat" to "Vistos recentemente","Unduh" to "Downloads","Bagikan Aplikasi" to "Compartilhar aplicativo","Nilai kami" to "Avalie-nos","Umpan Balik" to "Comentários","Manage Cache" to "Gerenciar cache","Simpan" to "Salvar","Batal" to "Cancelar","Tutup" to "Fechar","Pilih Bahasa" to "Escolher idioma"),
-        "zh" to mapOf("Pengaturan" to "设置","Bahasa Aplikasi" to "应用语言","Notifikasi" to "通知","Favorit" to "收藏","Riwayat dilihat" to "最近查看","Unduh" to "下载","Bagikan Aplikasi" to "分享应用","Nilai kami" to "评价我们","Umpan Balik" to "反馈","Manage Cache" to "管理缓存","Simpan" to "保存","Batal" to "取消","Tutup" to "关闭","Pilih Bahasa" to "选择语言"),
-        "ko" to mapOf("Pengaturan" to "설정","Bahasa Aplikasi" to "앱 언어","Notifikasi" to "알림","Favorit" to "즐겨찾기","Riwayat dilihat" to "최근 본 항목","Unduh" to "다운로드","Bagikan Aplikasi" to "앱 공유","Nilai kami" to "평가하기","Umpan Balik" to "피드백","Manage Cache" to "캐시 관리","Simpan" to "저장","Batal" to "취소","Tutup" to "닫기","Pilih Bahasa" to "언어 선택"),
-        "ru" to mapOf("Pengaturan" to "Настройки","Bahasa Aplikasi" to "Язык приложения","Notifikasi" to "Уведомления","Favorit" to "Избранное","Riwayat dilihat" to "Недавно просмотренные","Unduh" to "Загрузки","Bagikan Aplikasi" to "Поделиться приложением","Nilai kami" to "Оцените нас","Umpan Balik" to "Отзывы","Manage Cache" to "Управление кэшем","Simpan" to "Сохранить","Batal" to "Отмена","Tutup" to "Закрыть","Pilih Bahasa" to "Выбрать язык"),
-        "kk" to mapOf("Pengaturan" to "Баптаулар","Bahasa Aplikasi" to "Қолданба тілі","Notifikasi" to "Хабарландырулар","Favorit" to "Таңдаулылар","Unduh" to "Жүктеулер","Simpan" to "Сақтау","Batal" to "Болдырмау","Tutup" to "Жабу","Pilih Bahasa" to "Тілді таңдау"),
-        "fi" to mapOf("Pengaturan" to "Asetukset","Bahasa Aplikasi" to "Sovelluksen kieli","Notifikasi" to "Ilmoitukset","Favorit" to "Suosikit","Unduh" to "Lataukset","Simpan" to "Tallenna","Batal" to "Peruuta","Tutup" to "Sulje","Pilih Bahasa" to "Valitse kieli"),
-        "ar" to mapOf("Pengaturan" to "الإعدادات","Bahasa Aplikasi" to "لغة التطبيق","Notifikasi" to "الإشعارات","Favorit" to "المفضلة","Unduh" to "التنزيلات","Simpan" to "حفظ","Batal" to "إلغاء","Tutup" to "إغلاق","Pilih Bahasa" to "اختر اللغة"),
-        "ro" to mapOf("Pengaturan" to "Setări","Bahasa Aplikasi" to "Limba aplicației","Notifikasi" to "Notificări","Favorit" to "Favorite","Unduh" to "Descărcări","Simpan" to "Salvează","Batal" to "Anulează","Tutup" to "Închide","Pilih Bahasa" to "Alege limba"),
-        "ja" to mapOf("Pengaturan" to "設定","Bahasa Aplikasi" to "アプリの言語","Notifikasi" to "通知","Favorit" to "お気に入り","Unduh" to "ダウンロード","Simpan" to "保存","Batal" to "キャンセル","Tutup" to "閉じる","Pilih Bahasa" to "言語を選択"),
-        "fr" to mapOf("Pengaturan" to "Paramètres","Bahasa Aplikasi" to "Langue de l’application","Notifikasi" to "Notifications","Favorit" to "Favoris","Unduh" to "Téléchargements","Simpan" to "Enregistrer","Batal" to "Annuler","Tutup" to "Fermer","Pilih Bahasa" to "Choisir la langue"),
-        "de" to mapOf("Pengaturan" to "Einstellungen","Bahasa Aplikasi" to "App-Sprache","Notifikasi" to "Benachrichtigungen","Favorit" to "Favoriten","Unduh" to "Downloads","Simpan" to "Speichern","Batal" to "Abbrechen","Tutup" to "Schließen","Pilih Bahasa" to "Sprache wählen"),
-        "no" to mapOf("Pengaturan" to "Innstillinger","Bahasa Aplikasi" to "Appspråk","Notifikasi" to "Varsler","Favorit" to "Favoritter","Unduh" to "Nedlastinger","Simpan" to "Lagre","Batal" to "Avbryt","Tutup" to "Lukk","Pilih Bahasa" to "Velg språk"),
-        "it" to mapOf("Pengaturan" to "Impostazioni","Bahasa Aplikasi" to "Lingua dell'app","Notifikasi" to "Notifiche","Favorit" to "Preferiti","Riwayat dilihat" to "Visualizzati di recente","Unduh" to "Download","Bagikan Aplikasi" to "Condividi app","Nilai kami" to "Valutaci","Umpan Balik" to "Feedback","Manage Cache" to "Gestisci cache","Simpan" to "Salva","Batal" to "Annulla","Tutup" to "Chiudi","Pilih Bahasa" to "Scegli la lingua")
+        "en" to mapOf("Pengaturan" to "Settings","Bahasa Aplikasi" to "App Language","Notifikasi" to "Notifications","Favorit" to "Favorites","Riwayat dilihat" to "Recently Viewed","Unduh" to "Downloads","Bagikan Aplikasi" to "Share App","Nilai kami" to "Rate Us","Umpan Balik" to "Feedback","Manage Cache" to "Manage Cache","Admin" to "Admin","Beranda" to "Home","Wallpaper" to "Wallpaper","Kategori" to "Categories","Search" to "Search","Semua" to "All","Belum ada wallpaper" to "No wallpapers yet","Memuat wallpaper…" to "Loading wallpapers…","Simpan" to "Save","Cancel" to "Cancel","Tutup" to "Close","Pilih Bahasa" to "Choose Language","Tekan kembali sekali lagi untuk keluar" to "Press back again to exit"),
+        "id" to mapOf("Pengaturan" to "Pengaturan","Bahasa Aplikasi" to "Bahasa Aplikasi","Notifikasi" to "Notifikasi","Favorit" to "Favorit","Riwayat dilihat" to "Riwayat dilihat","Unduh" to "Downloads","Bagikan Aplikasi" to "Bagikan Aplikasi","Nilai kami" to "Nilai Kami","Umpan Balik" to "Masukan","Manage Cache" to "Manage Cache","Beranda" to "Beranda","Kategori" to "Kategori","Search" to "Search","Semua" to "Semua","Belum ada wallpaper" to "Belum ada wallpaper","Simpan" to "Simpan","Cancel" to "Cancel","Tutup" to "Tutup","Pilih Bahasa" to "Pilih Bahasa"),
+        "es" to mapOf("Pengaturan" to "Ajustes","Bahasa Aplikasi" to "Idioma de la aplicación","Notifikasi" to "Notificaciones","Favorit" to "Favoritos","Riwayat dilihat" to "Vistos recientemente","Unduh" to "Descargas","Bagikan Aplikasi" to "Compartir aplicación","Nilai kami" to "Califícanos","Umpan Balik" to "Comentarios","Manage Cache" to "Gestionar caché","Simpan" to "Guardar","Cancel" to "Cancelar","Tutup" to "Cerrar","Pilih Bahasa" to "Elegir idioma"),
+        "nl" to mapOf("Pengaturan" to "Instellingen","Bahasa Aplikasi" to "App-taal","Notifikasi" to "Meldingen","Favorit" to "Favorieten","Riwayat dilihat" to "Recent bekeken","Unduh" to "Downloads","Bagikan Aplikasi" to "App delen","Nilai kami" to "Beoordeel ons","Umpan Balik" to "Feedback","Manage Cache" to "Cache beheren","Simpan" to "Opslaan","Cancel" to "Annuleren","Tutup" to "Sluiten","Pilih Bahasa" to "Kies taal"),
+        "pt" to mapOf("Pengaturan" to "Configurações","Bahasa Aplikasi" to "Idioma do aplicativo","Notifikasi" to "Notificações","Favorit" to "Favoritos","Riwayat dilihat" to "Vistos recentemente","Unduh" to "Downloads","Bagikan Aplikasi" to "Compartilhar aplicativo","Nilai kami" to "Avalie-nos","Umpan Balik" to "Feedback","Manage Cache" to "Gerenciar cache","Simpan" to "Salvar","Cancel" to "Cancelar","Tutup" to "Fechar","Pilih Bahasa" to "Escolher idioma"),
+        "pt-BR" to mapOf("Pengaturan" to "Configurações","Bahasa Aplikasi" to "Idioma do aplicativo","Notifikasi" to "Notificações","Favorit" to "Favoritos","Riwayat dilihat" to "Vistos recentemente","Unduh" to "Downloads","Bagikan Aplikasi" to "Compartilhar aplicativo","Nilai kami" to "Avalie-nos","Umpan Balik" to "Comentários","Manage Cache" to "Gerenciar cache","Simpan" to "Salvar","Cancel" to "Cancelar","Tutup" to "Fechar","Pilih Bahasa" to "Escolher idioma"),
+        "zh" to mapOf("Pengaturan" to "设置","Bahasa Aplikasi" to "应用语言","Notifikasi" to "通知","Favorit" to "收藏","Riwayat dilihat" to "最近查看","Unduh" to "下载","Bagikan Aplikasi" to "分享应用","Nilai kami" to "评价我们","Umpan Balik" to "反馈","Manage Cache" to "管理缓存","Simpan" to "保存","Cancel" to "取消","Tutup" to "关闭","Pilih Bahasa" to "选择语言"),
+        "ko" to mapOf("Pengaturan" to "설정","Bahasa Aplikasi" to "앱 언어","Notifikasi" to "알림","Favorit" to "즐겨찾기","Riwayat dilihat" to "최근 본 항목","Unduh" to "다운로드","Bagikan Aplikasi" to "앱 공유","Nilai kami" to "평가하기","Umpan Balik" to "피드백","Manage Cache" to "캐시 관리","Simpan" to "저장","Cancel" to "취소","Tutup" to "닫기","Pilih Bahasa" to "언어 선택"),
+        "ru" to mapOf("Pengaturan" to "Настройки","Bahasa Aplikasi" to "Язык приложения","Notifikasi" to "Уведомления","Favorit" to "Избранное","Riwayat dilihat" to "Недавно просмотренные","Unduh" to "Загрузки","Bagikan Aplikasi" to "Поделиться приложением","Nilai kami" to "Оцените нас","Umpan Balik" to "Отзывы","Manage Cache" to "Управление кэшем","Simpan" to "Сохранить","Cancel" to "Отмена","Tutup" to "Закрыть","Pilih Bahasa" to "Выбрать язык"),
+        "kk" to mapOf("Pengaturan" to "Баптаулар","Bahasa Aplikasi" to "Қолданба тілі","Notifikasi" to "Хабарландырулар","Favorit" to "Таңдаулылар","Unduh" to "Жүктеулер","Simpan" to "Сақтау","Cancel" to "Болдырмау","Tutup" to "Жабу","Pilih Bahasa" to "Тілді таңдау"),
+        "fi" to mapOf("Pengaturan" to "Asetukset","Bahasa Aplikasi" to "Sovelluksen kieli","Notifikasi" to "Ilmoitukset","Favorit" to "Suosikit","Unduh" to "Lataukset","Simpan" to "Tallenna","Cancel" to "Peruuta","Tutup" to "Sulje","Pilih Bahasa" to "Valitse kieli"),
+        "ar" to mapOf("Pengaturan" to "الإعدادات","Bahasa Aplikasi" to "لغة التطبيق","Notifikasi" to "الإشعارات","Favorit" to "المفضلة","Unduh" to "التنزيلات","Simpan" to "حفظ","Cancel" to "إلغاء","Tutup" to "إغلاق","Pilih Bahasa" to "اختر اللغة"),
+        "ro" to mapOf("Pengaturan" to "Setări","Bahasa Aplikasi" to "Limba aplicației","Notifikasi" to "Notificări","Favorit" to "Favorite","Unduh" to "Descărcări","Simpan" to "Salvează","Cancel" to "Anulează","Tutup" to "Închide","Pilih Bahasa" to "Alege limba"),
+        "ja" to mapOf("Pengaturan" to "設定","Bahasa Aplikasi" to "アプリの言語","Notifikasi" to "通知","Favorit" to "お気に入り","Unduh" to "ダウンロード","Simpan" to "保存","Cancel" to "キャンセル","Tutup" to "閉じる","Pilih Bahasa" to "言語を選択"),
+        "fr" to mapOf("Pengaturan" to "Paramètres","Bahasa Aplikasi" to "Langue de l’application","Notifikasi" to "Notifications","Favorit" to "Favoris","Unduh" to "Téléchargements","Simpan" to "Enregistrer","Cancel" to "Annuler","Tutup" to "Fermer","Pilih Bahasa" to "Choisir la langue"),
+        "de" to mapOf("Pengaturan" to "Einstellungen","Bahasa Aplikasi" to "App-Sprache","Notifikasi" to "Benachrichtigungen","Favorit" to "Favoriten","Unduh" to "Downloads","Simpan" to "Speichern","Cancel" to "Abbrechen","Tutup" to "Schließen","Pilih Bahasa" to "Sprache wählen"),
+        "no" to mapOf("Pengaturan" to "Innstillinger","Bahasa Aplikasi" to "Appspråk","Notifikasi" to "Varsler","Favorit" to "Favoritter","Unduh" to "Nedlastinger","Simpan" to "Lagre","Cancel" to "Avbryt","Tutup" to "Lukk","Pilih Bahasa" to "Velg språk"),
+        "it" to mapOf("Pengaturan" to "Impostazioni","Bahasa Aplikasi" to "Lingua dell'app","Notifikasi" to "Notifiche","Favorit" to "Preferiti","Riwayat dilihat" to "Visualizzati di recente","Unduh" to "Download","Bagikan Aplikasi" to "Condividi app","Nilai kami" to "Valutaci","Umpan Balik" to "Feedback","Manage Cache" to "Gestisci cache","Simpan" to "Salva","Cancel" to "Annulla","Tutup" to "Chiudi","Pilih Bahasa" to "Scegli la lingua")
     )
     private val extraTranslations = mapOf(
-        "en" to mapOf("Popular Tags" to "Popular Tags","Filter :" to "Filter:","Paling populer" to "Most popular","Terbaru" to "Newest","Acak" to "Random","Sort by" to "Sort by","Cari wallpaper" to "Search wallpapers","Cari" to "Search","Hapus" to "Delete","Batal" to "Cancel","Terapkan" to "Apply","Unduhan" to "Downloads","Riwayat dilihat" to "Recently viewed","Maksimal 30 wallpaper terakhir yang dibuka" to "Up to 30 recently viewed wallpapers","Belum ada riwayat wallpaper." to "No wallpaper history yet.","Konten belum tersedia" to "Content unavailable","Try changing the category or search term." to "Try changing the category or search term.","Items will appear here when the catalog provides this content type." to "Items will appear here when the catalog has this content type.","Image unavailable" to "Image unavailable","Pull down to try again" to "Pull down to try again","Menyiapkan file UHD asli…" to "Preparing original UHD file…","Gagal memuat gambar. Periksa internet." to "Failed to load image. Check your internet connection.","Bagikan wallpaper" to "Share wallpaper","Wallpaper tersimpan" to "Wallpaper saved","Tema gelap aktif" to "Dark theme enabled","Tema terang aktif" to "Light theme enabled","Filter: paling populer" to "Filter: most popular","Filter: kategori" to "Filter: categories","Home" to "Home","Live" to "Live","3D" to "3D","Wallpaper" to "Wallpaper","Category" to "Categories","Get All Wallpaper Pro!" to "Get All Wallpaper Pro!"),
-        "id" to mapOf("Popular Tags" to "Tag Populer","Filter :" to "Filter:","Paling populer" to "Paling populer","Terbaru" to "Terbaru","Acak" to "Acak","Sort by" to "Sort by","Cari wallpaper" to "Cari wallpaper","Cari" to "Cari","Hapus" to "Hapus","Unduhan" to "Unduhan","Riwayat dilihat" to "Riwayat dilihat","Belum ada riwayat wallpaper." to "Belum ada riwayat wallpaper.","Konten belum tersedia" to "Konten belum tersedia","Image unavailable" to "Image unavailable","Tema gelap aktif" to "Tema gelap aktif","Tema terang aktif" to "Tema terang aktif","Home" to "Beranda","Live" to "Live","Wallpaper" to "Wallpaper","Category" to "Kategori"),
-        "es" to mapOf("Popular Tags" to "Etiquetas populares","Terbaru" to "Más recientes","Acak" to "Aleatorio","Sort by" to "Ordenar por","Cari wallpaper" to "Buscar fondos de pantalla","Cari" to "Buscar","Hapus" to "Eliminar","Unduhan" to "Descargas","Riwayat dilihat" to "Vistos recientemente","Belum ada riwayat wallpaper." to "Aún no hay historial.","Konten belum tersedia" to "Contenido no disponible","Image unavailable" to "Imagen no disponible","Home" to "Inicio","Wallpaper" to "Fondos","Category" to "Categorías"),
-        "nl" to mapOf("Popular Tags" to "Populaire tags","Terbaru" to "Nieuwste","Acak" to "Willekeurig","Sort by" to "Sorteren op","Cari wallpaper" to "Achtergronden zoeken","Cari" to "Zoeken","Hapus" to "Verwijderen","Unduhan" to "Downloads","Riwayat dilihat" to "Recent bekeken","Belum ada riwayat wallpaper." to "Nog geen kijkgeschiedenis.","Konten belum tersedia" to "Inhoud niet beschikbaar","Image unavailable" to "Afbeelding niet beschikbaar","Home" to "Startpagina","Wallpaper" to "Achtergronden","Category" to "Categorieën"),
-        "pt" to mapOf("Popular Tags" to "Tags populares","Terbaru" to "Mais recentes","Acak" to "Aleatório","Sort by" to "Ordenar por","Cari wallpaper" to "Pesquisar papéis de parede","Cari" to "Pesquisar","Hapus" to "Excluir","Unduhan" to "Downloads","Riwayat dilihat" to "Vistos recentemente","Belum ada riwayat wallpaper." to "Ainda não há histórico.","Konten belum tersedia" to "Conteúdo indisponível","Image unavailable" to "Imagem indisponível","Home" to "Início","Wallpaper" to "Papéis de parede","Category" to "Categorias"),
-        "pt-BR" to mapOf("Popular Tags" to "Tags populares","Terbaru" to "Mais recentes","Acak" to "Aleatório","Sort by" to "Ordenar por","Cari wallpaper" to "Buscar papéis de parede","Cari" to "Buscar","Hapus" to "Excluir","Unduhan" to "Downloads","Riwayat dilihat" to "Vistos recentemente","Belum ada riwayat wallpaper." to "Ainda não há histórico.","Konten belum tersedia" to "Conteúdo indisponível","Image unavailable" to "Imagem indisponível","Home" to "Início","Wallpaper" to "Papéis de parede","Category" to "Categorias"),
-        "zh" to mapOf("Popular Tags" to "热门标签","Terbaru" to "最新","Acak" to "随机","Sort by" to "排序方式","Cari wallpaper" to "搜索壁纸","Cari" to "搜索","Hapus" to "删除","Unduhan" to "下载","Riwayat dilihat" to "最近浏览","Belum ada riwayat wallpaper." to "暂无浏览记录","Konten belum tersedia" to "暂无内容","Image unavailable" to "图片不可用","Home" to "首页","Wallpaper" to "壁纸","Category" to "分类"),
-        "ko" to mapOf("Popular Tags" to "인기 태그","Terbaru" to "최신순","Acak" to "무작위","Sort by" to "정렬 기준","Cari wallpaper" to "배경화면 검색","Cari" to "검색","Hapus" to "삭제","Unduhan" to "다운로드","Riwayat dilihat" to "최근 본 항목","Belum ada riwayat wallpaper." to "최근 기록이 없습니다.","Konten belum tersedia" to "콘텐츠 없음","Image unavailable" to "이미지 없음","Home" to "홈","Wallpaper" to "배경화면","Category" to "카테고리"),
-        "it" to mapOf("Popular Tags" to "Tag popolari","Terbaru" to "Più recenti","Acak" to "Casuale","Sort by" to "Ordina per","Cari wallpaper" to "Cerca sfondi","Cari" to "Cerca","Hapus" to "Elimina","Unduhan" to "Download","Riwayat dilihat" to "Visualizzati di recente","Belum ada riwayat wallpaper." to "Nessuna cronologia.","Konten belum tersedia" to "Contenuto non disponibile","Image unavailable" to "Immagine non disponibile","Home" to "Home","Wallpaper" to "Sfondi","Category" to "Categorie")
+        "en" to mapOf("Popular Tags" to "Popular Tags","Filter :" to "Filter:","Paling populer" to "Most popular","Newest" to "Newest","Acak" to "Random","Sort by" to "Sort by","Search wallpaper" to "Search wallpapers","Search" to "Search","Hapus" to "Delete","Cancel" to "Cancel","Terapkan" to "Apply","Downloads" to "Downloads","Riwayat dilihat" to "Recently viewed","Maksimal 30 wallpaper terakhir yang dibuka" to "Up to 30 recently viewed wallpapers","Belum ada riwayat wallpaper." to "No wallpaper history yet.","Konten belum tersedia" to "Content unavailable","Try changing the category or search term." to "Try changing the category or search term.","Items will appear here when the catalog provides this content type." to "Items will appear here when the catalog has this content type.","Image unavailable" to "Image unavailable","Pull down to try again" to "Pull down to try again","Preparing the original UHD file…" to "Preparing original UHD file…","Failed to load image. Check your internet connection." to "Failed to load image. Check your internet connection.","Bagikan wallpaper" to "Share wallpaper","Wallpaper tersimpan" to "Wallpaper saved","Tema gelap aktif" to "Dark theme enabled","Tema terang aktif" to "Light theme enabled","Filter: paling populer" to "Filter: most popular","Filter: kategori" to "Filter: categories","Home" to "Home","Live" to "Live","3D" to "3D","Wallpaper" to "Wallpaper","Category" to "Categories","Get All Wallpaper Pro!" to "Get All Wallpaper Pro!"),
+        "id" to mapOf("Popular Tags" to "Tag Populer","Filter :" to "Filter:","Paling populer" to "Paling populer","Newest" to "Newest","Acak" to "Acak","Sort by" to "Sort by","Search wallpaper" to "Search wallpaper","Search" to "Search","Hapus" to "Hapus","Downloads" to "Downloads","Riwayat dilihat" to "Riwayat dilihat","Belum ada riwayat wallpaper." to "Belum ada riwayat wallpaper.","Konten belum tersedia" to "Konten belum tersedia","Image unavailable" to "Image unavailable","Tema gelap aktif" to "Tema gelap aktif","Tema terang aktif" to "Tema terang aktif","Home" to "Beranda","Live" to "Live","Wallpaper" to "Wallpaper","Category" to "Kategori"),
+        "es" to mapOf("Popular Tags" to "Etiquetas populares","Newest" to "Más recientes","Acak" to "Aleatorio","Sort by" to "Ordenar por","Search wallpaper" to "Buscar fondos de pantalla","Search" to "Buscar","Hapus" to "Eliminar","Downloads" to "Descargas","Riwayat dilihat" to "Vistos recientemente","Belum ada riwayat wallpaper." to "Aún no hay historial.","Konten belum tersedia" to "Contenido no disponible","Image unavailable" to "Imagen no disponible","Home" to "Inicio","Wallpaper" to "Fondos","Category" to "Categorías"),
+        "nl" to mapOf("Popular Tags" to "Populaire tags","Newest" to "Nieuwste","Acak" to "Willekeurig","Sort by" to "Sorteren op","Search wallpaper" to "Achtergronden zoeken","Search" to "Zoeken","Hapus" to "Verwijderen","Downloads" to "Downloads","Riwayat dilihat" to "Recent bekeken","Belum ada riwayat wallpaper." to "Nog geen kijkgeschiedenis.","Konten belum tersedia" to "Inhoud niet beschikbaar","Image unavailable" to "Afbeelding niet beschikbaar","Home" to "Startpagina","Wallpaper" to "Achtergronden","Category" to "Categorieën"),
+        "pt" to mapOf("Popular Tags" to "Tags populares","Newest" to "Mais recentes","Acak" to "Aleatório","Sort by" to "Ordenar por","Search wallpaper" to "Pesquisar papéis de parede","Search" to "Pesquisar","Hapus" to "Excluir","Downloads" to "Downloads","Riwayat dilihat" to "Vistos recentemente","Belum ada riwayat wallpaper." to "Ainda não há histórico.","Konten belum tersedia" to "Conteúdo indisponível","Image unavailable" to "Imagem indisponível","Home" to "Início","Wallpaper" to "Papéis de parede","Category" to "Categorias"),
+        "pt-BR" to mapOf("Popular Tags" to "Tags populares","Newest" to "Mais recentes","Acak" to "Aleatório","Sort by" to "Ordenar por","Search wallpaper" to "Buscar papéis de parede","Search" to "Buscar","Hapus" to "Excluir","Downloads" to "Downloads","Riwayat dilihat" to "Vistos recentemente","Belum ada riwayat wallpaper." to "Ainda não há histórico.","Konten belum tersedia" to "Conteúdo indisponível","Image unavailable" to "Imagem indisponível","Home" to "Início","Wallpaper" to "Papéis de parede","Category" to "Categorias"),
+        "zh" to mapOf("Popular Tags" to "热门标签","Newest" to "最新","Acak" to "随机","Sort by" to "排序方式","Search wallpaper" to "搜索壁纸","Search" to "搜索","Hapus" to "删除","Downloads" to "下载","Riwayat dilihat" to "最近浏览","Belum ada riwayat wallpaper." to "暂无浏览记录","Konten belum tersedia" to "暂无内容","Image unavailable" to "图片不可用","Home" to "首页","Wallpaper" to "壁纸","Category" to "分类"),
+        "ko" to mapOf("Popular Tags" to "인기 태그","Newest" to "최신순","Acak" to "무작위","Sort by" to "정렬 기준","Search wallpaper" to "배경화면 검색","Search" to "검색","Hapus" to "삭제","Downloads" to "다운로드","Riwayat dilihat" to "최근 본 항목","Belum ada riwayat wallpaper." to "최근 기록이 없습니다.","Konten belum tersedia" to "콘텐츠 없음","Image unavailable" to "이미지 없음","Home" to "홈","Wallpaper" to "배경화면","Category" to "카테고리"),
+        "it" to mapOf("Popular Tags" to "Tag popolari","Newest" to "Più recenti","Acak" to "Casuale","Sort by" to "Ordina per","Search wallpaper" to "Cerca sfondi","Search" to "Cerca","Hapus" to "Elimina","Downloads" to "Download","Riwayat dilihat" to "Visualizzati di recente","Belum ada riwayat wallpaper." to "Nessuna cronologia.","Konten belum tersedia" to "Contenuto non disponibile","Image unavailable" to "Immagine non disponibile","Home" to "Home","Wallpaper" to "Sfondi","Category" to "Categorie")
     )
     private fun localized(value: String): String {
         if (adminUiActive) return value
@@ -137,12 +137,12 @@ class MainActivity : Activity() {
         "Memuat wallpaper…" -> "Loading wallpapers…"
         "Belum ada wallpaper" -> "No wallpapers yet"
         "Paling populer" -> "Most popular"
-        "Nama A-Z" -> "Name A-Z"
+        "Name A-Z" -> "Name A-Z"
         "Tekan kembali sekali lagi untuk keluar" -> "Press back again to exit"
-        "Katalog bawaan gagal dibaca" -> "Unable to read the built-in catalog"
+        "Built-in catalog failed to load" -> "Unable to read the built-in catalog"
         "Katalog online kosong" -> "Online catalog is empty"
         "Simpan" -> "Save"
-        "Batal" -> "Cancel"
+        "Cancel" -> "Cancel"
         "Tutup" -> "Close"
         else -> value
     }
@@ -196,7 +196,7 @@ class MainActivity : Activity() {
         darkMode = preferences.getBoolean("dark_mode", false)
         appLanguage = preferences.getString("app_language", "en") ?: "en"
         sortMode = preferences.getString("wallpaper_sort_mode", "Paling populer") ?: "Paling populer"
-        downloadSortMode = preferences.getString("download_sort_mode", "Nama A-Z") ?: "Nama A-Z"
+        downloadSortMode = preferences.getString("download_sort_mode", "Name A-Z") ?: "Name A-Z"
         selectedTab = preferences.getString("selected_wallpaper_tab", "Wallpaper") ?: "Wallpaper"
         if (selectedTab !in tabs && selectedTab != "Home") selectedTab = "Wallpaper"
         selectedCategory = preferences.getString("selected_wallpaper_category", "All") ?: "All"
@@ -376,7 +376,7 @@ class MainActivity : Activity() {
                 buildHome()
             }
         } catch (_: Exception) {
-            Toast.makeText(this, "Katalog bawaan gagal dibaca", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Built-in catalog failed to load", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -448,7 +448,7 @@ class MainActivity : Activity() {
                     if (connection.responseCode !in 200..299) throw IllegalStateException("HTTP " + connection.responseCode)
                     val contentLength = connection.contentLengthLong
                     val maxBytes = 40L * 1024L * 1024L
-                    if (contentLength > maxBytes) throw IllegalStateException("Ukuran gambar melebihi batas")
+                    if (contentLength > maxBytes) throw IllegalStateException("Image size exceeds the limit")
                     val temporary = File(target.parentFile, target.name + "." + Thread.currentThread().id + ".download")
                     try {
                         connection.inputStream.use { input ->
@@ -459,13 +459,13 @@ class MainActivity : Activity() {
                                     val count = input.read(buffer)
                                     if (count < 0) break
                                     total += count
-                                    if (total > maxBytes) throw IllegalStateException("Ukuran gambar melebihi batas")
+                                    if (total > maxBytes) throw IllegalStateException("Image size exceeds the limit")
                                     output.write(buffer, 0, count)
                                 }
                                 output.fd.sync()
                             }
                         }
-                        if (!isValidWallpaperFile(temporary)) throw IllegalStateException("File gambar tidak valid")
+                        if (!isValidWallpaperFile(temporary)) throw IllegalStateException("Invalid image file")
                         if (!temporary.renameTo(target)) {
                             temporary.copyTo(target, overwrite = true)
                             temporary.delete()
@@ -610,7 +610,7 @@ class MainActivity : Activity() {
                         if (connection.responseCode !in 200..299) throw IllegalStateException("HTTP " + connection.responseCode)
                         android.util.Log.d("WallpaperImage", "HTTP ${connection.responseCode} for $url")
                         val maxBytes = 40L * 1024L * 1024L
-                        if (connection.contentLengthLong > maxBytes) throw IllegalStateException("Ukuran gambar melebihi batas")
+                        if (connection.contentLengthLong > maxBytes) throw IllegalStateException("Image size exceeds the limit")
                         val temporaryFile = File(cacheFile.parentFile, cacheFile.name + "." + Thread.currentThread().id + ".tmp")
                         try {
                             connection.inputStream.use { input ->
@@ -621,7 +621,7 @@ class MainActivity : Activity() {
                                         val count = input.read(buffer)
                                         if (count < 0) break
                                         total += count
-                                        if (total > maxBytes) throw IllegalStateException("Ukuran gambar melebihi batas")
+                                        if (total > maxBytes) throw IllegalStateException("Image size exceeds the limit")
                                         output.write(buffer, 0, count)
                                     }
                                     output.fd.sync()
@@ -787,14 +787,14 @@ class MainActivity : Activity() {
                                     output.fd.sync()
                                 }
                             }
-                            if (BitmapFactory.decodeFile(temporary.absolutePath) == null) throw IllegalStateException("Banner tidak valid")
+                            if (BitmapFactory.decodeFile(temporary.absolutePath) == null) throw IllegalStateException("Invalid banner")
                             if (!temporary.renameTo(file)) temporary.copyTo(file, overwrite = true)
                         } finally { if (temporary.exists()) temporary.delete() }
                     } finally { connection?.disconnect() }
                 }
                 bitmap = BitmapFactory.decodeFile(file.absolutePath)
             } catch (error: Exception) {
-                android.util.Log.w("HomeBanner", "Banner gagal dimuat: $url", error)
+                android.util.Log.w("HomeBanner", "Banner failed to load: $url", error)
             }
             val loaded = bitmap
             runOnUiThread {
@@ -824,7 +824,7 @@ class MainActivity : Activity() {
         if (!showOnlyFavorites) header.addView(animatedDiamond(dp(34)))
         listOf("moon-soft","⌕","♡","gear-filled").forEachIndexed { i,glyph ->
             val icon = modernIcon(glyph, 40)
-            icon.contentDescription = listOf("Tema","Cari","Favorit","Pengaturan")[i]
+            icon.contentDescription = listOf("Tema","Search","Favorit","Pengaturan")[i]
             icon.setOnClickListener {
                 when(i){0->toggleTheme();1->search();2->{showOnlyFavorites=true;selectedCategory="All";searchQuery="";selectedTab="Wallpaper";visibleItemLimit=24;buildHome()};3->showSettings()}
             }
@@ -938,9 +938,9 @@ class MainActivity : Activity() {
             content.addView(popularPanel, LinearLayout.LayoutParams(-1, dp(52)).apply { setMargins(dp(12), dp(1), dp(12), dp(3)) })
         }
         val sort=TextView(this@MainActivity).apply { text=localized("Filter :")+" "+localized(sortMode)+"   ▾"; textSize=13f; setTextColor(if (darkMode) Color.WHITE else Color.BLACK); setTypeface(typeface, android.graphics.Typeface.BOLD); setPadding(dp(18),dp(1),dp(12),dp(4)); setOnClickListener {
-            val options = arrayOf("Paling populer", "Terbaru", "A-Z", "Acak").map { localized(it) }.toTypedArray()
+            val options = arrayOf("Paling populer", "Newest", "A-Z", "Acak").map { localized(it) }.toTypedArray()
             AlertDialog.Builder(this@MainActivity).setTitle("Sort by").setItems(options) { _, w ->
-                sortMode = listOf("Paling populer", "Terbaru", "A-Z", "Acak")[w]
+                sortMode = listOf("Paling populer", "Newest", "A-Z", "Acak")[w]
                 preferences.edit().putString("wallpaper_sort_mode", sortMode).apply()
                 visibleItemLimit = 24
                 buildHome()
@@ -977,7 +977,7 @@ class MainActivity : Activity() {
             categoryMatch && searchMatch && favoriteMatch && tabMatch
         }
         val visibleIndexes = when (sortMode) {
-            "Terbaru" -> filteredIndexes.reversed()
+            "Newest" -> filteredIndexes.reversed()
             "A-Z" -> filteredIndexes.sortedBy { names[it].lowercase() }
             "Acak" -> filteredIndexes.shuffled()
             else -> filteredIndexes
@@ -1264,7 +1264,7 @@ class MainActivity : Activity() {
             AlertDialog.Builder(this@MainActivity)
                 .setTitle("Report wallpaper")
                 .setMessage("Report this wallpaper if the image is inappropriate or misleading.")
-                .setNegativeButton("Batal", null)
+                .setNegativeButton("Cancel", null)
                 .setPositiveButton("Tutup", null)
                 .show()
         })
@@ -1590,7 +1590,7 @@ class MainActivity : Activity() {
                         Toast.makeText(this, "Cache cleared: " + formatCacheSize(removed), Toast.LENGTH_LONG).show()
                         showCacheManager()
                     }
-                    .setNegativeButton("Batal", null)
+                    .setNegativeButton("Cancel", null)
                     .show()
             }
             .setNegativeButton("Tutup", null)
@@ -2038,10 +2038,10 @@ class MainActivity : Activity() {
             Toast.makeText(this, "Image unavailable", Toast.LENGTH_LONG).show()
             return
         }
-        Toast.makeText(this, "Menyiapkan file UHD asli…", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Preparing the original UHD file…", Toast.LENGTH_SHORT).show()
         loadWallpaperFile(url) { imageFile ->
             if (imageFile == null) {
-                Toast.makeText(this, "Gagal memuat gambar. Periksa internet.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Failed to load image. Check your internet connection.", Toast.LENGTH_LONG).show()
                 return@loadWallpaperFile
             }
             pendingDownloadFile = imageFile
@@ -2057,7 +2057,7 @@ class MainActivity : Activity() {
             } catch (_: Exception) {
                 pendingDownloadFile = null
                 pendingDownloadTitle = ""
-                Toast.makeText(this, "Penyimpanan tidak tersedia", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Storage unavailable", Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -2070,8 +2070,8 @@ class MainActivity : Activity() {
                 adminSelectedImage = data?.data
                 adminSelectedImage?.let { uri ->
                     try { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) {}
-                    adminImageLabel?.text = "Gambar berhasil dipilih"
-                    Toast.makeText(this, "Gambar dipilih", Toast.LENGTH_SHORT).show()
+                    adminImageLabel?.text = "Gambar berhasil selected"
+                    Toast.makeText(this, "Gambar selected", Toast.LENGTH_SHORT).show()
                 }
             }
             return
@@ -2099,9 +2099,9 @@ class MainActivity : Activity() {
             runOnUiThread {
                 if (isFinishing || isDestroyed) return@runOnUiThread
                 val message = when {
-                    !saved -> "Gagal menyimpan wallpaper"
-                    librarySaved -> "Wallpaper asli tersimpan dan masuk ke Unduhan"
-                    else -> "Wallpaper tersimpan, tetapi gagal masuk ke pustaka Unduhan"
+                    !saved -> "Failed to save wallpaper"
+                    librarySaved -> "Original wallpaper saved to Downloads"
+                    else -> "Wallpaper saved, but could not be added to Downloads"
                 }
                 Toast.makeText(this, message, Toast.LENGTH_LONG).show()
             }
@@ -2137,7 +2137,7 @@ class MainActivity : Activity() {
             setPadding(dp(18), dp(18), dp(18), dp(12))
             setBackgroundColor(pageBg)
         }
-        root.addView(text("‹   Unduhan", 23, pageText, true).apply {
+        root.addView(text("‹   Downloads", 23, pageText, true).apply {
             setPadding(0, 0, 0, dp(14))
             setOnClickListener { showSettings() }
         })
@@ -2150,17 +2150,17 @@ class MainActivity : Activity() {
             query.isEmpty() || record.substringAfter("\t", "Wallpaper").contains(query, ignoreCase = true)
         }.let { saved ->
             when (downloadSortMode) {
-                "Nama Z-A" -> saved.sortedByDescending { it.substringAfter("\t", "Wallpaper").lowercase() }
-                "Ukuran terbesar" -> saved.sortedByDescending { File(File(filesDir, "downloads"), it.substringBefore("\t")).length() }
-                "Terlama" -> saved.sortedBy { File(File(filesDir, "downloads"), it.substringBefore("\t")).lastModified() }
-                "Terbaru" -> saved.sortedByDescending { File(File(filesDir, "downloads"), it.substringBefore("\t")).lastModified() }
+                "Name Z-A" -> saved.sortedByDescending { it.substringAfter("\t", "Wallpaper").lowercase() }
+                "Largest first" -> saved.sortedByDescending { File(File(filesDir, "downloads"), it.substringBefore("\t")).length() }
+                "Oldest" -> saved.sortedBy { File(File(filesDir, "downloads"), it.substringBefore("\t")).lastModified() }
+                "Newest" -> saved.sortedByDescending { File(File(filesDir, "downloads"), it.substringBefore("\t")).lastModified() }
                 else -> saved.sortedBy { it.substringAfter("\t", "Wallpaper").lowercase() }
             }
         }
         val searchRow = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         val searchBox = EditText(this@MainActivity).apply {
             setSingleLine(true)
-            hint = "Cari wallpaper yang diunduh..."
+            hint = "Search downloaded wallpapers..."
             textSize = 14f
             setTextColor(pageText)
             setHintTextColor(if (darkMode) 0xff9296a2.toInt() else 0xff888888.toInt())
@@ -2170,7 +2170,7 @@ class MainActivity : Activity() {
             setOnEditorActionListener { _, _, _ -> downloadsSearchQuery = text.toString(); showDownloads(); true }
         }
         searchRow.addView(searchBox, LinearLayout.LayoutParams(0, -2, 1f))
-        searchRow.addView(text("Cari", 14, Color.WHITE, true).apply {
+        searchRow.addView(text("Search", 14, Color.WHITE, true).apply {
             gravity = Gravity.CENTER
             setPadding(dp(16), dp(13), dp(16), dp(13))
             background = rounded(blue, 12)
@@ -2178,7 +2178,7 @@ class MainActivity : Activity() {
         }, LinearLayout.LayoutParams(-2, -2).apply { leftMargin = dp(8) })
         root.addView(searchRow, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(4) })
         if (downloadsSearchQuery.isNotBlank()) {
-            root.addView(text("Hapus pencarian  x", 12, if (darkMode) 0xffaebeff.toInt() else blue, true).apply {
+            root.addView(text("Clear search  x", 12, if (darkMode) 0xffaebeff.toInt() else blue, true).apply {
                 gravity = Gravity.END
                 setPadding(dp(8), dp(7), dp(4), dp(10))
                 setOnClickListener { downloadsSearchQuery = ""; showDownloads() }
@@ -2186,12 +2186,12 @@ class MainActivity : Activity() {
         } else {
             root.addView(space(8))
         }
-        root.addView(text("Urutkan: $downloadSortMode  ▾", 14, if (darkMode) 0xffc5c9d4.toInt() else 0xff555966.toInt(), true).apply {
+        root.addView(text("Sort: $downloadSortMode  ▾", 14, if (darkMode) 0xffc5c9d4.toInt() else 0xff555966.toInt(), true).apply {
             setPadding(0, 0, 0, dp(14))
             setOnClickListener {
-                val modes = arrayOf("Terbaru", "Terlama", "Nama A-Z", "Nama Z-A", "Ukuran terbesar")
+                val modes = arrayOf("Newest", "Oldest", "Name A-Z", "Name Z-A", "Largest first")
                 AlertDialog.Builder(this@MainActivity)
-                    .setTitle("Urutkan unduhan")
+                    .setTitle("Sort downloads")
                      .setSingleChoiceItems(modes, modes.indexOf(downloadSortMode).coerceAtLeast(0)) { dialog, which ->
                         downloadSortMode = modes[which]
                         preferences.edit().putString("download_sort_mode", downloadSortMode).apply()
@@ -2202,20 +2202,20 @@ class MainActivity : Activity() {
             }
         })
         if (records.isNotEmpty()) {
-            root.addView(text(if (query.isBlank()) "Hapus semua unduhan" else "Hapus hasil pencarian (" + records.size + ")", 14, if (darkMode) 0xffff8b8b.toInt() else 0xffc62828.toInt(), true).apply {
+            root.addView(text(if (query.isBlank()) "Delete all downloads" else "Delete search results (" + records.size + ")", 14, if (darkMode) 0xffff8b8b.toInt() else 0xffc62828.toInt(), true).apply {
                 gravity = Gravity.END
                 setPadding(0, 0, 0, dp(12))
                 setOnClickListener {
                     AlertDialog.Builder(this@MainActivity)
-                        .setTitle("Hapus semua unduhan?")
-                        .setMessage("Semua ${records.size} wallpaper yang tersimpan akan dihapus dari pustaka Unduhan.")
-                        .setNegativeButton("Batal", null)
-                        .setPositiveButton("Hapus semua") { _, _ ->
+                        .setTitle("Delete all downloads?")
+                        .setMessage("Semua ${records.size} wallpaper yang tersimpan akan dihapus dari pustaka Downloads.")
+                        .setNegativeButton("Cancel", null)
+                        .setPositiveButton("Delete all") { _, _ ->
                             val updated = (preferences.getStringSet("download_records", emptySet()) ?: emptySet()).toMutableSet()
                             records.forEach { record ->
                                 val file = File(File(filesDir, "downloads"), record.substringBefore("\t"))
                                 if (file.exists() && !file.delete()) {
-                                    Toast.makeText(this@MainActivity, "Sebagian file tidak dapat dihapus", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(this@MainActivity, "Some files could not be deleted", Toast.LENGTH_LONG).show()
                                 } else updated.remove(record)
                             }
                             preferences.edit().putStringSet("download_records", updated).apply()
@@ -2229,15 +2229,15 @@ class MainActivity : Activity() {
         if (selectedDownloadRecords.isEmpty()) downloadSelectionMode = false
         if (records.isNotEmpty()) {
             val bar = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(10), dp(6), dp(10), dp(6)); background = rounded(if (darkMode) 0xff242f42.toInt() else 0xffe8f1ff.toInt(), 12) }
-            bar.addView(text(if (downloadSelectionMode) selectedDownloadRecords.size.toString() + " dipilih" else "Pilih beberapa", 13, pageText, true), LinearLayout.LayoutParams(0, -2, 1f))
-            bar.addView(text("Pilih semua", 12, blue, true).apply { setPadding(dp(8), dp(8), dp(8), dp(8)); setOnClickListener { downloadSelectionMode = true; selectedDownloadRecords.addAll(records); showDownloads() } })
-            bar.addView(text("Batal", 12, pageText, true).apply { setPadding(dp(8), dp(8), dp(4), dp(8)); setOnClickListener { selectedDownloadRecords.clear(); downloadSelectionMode = false; showDownloads() } })
+            bar.addView(text(if (downloadSelectionMode) selectedDownloadRecords.size.toString() + " selected" else "Select multiple", 13, pageText, true), LinearLayout.LayoutParams(0, -2, 1f))
+            bar.addView(text("Select all", 12, blue, true).apply { setPadding(dp(8), dp(8), dp(8), dp(8)); setOnClickListener { downloadSelectionMode = true; selectedDownloadRecords.addAll(records); showDownloads() } })
+            bar.addView(text("Cancel", 12, pageText, true).apply { setPadding(dp(8), dp(8), dp(4), dp(8)); setOnClickListener { selectedDownloadRecords.clear(); downloadSelectionMode = false; showDownloads() } })
             root.addView(bar, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
             if (downloadSelectionMode && selectedDownloadRecords.isNotEmpty()) {
-                root.addView(text("Hapus seleksi", 14, 0xffc62828.toInt(), true).apply { gravity = Gravity.END; setPadding(0, dp(5), 0, dp(10)); setOnClickListener {
+                root.addView(text("Delete selected", 14, 0xffc62828.toInt(), true).apply { gravity = Gravity.END; setPadding(0, dp(5), 0, dp(10)); setOnClickListener {
                     val targets = selectedDownloadRecords.toSet()
-                    AlertDialog.Builder(this@MainActivity).setTitle("Hapus wallpaper terpilih?").setMessage(targets.size.toString() + " file akan dihapus.")
-                        .setNegativeButton("Batal", null).setPositiveButton("Hapus") { _, _ ->
+                    AlertDialog.Builder(this@MainActivity).setTitle("Delete selected wallpapers?").setMessage(targets.size.toString() + " files will be deleted.")
+                        .setNegativeButton("Cancel", null).setPositiveButton("Hapus") { _, _ ->
                             val updated = (preferences.getStringSet("download_records", emptySet()) ?: emptySet()).toMutableSet()
                             targets.forEach { record -> val file = File(File(filesDir, "downloads"), record.substringBefore("\\t")); if (!file.exists() || file.delete()) updated.remove(record) }
                             preferences.edit().putStringSet("download_records", updated).apply(); selectedDownloadRecords.clear(); downloadSelectionMode = false; showDownloads()
@@ -2254,9 +2254,9 @@ class MainActivity : Activity() {
             String.format("%.1f MB", downloadBytes / (1024.0 * 1024.0))
         }
         val summary = if (query.isBlank()) {
-            "${records.size} wallpaper tersimpan  •  $downloadSize digunakan"
+            "${records.size} wallpapers saved  •  $downloadSize digunakan"
         } else {
-            "${records.size} dari ${allRecords.size} wallpaper cocok  •  $downloadSize ditampilkan"
+            "${records.size} of ${allRecords.size} matching wallpapers  •  $downloadSize shown"
         }
         root.addView(text(summary, 13, if (darkMode) 0xffb9bdc8.toInt() else 0xff666a75.toInt(), false)
             .apply { setPadding(0, 0, 0, dp(14)) })
@@ -2266,12 +2266,12 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
                 setPadding(dp(24), dp(30), dp(24), dp(30))
-                addView(text(if (noDownloads) "Belum ada wallpaper yang diunduh" else "Wallpaper tidak ditemukan", 17, pageText, true).apply { gravity = Gravity.CENTER })
-                addView(text(if (noDownloads) "Unduh wallpaper terlebih dahulu. File yang disimpan akan muncul di sini." else "Coba kata kunci lain atau hapus pencarian untuk melihat semua unduhan.", 13, if (darkMode) 0xffaeb3bf.toInt() else 0xff777b86.toInt(), false).apply {
+                addView(text(if (noDownloads) "No wallpapers downloaded yet" else "No wallpapers found", 17, pageText, true).apply { gravity = Gravity.CENTER })
+                addView(text(if (noDownloads) "Download wallpapers first. Saved files will appear here." else "Try another keyword or clear the search to view all downloads.", 13, if (darkMode) 0xffaeb3bf.toInt() else 0xff777b86.toInt(), false).apply {
                     gravity = Gravity.CENTER
                     setPadding(0, dp(9), 0, dp(18))
                 })
-                if (!noDownloads) addView(text("Hapus pencarian", 14, if (darkMode) 0xff9bbcff.toInt() else blue, true).apply {
+                if (!noDownloads) addView(text("Clear search", 14, if (darkMode) 0xff9bbcff.toInt() else blue, true).apply {
                     gravity = Gravity.CENTER
                     setPadding(dp(16), dp(10), dp(16), dp(10))
                     background = rounded(if (darkMode) 0xff242f42.toInt() else 0xffe8f1ff.toInt(), 12)
@@ -2348,8 +2348,8 @@ class MainActivity : Activity() {
                     setOnClickListener {
                         AlertDialog.Builder(this@MainActivity)
                             .setTitle("Hapus unduhan?")
-                            .setMessage("Wallpaper \"$title\" akan dihapus dari pustaka Unduhan.")
-                            .setNegativeButton("Batal", null)
+                            .setMessage("Wallpaper \"$title\" akan dihapus dari pustaka Downloads.")
+                            .setNegativeButton("Cancel", null)
                             .setPositiveButton("Hapus") { _, _ ->
                                 if (imageFile.exists() && !imageFile.delete()) {
                                     Toast.makeText(this@MainActivity, "File tidak dapat dihapus. Coba lagi.", Toast.LENGTH_LONG).show()
@@ -2462,7 +2462,7 @@ class MainActivity : Activity() {
                 AlertDialog.Builder(this@MainActivity)
                     .setTitle("Hapus riwayat?")
                     .setMessage("Daftar wallpaper yang pernah dibuka akan dikosongkan.")
-                    .setNegativeButton("Batal", null)
+                    .setNegativeButton("Cancel", null)
                     .setPositiveButton("Hapus") { _, _ ->
                         preferences.edit().remove("recent_wallpaper_ids").apply()
                         showRecentlyViewed()
@@ -2759,7 +2759,7 @@ class MainActivity : Activity() {
         }
         setContentView(root)
     }
-    private fun search(){ val input=EditText(this@MainActivity).apply { hint=localized("Cari wallpaper"); setText(searchQuery) }; AlertDialog.Builder(this@MainActivity).setTitle(localized("Search")).setView(input).setPositiveButton(localized("Cari")){_,_-> searchQuery=input.text.toString().trim(); showOnlyFavorites=false; visibleItemLimit=60; buildHome() }.setNeutralButton(localized("Hapus")){_,_-> searchQuery=""; visibleItemLimit=60; buildHome() }.setNegativeButton(localized("Batal"),null).show() }
+    private fun search(){ val input=EditText(this@MainActivity).apply { hint=localized("Search wallpaper"); setText(searchQuery) }; AlertDialog.Builder(this@MainActivity).setTitle(localized("Search")).setView(input).setPositiveButton(localized("Search")){_,_-> searchQuery=input.text.toString().trim(); showOnlyFavorites=false; visibleItemLimit=60; buildHome() }.setNeutralButton(localized("Hapus")){_,_-> searchQuery=""; visibleItemLimit=60; buildHome() }.setNegativeButton(localized("Cancel"),null).show() }
     private fun shareWallpaper(index: Int) {
         val url = fullUrls.getOrNull(index)
         if (url.isNullOrBlank()) {
