@@ -1439,33 +1439,7 @@ class MainActivity : Activity() {
             .show()
     }
 
-    private fun settingsIcon(glyph: String, size: Int): View {
-        val resource = when (glyph) {
-            "♟" -> android.R.drawable.ic_dialog_info
-            "♡" -> android.R.drawable.btn_star_big_off
-            "◷" -> android.R.drawable.ic_menu_recent_history
-            "文" -> android.R.drawable.ic_menu_set_as
-            "▧" -> android.R.drawable.ic_menu_gallery
-            "⇩" -> android.R.drawable.ic_menu_save
-            "▤" -> android.R.drawable.ic_menu_view
-            "↗" -> android.R.drawable.ic_menu_share
-            "☆" -> android.R.drawable.btn_star_big_on
-            "✉" -> android.R.drawable.ic_dialog_email
-            "▣" -> android.R.drawable.ic_menu_manage
-            else -> android.R.drawable.ic_menu_info_details
-        }
-        return ImageView(this@MainActivity).apply {
-            setImageResource(resource)
-            setColorFilter(blue)
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            contentDescription = glyph
-            background = getDrawable(android.R.drawable.list_selector_background)
-            isClickable = true
-            isFocusable = true
-            setPadding(dp(5), dp(5), dp(5), dp(5))
-            layoutParams = LinearLayout.LayoutParams(dp(size), dp(size))
-        }
-    }
+    private fun settingsIcon(glyph: String, size: Int): View = modernIcon(glyph, size)
 
     private fun showSettings() {
         homeScreenActive = false
@@ -2479,9 +2453,9 @@ class MainActivity : Activity() {
         }
     }
     private fun toggleTheme(){ darkMode = !darkMode; preferences.edit().putBoolean("dark_mode", darkMode).apply(); buildHome(); Toast.makeText(this@MainActivity,if(darkMode) "Tema gelap aktif" else "Tema terang aktif",Toast.LENGTH_SHORT).show() }
-    // Classic, restrained system icon set with a consistent Rose Gold accent.
+    // Consistent outline icon treatment used throughout the app.
     private fun modernIcon(glyph: String, size: Int): FrameLayout {
-        val iconColor = if (darkMode) Color.WHITE else Color.BLACK
+        val iconColor = if (darkMode) Color.WHITE else ink
         val icon = FrameLayout(this@MainActivity).apply {
             background = getDrawable(android.R.drawable.list_selector_background)
             isClickable = true
@@ -2489,33 +2463,72 @@ class MainActivity : Activity() {
             clipToOutline = false
             contentDescription = glyph
         }
-        val resource = when (glyph) {
-            "⌕" -> android.R.drawable.ic_menu_search
-            "⚙" -> 0
-            "▦", "▧" -> android.R.drawable.ic_menu_gallery
-            "⇩" -> android.R.drawable.ic_menu_save
-            "↗" -> android.R.drawable.ic_menu_share
-            "ⓘ" -> android.R.drawable.ic_menu_info_details
-            "‹", "›" -> android.R.drawable.ic_media_previous
-            "✦", "💎" -> android.R.drawable.btn_star_big_on
-            "⌂" -> android.R.drawable.ic_menu_view
-            else -> 0
+        val art = OutlineIconView(glyph, iconColor).apply {
+            contentDescription = glyph
+            isFocusable = false
         }
-        if (resource != 0) {
-            val standardIcon = ImageView(this@MainActivity).apply {
-                setImageResource(resource)
-                setColorFilter(iconColor)
-                scaleType = ImageView.ScaleType.FIT_CENTER
-                contentDescription = glyph
-                setPadding(dp(3), dp(3), dp(3), dp(3))
-            }
-            icon.addView(standardIcon, FrameLayout.LayoutParams(-1, -1))
-        } else {
-            icon.addView(text(glyph, (size * 0.68f).toInt().coerceAtLeast(18), iconColor, true).apply {
-                gravity = Gravity.CENTER
-            }, FrameLayout.LayoutParams(-1, -1))
-        }
+        icon.addView(art, FrameLayout.LayoutParams(-1, -1))
+        icon.layoutParams = LinearLayout.LayoutParams(dp(size), dp(size))
         return icon
+    }
+
+    private inner class OutlineIconView(
+        private val glyph: String,
+        private val iconColor: Int
+    ) : View(this@MainActivity) {
+        private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = iconColor
+            style = Paint.Style.STROKE
+            strokeWidth = dp(2).toFloat()
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+        }
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+            val scale = minOf(width, height) * 0.72f
+            val left = (width - scale) / 2f
+            val top = (height - scale) / 2f
+            canvas.save()
+            canvas.translate(left, top)
+            canvas.scale(scale / 48f, scale / 48f)
+            val p = paint
+            when (glyph) {
+                "⌕", "🔍" -> {
+                    canvas.drawCircle(19f, 19f, 12f, p)
+                    canvas.drawLine(28f, 28f, 42f, 42f, p)
+                }
+                "⚙" -> {
+                    canvas.drawCircle(24f, 24f, 17f, p)
+                    canvas.drawCircle(24f, 24f, 6f, p)
+                    for (i in 0..7) {
+                        val a = Math.toRadians(i * 45.0)
+                        canvas.drawLine((24+18*kotlin.math.cos(a)).toFloat(), (24+18*kotlin.math.sin(a)).toFloat(),
+                            (24+22*kotlin.math.cos(a)).toFloat(), (24+22*kotlin.math.sin(a)).toFloat(), p)
+                    }
+                }
+                "♡", "♥" -> {
+                    val path = Path().apply { moveTo(24f, 41f); cubicTo(19f,36f,5f,27f,5f,16f); cubicTo(5f,5f,19f,3f,24f,13f); cubicTo(29f,3f,43f,5f,43f,16f); cubicTo(43f,27f,29f,36f,24f,41f) }
+                    canvas.drawPath(path,p)
+                }
+                "⇩", "⬇" -> { canvas.drawLine(24f,5f,24f,33f,p); canvas.drawLine(13f,23f,24f,34f,p); canvas.drawLine(35f,23f,24f,34f,p); canvas.drawRoundRect(7f,38f,41f,44f,3f,3f,p) }
+                "↗" -> { canvas.drawLine(9f,39f,39f,9f,p); canvas.drawLine(20f,9f,39f,9f,p); canvas.drawLine(39f,9f,39f,28f,p) }
+                "‹", "›" -> { val path=Path().apply { if(glyph=="‹"){moveTo(30f,8f);lineTo(14f,24f);lineTo(30f,40f)}else{moveTo(18f,8f);lineTo(34f,24f);lineTo(18f,40f)} }; canvas.drawPath(path,p) }
+                "⌂" -> { val path=Path().apply{moveTo(4f,22f);lineTo(24f,5f);lineTo(44f,22f);moveTo(10f,19f);lineTo(10f,43f);lineTo(38f,43f);lineTo(38f,19f);moveTo(20f,43f);lineTo(20f,29f);lineTo(28f,29f);lineTo(28f,43f)};canvas.drawPath(path,p) }
+                "▦", "▧", "▤" -> { canvas.drawRoundRect(5f,5f,43f,43f,4f,4f,p); canvas.drawLine(5f,19f,43f,19f,p); canvas.drawLine(5f,31f,43f,31f,p); if(glyph=="▦"){canvas.drawLine(19f,5f,19f,43f,p);canvas.drawLine(31f,5f,31f,43f,p)} }
+                "✦", "✧", "💎" -> { val path=Path().apply{moveTo(24f,4f);lineTo(29f,18f);lineTo(44f,24f);lineTo(29f,29f);lineTo(24f,44f);lineTo(19f,29f);lineTo(4f,24f);lineTo(19f,18f);close()};canvas.drawPath(path,p) }
+                "●" -> canvas.drawCircle(24f,24f,15f,p)
+                "▶" -> canvas.drawPath(Path().apply{moveTo(15f,7f);lineTo(39f,24f);lineTo(15f,41f);close()},p)
+                "◈" -> canvas.drawPath(Path().apply{moveTo(24f,4f);lineTo(43f,24f);lineTo(24f,44f);lineTo(5f,24f);close();moveTo(24f,13f);lineTo(33f,24f);lineTo(24f,35f);lineTo(15f,24f);close()},p)
+                "≈", "⌁" -> { canvas.drawArc(5f,10f,43f,30f,0f,180f,false,p);canvas.drawArc(5f,22f,43f,42f,0f,180f,false,p) }
+                else -> {
+                    // Generic outline tile for less common symbols, avoiding platform-dependent glyph fonts.
+                    canvas.drawRoundRect(5f,5f,43f,43f,8f,8f,p)
+                    canvas.drawLine(15f,24f,33f,24f,p)
+                    canvas.drawLine(24f,15f,24f,33f,p)
+                }
+            }
+            canvas.restore()
+        }
     }
 
     private fun circle(symbol:String, action:()->Unit):View = modernIcon(symbol,40).apply {
