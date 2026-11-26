@@ -2489,17 +2489,32 @@ class MainActivity : Activity() {
             val p = paint
             when (glyph) {
                 "⌕", "🔍" -> {
-                    canvas.drawCircle(19f, 19f, 12f, p)
-                    canvas.drawLine(28f, 28f, 42f, 42f, p)
+                    // Clean magnifier outline, matching the supplied header reference.
+                    canvas.drawCircle(20f, 20f, 13f, p)
+                    canvas.drawLine(29.5f, 29.5f, 43f, 43f, p)
+                }
+                "☾" -> {
+                    // Crescent moon drawn as a smooth vector path (not a font glyph).
+                    val moon = Path().apply {
+                        moveTo(31f, 5f)
+                        cubicTo(16f, 7f, 7f, 19f, 9f, 31f)
+                        cubicTo(11f, 43f, 24f, 47f, 35f, 40f)
+                        cubicTo(22f, 42f, 14f, 32f, 16f, 21f)
+                        cubicTo(17f, 14f, 23f, 8f, 31f, 5f)
+                        close()
+                    }
+                    canvas.drawPath(moon, p)
                 }
                 "⚙" -> {
-                    canvas.drawCircle(24f, 24f, 17f, p)
-                    canvas.drawCircle(24f, 24f, 6f, p)
+                    // Eight-tooth outlined gear with a hollow center.
                     for (i in 0..7) {
-                        val a = Math.toRadians(i * 45.0)
-                        canvas.drawLine((24+18*kotlin.math.cos(a)).toFloat(), (24+18*kotlin.math.sin(a)).toFloat(),
-                            (24+22*kotlin.math.cos(a)).toFloat(), (24+22*kotlin.math.sin(a)).toFloat(), p)
+                        canvas.save()
+                        canvas.rotate(i * 45f, 24f, 24f)
+                        canvas.drawRoundRect(20f, 3f, 28f, 14f, 2f, 2f, p)
+                        canvas.restore()
                     }
+                    canvas.drawCircle(24f, 24f, 16f, p)
+                    canvas.drawCircle(24f, 24f, 6f, p)
                 }
                 "♡", "♥" -> {
                     val path = Path().apply { moveTo(24f, 41f); cubicTo(19f,36f,5f,27f,5f,16f); cubicTo(5f,5f,19f,3f,24f,13f); cubicTo(29f,3f,43f,5f,43f,16f); cubicTo(43f,27f,29f,36f,24f,41f) }
