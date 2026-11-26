@@ -1538,6 +1538,7 @@ class MainActivity : Activity() {
         homeScreenActive = false
         val bg = if (darkMode) 0xff121318.toInt() else Color.WHITE
         val fg = if (darkMode) 0xfff2f2f5.toInt() else ink
+        val muted = if (darkMode) 0xffa6a6ad.toInt() else Color.GRAY
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(18), dp(20), dp(18))
@@ -1549,12 +1550,6 @@ class MainActivity : Activity() {
         })
         val title = EditText(this).apply { hint = "Judul wallpaper"; setTextColor(fg) }
         val category = EditText(this).apply { hint = "Kategori, contoh: Nature"; setTextColor(fg) }
-        val tagsInput = EditText(this).apply {
-            hint = "Tags, pisahkan dengan koma (Nature, Forest, Relaxing)"
-            setTextColor(fg)
-            minLines = 2
-            gravity = Gravity.TOP
-        }
         val imageUrl = EditText(this).apply {
             hint = "URL gambar (https://...)"
             setTextColor(fg)
@@ -1563,21 +1558,51 @@ class MainActivity : Activity() {
         val wallpaperTypeSpinner = Spinner(this).apply {
             adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, listOf("wallpaper", "live"))
         }
-        val showIn3D = CheckBox(this).apply {
-            text = "Tambahkan ke menu 3D"
-            setTextColor(fg)
-            isChecked = false
+        val tagChoices = listOf(
+            "Nature", "City", "Cars", "Technology", "Gaming",
+            "Space", "Minimalist", "Abstract", "AMOLED", "Dark",
+            "3D", "Anime", "Architecture", "Animals", "Flowers",
+            "Fantasy", "Superheroes", "Art", "Luxury", "Aesthetic"
+        )
+        val selectedTags = linkedSetOf<String>()
+        val tagGrid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        tagChoices.chunked(2).forEach { pair ->
+            val tagRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            pair.forEach { tag ->
+                val check = CheckBox(this).apply {
+                    text = tag
+                    textSize = 14f
+                    setTextColor(fg)
+                    buttonTintList = android.content.res.ColorStateList.valueOf(if (darkMode) 0xffb76e79.toInt() else blue)
+                    setOnCheckedChangeListener { _, checked ->
+                        if (checked) selectedTags.add(tag) else selectedTags.remove(tag)
+                    }
+                }
+                tagRow.addView(check, LinearLayout.LayoutParams(0, -2, 1f).apply {
+                    rightMargin = dp(6)
+                    bottomMargin = dp(3)
+                })
+            }
+            if (pair.size == 1) tagRow.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
+            tagGrid.addView(tagRow)
         }
         val save = Button(this).apply { text = "Simpan wallpaper" }
         root.addView(title)
         root.addView(category)
-        root.addView(tagsInput)
+        root.addView(text("Pilih tag wallpaper (boleh lebih dari 4)", 14, fg, true).apply {
+            setPadding(0, dp(16), 0, dp(5))
+        })
+        root.addView(tagGrid)
         root.addView(imageUrl)
+        root.addView(text("Jenis konten", 13, muted, false).apply { setPadding(0, dp(10), 0, 0) })
         root.addView(wallpaperTypeSpinner)
-        root.addView(showIn3D)
         root.addView(save)
-        root.addView(text("Gunakan URL gambar HTTPS yang dapat dibuka publik. Data wallpaper disimpan di Cloud Firestore.", 12,
-            if (darkMode) 0xffa6a6ad.toInt() else Color.GRAY, false).apply { setPadding(0, dp(12), 0, 0) })
+        root.addView(text("Pilih beberapa tag dengan mencentang kotaknya. Tag 3D akan menampilkan wallpaper ini di menu 3D. Gunakan URL gambar HTTPS yang dapat dibuka publik.", 12, muted, false).apply {
+            setPadding(0, dp(12), 0, 0)
+        })
         save.setOnClickListener {
             val name = title.text.toString().trim()
             val group = category.text.toString().trim()
@@ -1596,14 +1621,7 @@ class MainActivity : Activity() {
                 "thumbnail" to url,
                 "image" to url,
                 "type" to wallpaperTypeSpinner.selectedItem.toString(),
-                "tags" to (tagsInput.text.toString()
-                    .split(',', ';', '\n')
-                    .map { it.trim() }
-                    .filter { it.isNotEmpty() }
-                    .toMutableList().apply {
-                        if (showIn3D.isChecked && none { it.equals("3D", ignoreCase = true) }) add("3D")
-                    }
-                    .distinctBy { it.lowercase(java.util.Locale.ROOT) }),
+                "tags" to selectedTags.toList(),
                 "createdAt" to com.google.firebase.Timestamp.now()
             )
             FirebaseFirestore.getInstance().collection("wallpapers").document(id).set(data)
@@ -1618,8 +1636,13 @@ class MainActivity : Activity() {
                     fullUrls.add(url)
                     title.text.clear()
                     category.text.clear()
-                    tagsInput.text.clear()
-                    showIn3D.isChecked = false
+                    selectedTags.clear()
+                    for (rowIndex in 0 until tagGrid.childCount) {
+                        val row = tagGrid.getChildAt(rowIndex) as? LinearLayout ?: continue
+                        for (childIndex in 0 until row.childCount) {
+                            (row.getChildAt(childIndex) as? CheckBox)?.isChecked = false
+                        }
+                    }
                     imageUrl.text.clear()
                     Toast.makeText(this, "Wallpaper berhasil disimpan", Toast.LENGTH_LONG).show()
                     save.isEnabled = true
