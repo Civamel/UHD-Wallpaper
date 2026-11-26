@@ -1459,6 +1459,9 @@ class MainActivity : Activity() {
             setColorFilter(blue)
             scaleType = ImageView.ScaleType.FIT_CENTER
             contentDescription = glyph
+            background = getDrawable(android.R.drawable.list_selector_background)
+            isClickable = true
+            isFocusable = true
             setPadding(dp(5), dp(5), dp(5), dp(5))
             layoutParams = LinearLayout.LayoutParams(dp(size), dp(size))
         }
@@ -2480,7 +2483,9 @@ class MainActivity : Activity() {
     private fun modernIcon(glyph: String, size: Int): FrameLayout {
         val iconColor = if (darkMode) Color.WHITE else Color.BLACK
         val icon = FrameLayout(this@MainActivity).apply {
-            setBackgroundColor(Color.TRANSPARENT)
+            background = getDrawable(android.R.drawable.list_selector_background)
+            isClickable = true
+            isFocusable = true
             clipToOutline = false
             contentDescription = glyph
         }
