@@ -1439,6 +1439,31 @@ class MainActivity : Activity() {
             .show()
     }
 
+    private fun settingsIcon(glyph: String, size: Int): View {
+        val resource = when (glyph) {
+            "♟" -> android.R.drawable.ic_dialog_info
+            "♡" -> android.R.drawable.btn_star_big_off
+            "◷" -> android.R.drawable.ic_menu_recent_history
+            "文" -> android.R.drawable.ic_menu_set_as
+            "▧" -> android.R.drawable.ic_menu_gallery
+            "⇩" -> android.R.drawable.ic_menu_save
+            "▤" -> android.R.drawable.ic_menu_view
+            "↗" -> android.R.drawable.ic_menu_share
+            "☆" -> android.R.drawable.btn_star_big_on
+            "✉" -> android.R.drawable.ic_dialog_email
+            "▣" -> android.R.drawable.ic_menu_manage
+            else -> android.R.drawable.ic_menu_info_details
+        }
+        return ImageView(this@MainActivity).apply {
+            setImageResource(resource)
+            setColorFilter(blue)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            contentDescription = glyph
+            setPadding(dp(5), dp(5), dp(5), dp(5))
+            layoutParams = LinearLayout.LayoutParams(dp(size), dp(size))
+        }
+    }
+
     private fun showSettings() {
         homeScreenActive = false
         val settingsBg = if (darkMode) 0xff121318.toInt() else Color.WHITE
@@ -1468,7 +1493,7 @@ class MainActivity : Activity() {
                     }
                 }
             }
-            row.addView(modernIcon(glyph,34),LinearLayout.LayoutParams(dp(42),dp(42)))
+            row.addView(settingsIcon(glyph,34),LinearLayout.LayoutParams(dp(42),dp(42)))
             row.addView(text(item,15,settingsText,false),LinearLayout.LayoutParams(0,-2,1f).apply { leftMargin=dp(12) })
             row.addView(text("›",23,if(darkMode) 0xffb9c8e8.toInt() else 0xff6f7f9b.toInt(),false))
             val rowParams = LinearLayout.LayoutParams(-1,-2)
