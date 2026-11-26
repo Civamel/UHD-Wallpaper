@@ -85,6 +85,7 @@ class MainActivity : Activity() {
     private var downloadSelectionMode = false
     private val selectedDownloadRecords = mutableSetOf<String>()
     private var appLanguage = "en"
+    private var adminUiActive = false
     private val supportedLanguages = listOf(
         "🇬🇧 English" to "en", "🇮🇩 Indonesia" to "id", "🇪🇸 Español" to "es",
         "🇳🇱 Nederlands" to "nl", "🇵🇹 Português" to "pt", "🇨🇳 中文（普通话）" to "zh",
@@ -114,7 +115,21 @@ class MainActivity : Activity() {
         "no" to mapOf("Pengaturan" to "Innstillinger","Bahasa Aplikasi" to "Appspråk","Notifikasi" to "Varsler","Favorit" to "Favoritter","Unduh" to "Nedlastinger","Simpan" to "Lagre","Batal" to "Avbryt","Tutup" to "Lukk","Pilih Bahasa" to "Velg språk"),
         "it" to mapOf("Pengaturan" to "Impostazioni","Bahasa Aplikasi" to "Lingua dell'app","Notifikasi" to "Notifiche","Favorit" to "Preferiti","Riwayat dilihat" to "Visualizzati di recente","Unduh" to "Download","Bagikan Aplikasi" to "Condividi app","Nilai kami" to "Valutaci","Umpan Balik" to "Feedback","Kelola Cache" to "Gestisci cache","Simpan" to "Salva","Batal" to "Annulla","Tutup" to "Chiudi","Pilih Bahasa" to "Scegli la lingua")
     )
+    private val extraTranslations = mapOf(
+        "en" to mapOf("Popular Tags" to "Popular Tags","Filter :" to "Filter:","Paling populer" to "Most popular","Terbaru" to "Newest","Acak" to "Random","Urutkan berdasarkan" to "Sort by","Cari wallpaper" to "Search wallpapers","Cari" to "Search","Hapus" to "Delete","Batal" to "Cancel","Terapkan" to "Apply","Unduhan" to "Downloads","Riwayat dilihat" to "Recently viewed","Maksimal 30 wallpaper terakhir yang dibuka" to "Up to 30 recently viewed wallpapers","Belum ada riwayat wallpaper." to "No wallpaper history yet.","Konten belum tersedia" to "Content unavailable","Coba ubah kategori atau kata pencarian." to "Try changing the category or search term.","Koleksi untuk tab ini akan muncul setelah katalog menyediakan jenis kontennya." to "Items will appear here when the catalog has this content type.","Gambar belum tersedia" to "Image unavailable","Tarik ke bawah untuk mencoba lagi" to "Pull down to try again","Menyiapkan file UHD asli…" to "Preparing original UHD file…","Gagal memuat gambar. Periksa internet." to "Failed to load image. Check your internet connection.","Bagikan wallpaper" to "Share wallpaper","Wallpaper tersimpan" to "Wallpaper saved","Tema gelap aktif" to "Dark theme enabled","Tema terang aktif" to "Light theme enabled","Filter: paling populer" to "Filter: most popular","Filter: kategori" to "Filter: categories","Home" to "Home","Live" to "Live","3D" to "3D","Wallpaper" to "Wallpaper","Category" to "Categories","Get All Wallpaper Pro!" to "Get All Wallpaper Pro!"),
+        "id" to mapOf("Popular Tags" to "Tag Populer","Filter :" to "Filter:","Paling populer" to "Paling populer","Terbaru" to "Terbaru","Acak" to "Acak","Urutkan berdasarkan" to "Urutkan berdasarkan","Cari wallpaper" to "Cari wallpaper","Cari" to "Cari","Hapus" to "Hapus","Unduhan" to "Unduhan","Riwayat dilihat" to "Riwayat dilihat","Belum ada riwayat wallpaper." to "Belum ada riwayat wallpaper.","Konten belum tersedia" to "Konten belum tersedia","Gambar belum tersedia" to "Gambar belum tersedia","Tema gelap aktif" to "Tema gelap aktif","Tema terang aktif" to "Tema terang aktif","Home" to "Beranda","Live" to "Live","Wallpaper" to "Wallpaper","Category" to "Kategori"),
+        "es" to mapOf("Popular Tags" to "Etiquetas populares","Terbaru" to "Más recientes","Acak" to "Aleatorio","Urutkan berdasarkan" to "Ordenar por","Cari wallpaper" to "Buscar fondos de pantalla","Cari" to "Buscar","Hapus" to "Eliminar","Unduhan" to "Descargas","Riwayat dilihat" to "Vistos recientemente","Belum ada riwayat wallpaper." to "Aún no hay historial.","Konten belum tersedia" to "Contenido no disponible","Gambar belum tersedia" to "Imagen no disponible","Home" to "Inicio","Wallpaper" to "Fondos","Category" to "Categorías"),
+        "nl" to mapOf("Popular Tags" to "Populaire tags","Terbaru" to "Nieuwste","Acak" to "Willekeurig","Urutkan berdasarkan" to "Sorteren op","Cari wallpaper" to "Achtergronden zoeken","Cari" to "Zoeken","Hapus" to "Verwijderen","Unduhan" to "Downloads","Riwayat dilihat" to "Recent bekeken","Belum ada riwayat wallpaper." to "Nog geen kijkgeschiedenis.","Konten belum tersedia" to "Inhoud niet beschikbaar","Gambar belum tersedia" to "Afbeelding niet beschikbaar","Home" to "Startpagina","Wallpaper" to "Achtergronden","Category" to "Categorieën"),
+        "pt" to mapOf("Popular Tags" to "Tags populares","Terbaru" to "Mais recentes","Acak" to "Aleatório","Urutkan berdasarkan" to "Ordenar por","Cari wallpaper" to "Pesquisar papéis de parede","Cari" to "Pesquisar","Hapus" to "Excluir","Unduhan" to "Downloads","Riwayat dilihat" to "Vistos recentemente","Belum ada riwayat wallpaper." to "Ainda não há histórico.","Konten belum tersedia" to "Conteúdo indisponível","Gambar belum tersedia" to "Imagem indisponível","Home" to "Início","Wallpaper" to "Papéis de parede","Category" to "Categorias"),
+        "pt-BR" to mapOf("Popular Tags" to "Tags populares","Terbaru" to "Mais recentes","Acak" to "Aleatório","Urutkan berdasarkan" to "Ordenar por","Cari wallpaper" to "Buscar papéis de parede","Cari" to "Buscar","Hapus" to "Excluir","Unduhan" to "Downloads","Riwayat dilihat" to "Vistos recentemente","Belum ada riwayat wallpaper." to "Ainda não há histórico.","Konten belum tersedia" to "Conteúdo indisponível","Gambar belum tersedia" to "Imagem indisponível","Home" to "Início","Wallpaper" to "Papéis de parede","Category" to "Categorias"),
+        "zh" to mapOf("Popular Tags" to "热门标签","Terbaru" to "最新","Acak" to "随机","Urutkan berdasarkan" to "排序方式","Cari wallpaper" to "搜索壁纸","Cari" to "搜索","Hapus" to "删除","Unduhan" to "下载","Riwayat dilihat" to "最近浏览","Belum ada riwayat wallpaper." to "暂无浏览记录","Konten belum tersedia" to "暂无内容","Gambar belum tersedia" to "图片不可用","Home" to "首页","Wallpaper" to "壁纸","Category" to "分类"),
+        "ko" to mapOf("Popular Tags" to "인기 태그","Terbaru" to "최신순","Acak" to "무작위","Urutkan berdasarkan" to "정렬 기준","Cari wallpaper" to "배경화면 검색","Cari" to "검색","Hapus" to "삭제","Unduhan" to "다운로드","Riwayat dilihat" to "최근 본 항목","Belum ada riwayat wallpaper." to "최근 기록이 없습니다.","Konten belum tersedia" to "콘텐츠 없음","Gambar belum tersedia" to "이미지 없음","Home" to "홈","Wallpaper" to "배경화면","Category" to "카테고리"),
+        "it" to mapOf("Popular Tags" to "Tag popolari","Terbaru" to "Più recenti","Acak" to "Casuale","Urutkan berdasarkan" to "Ordina per","Cari wallpaper" to "Cerca sfondi","Cari" to "Cerca","Hapus" to "Elimina","Unduhan" to "Download","Riwayat dilihat" to "Visualizzati di recente","Belum ada riwayat wallpaper." to "Nessuna cronologia.","Konten belum tersedia" to "Contenuto non disponibile","Gambar belum tersedia" to "Immagine non disponibile","Home" to "Home","Wallpaper" to "Sfondi","Category" to "Categorie")
+    )
     private fun localized(value: String): String {
+        if (adminUiActive) return value
+        val extras = extraTranslations[appLanguage] ?: extraTranslations[appLanguage.substringBefore("-")]
+        extras?.get(value)?.let { return it }
         val langMap = translations[appLanguage] ?: translations[appLanguage.substringBefore("-")] ?: translations["en"]!!
         return langMap[value] ?: if (appLanguage == "en") englishFallback(value) else value
     }
@@ -791,6 +806,7 @@ class MainActivity : Activity() {
     }
 
     private fun buildHome() {
+        adminUiActive = false
         homeScreenActive = true
         previewScreenActive = false
         val pageBg = if (darkMode) 0xff121318.toInt() else Color.WHITE
@@ -1584,6 +1600,7 @@ class MainActivity : Activity() {
     private fun settingsIcon(glyph: String, size: Int): View = modernIcon(glyph, size)
 
     private fun showSettings() {
+        adminUiActive = false
         homeScreenActive = false
         val settingsBg = if (darkMode) 0xff121318.toInt() else Color.WHITE
         val settingsText = if (darkMode) 0xfff2f2f5.toInt() else ink
@@ -1645,6 +1662,7 @@ class MainActivity : Activity() {
     }
 
     private fun showAdminLogin() {
+        adminUiActive = true
         homeScreenActive = false
         val email = EditText(this).apply { hint = "Email admin"; inputType = 33 }
         val password = EditText(this).apply { hint = "Kata sandi"; inputType = 129 }
@@ -1689,6 +1707,7 @@ class MainActivity : Activity() {
     }
 
     private fun showAdminPanel() {
+        adminUiActive = true
         homeScreenActive = false
         val bg = if (darkMode) 0xff121318.toInt() else Color.WHITE
         val fg = if (darkMode) 0xfff2f2f5.toInt() else ink
@@ -1833,6 +1852,7 @@ class MainActivity : Activity() {
     }
 
     private fun showAdminWallpaperManager() {
+        adminUiActive = true
         val dark = darkMode
         val bg = if (dark) 0xff121318.toInt() else Color.WHITE
         val fg = if (dark) 0xfff2f2f5.toInt() else ink
@@ -2995,7 +3015,7 @@ class MainActivity : Activity() {
     }.also { it.layoutParams=LinearLayout.LayoutParams(dp(40),dp(40)).apply { setMargins(dp(3),0,dp(3),0) } }
     private fun artDrawable(index:Int):GradientDrawable { val a=palettes[index%palettes.size]; return GradientDrawable(GradientDrawable.Orientation.TL_BR,a).apply { cornerRadius=dp(2).toFloat() } }
     private fun rounded(color:Int,radius:Int)=GradientDrawable().apply { setColor(color); cornerRadius=dp(radius).toFloat() }
-    private fun text(s:String,size:Int,color:Int,bold:Boolean)=TextView(this@MainActivity).apply { text=localized(s); textSize=size.toFloat(); setTextColor(color); if(bold) typeface=Typeface.DEFAULT_BOLD }
+    private fun text(s:String,size:Int,color:Int,bold:Boolean)=TextView(this@MainActivity).apply { text=if (adminUiActive) s else localized(s); textSize=size.toFloat(); setTextColor(color); if(bold) typeface=Typeface.DEFAULT_BOLD }
     private fun space(h:Int)=View(this@MainActivity).apply { layoutParams=LinearLayout.LayoutParams(1,dp(h)) }
     private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
 
