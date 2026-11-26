@@ -837,7 +837,7 @@ class MainActivity : Activity() {
         if (!showOnlyFavorites) header.addView(animatedDiamond(dp(34)))
         listOf("moon-soft","⌕","♡","gear-filled").forEachIndexed { i,glyph ->
             val icon = modernIcon(glyph, 40)
-            icon.contentDescription = listOf("Tema","Search","Favorit","Pengaturan")[i]
+            icon.contentDescription = listOf("Theme","Search","Favorites","Settings")[i]
             icon.setOnClickListener {
                 when(i){0->toggleTheme();1->search();2->{showOnlyFavorites=true;selectedCategory="All";searchQuery="";selectedTab="Wallpaper";visibleItemLimit=24;buildHome()};3->showSettings()}
             }
@@ -2360,7 +2360,7 @@ class MainActivity : Activity() {
                     gravity = Gravity.CENTER
                     setOnClickListener {
                         AlertDialog.Builder(this@MainActivity)
-                            .setTitle("Delete unduhan?")
+                            .setTitle("Delete download?")
                             .setMessage("Wallpaper \"$title\" will be deleted from Downloads.")
                             .setNegativeButton("Cancel", null)
                             .setPositiveButton("Delete") { _, _ ->
@@ -2473,7 +2473,7 @@ class MainActivity : Activity() {
         header.addView(text("Delete", 14, blue, true).apply {
             setOnClickListener {
                 AlertDialog.Builder(this@MainActivity)
-                    .setTitle("Delete riwayat?")
+                    .setTitle("Clear history?")
                     .setMessage("Your recently viewed wallpaper history will be cleared.")
                     .setNegativeButton("Cancel", null)
                     .setPositiveButton("Delete") { _, _ ->
@@ -2689,7 +2689,7 @@ class MainActivity : Activity() {
             val current = quotes[currentIndex]
             quoteText.text = current.first
             categoryText.text = current.second.uppercase()
-            saveButton.text = if (savedQuotes().any { it.first == current.first }) "♥ Delete dari tersimpan" else "♡ Save quote"
+            saveButton.text = if (savedQuotes().any { it.first == current.first }) "♥ Remove from saved" else "♡ Save quote"
         }
         root.addView(saveButton, LinearLayout.LayoutParams(-1, dp(48)))
         root.addView(Button(this).apply {
