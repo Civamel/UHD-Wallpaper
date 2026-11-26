@@ -1177,38 +1177,25 @@ class MainActivity : Activity() {
     }
 
     private fun previewCircle(symbol: String, action: () -> Unit): View {
+        val glyph = if (symbol == "↗") "share-curved" else symbol
+        val baseColor = Color.WHITE
+        val icon = OutlineIconView(glyph, baseColor)
         val button = FrameLayout(this@MainActivity).apply {
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(0xfff3f3f3.toInt())
-            }
-            setOnClickListener { action() }
+            // Clean floating outline icon: no blurred circle or filled background.
+            background = null
+            isClickable = true
+            isFocusable = true
             contentDescription = symbol
-        }
-        val iconRes = when (symbol) {
-            "‹" -> android.R.drawable.ic_media_previous
-            "⚑" -> android.R.drawable.ic_menu_report_image
-            "ⓘ" -> android.R.drawable.ic_menu_info_details
-            "↗" -> android.R.drawable.ic_menu_share
-            "♥", "♡" -> android.R.drawable.btn_star_big_off
-            "⇩" -> android.R.drawable.stat_sys_download_done
-            else -> 0
-        }
-        if (iconRes != 0) {
-            button.addView(ImageView(this@MainActivity).apply {
-                setImageResource(iconRes)
-                setColorFilter(0xff70434b.toInt())
-                scaleType = ImageView.ScaleType.FIT_CENTER
-                setPadding(dp(9), dp(9), dp(9), dp(9))
-            }, FrameLayout.LayoutParams(-1, -1))
-        } else {
-            button.addView(TextView(this@MainActivity).apply {
-                text = symbol
-                textSize = 24f
-                gravity = Gravity.CENTER
-                setTextColor(0xff111111.toInt())
-                typeface = Typeface.DEFAULT
-            }, FrameLayout.LayoutParams(-1, -1))
+            addView(icon, FrameLayout.LayoutParams(-1, -1))
+            setOnClickListener { action() }
+            setOnTouchListener { _, event ->
+                when (event.actionMasked) {
+                    android.view.MotionEvent.ACTION_DOWN -> icon.setActive(true)
+                    android.view.MotionEvent.ACTION_UP,
+                    android.view.MotionEvent.ACTION_CANCEL -> icon.setActive(false)
+                }
+                false
+            }
         }
         return button.also {
             it.layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply {
@@ -2470,6 +2457,8 @@ class MainActivity : Activity() {
         private val glyph: String,
         private val iconColor: Int
     ) : View(this@MainActivity) {
+        private var active = false
+        fun setActive(value: Boolean) { active = value; paint.color = if (active) 0xff36a3ff.toInt() else iconColor; invalidate() }
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = iconColor
             style = Paint.Style.STROKE
@@ -2492,6 +2481,8 @@ class MainActivity : Activity() {
                 "bell-modern" -> { val path=Path().apply { moveTo(10f,35f); cubicTo(15f,30f,13f,22f,15f,15f); cubicTo(19f,5f,29f,5f,33f,15f); cubicTo(35f,22f,33f,30f,38f,35f); close() }; canvas.drawPath(path,p); canvas.drawLine(10f,35f,38f,35f,p); canvas.drawArc(19f,34f,29f,43f,0f,180f,false,p) }
                 "language-modern" -> { canvas.drawCircle(24f,24f,19f,p); canvas.drawOval(15f,5f,33f,43f,p); canvas.drawLine(6f,24f,42f,24f,p); canvas.drawLine(10f,14f,38f,14f,p); canvas.drawLine(10f,34f,38f,34f,p) }
                 "share-curved" -> { val path=Path().apply { moveTo(12f,31f); cubicTo(12f,14f,26f,8f,36f,16f); moveTo(27f,8f); lineTo(36f,16f); lineTo(27f,21f) }; canvas.drawPath(path,p) }
+                "⚑" -> { canvas.drawLine(12f,5f,12f,43f,p); val flag=Path().apply { moveTo(13f,7f); lineTo(37f,12f); lineTo(29f,22f); lineTo(13f,19f); close() }; canvas.drawPath(flag,p) }
+                "ⓘ" -> { canvas.drawCircle(24f,24f,19f,p); canvas.drawCircle(24f,14f,1.5f,p); canvas.drawLine(24f,21f,24f,34f,p) }
                 "cache-modern" -> { canvas.drawRoundRect(7f,8f,41f,40f,5f,5f,p); canvas.drawLine(7f,17f,41f,17f,p); canvas.drawLine(7f,31f,41f,31f,p); canvas.drawLine(17f,17f,17f,31f,p); canvas.drawLine(31f,17f,31f,31f,p) }
                 "⌕", "🔍" -> {
                     // Clean magnifier outline, matching the supplied header reference.
