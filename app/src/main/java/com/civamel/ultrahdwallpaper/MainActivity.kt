@@ -1278,7 +1278,7 @@ class MainActivity : Activity() {
                 .setTitle("Report wallpaper")
                 .setMessage("Report this wallpaper if the image is inappropriate or misleading.")
                 .setNegativeButton("Cancel", null)
-                .setPositiveButton("Tutup", null)
+                .setPositiveButton("Close", null)
                 .show()
         })
         top.addView(previewCircle("ⓘ") {
@@ -1590,7 +1590,7 @@ class MainActivity : Activity() {
             .setPositiveButton("Clear cache") { _, _ ->
                 AlertDialog.Builder(this)
                     .setTitle("Confirmation")
-                    .setMessage("Clear all image cache (" + formatCacheSize(total) + "? Wallpapers saved through Downloads will remain safe.")
+                    .setMessage("Clear all image cache (" + formatCacheSize(total) + ")? Wallpapers saved through Downloads will remain safe.")
                     .setPositiveButton("Yes, clear") { _, _ ->
                         var removed = 0L
                         directories.forEach { (_, directory) ->
@@ -2010,7 +2010,7 @@ class MainActivity : Activity() {
             }
             .addOnFailureListener {
                 onComplete?.invoke()
-                Toast.makeText(this, "Gagal memuat ulang wallpaper. Periksa koneksi internet.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Failed to refresh wallpapers. Check your internet connection.", Toast.LENGTH_SHORT).show()
             }
     }
 
@@ -2267,7 +2267,7 @@ class MainActivity : Activity() {
             String.format("%.1f MB", downloadBytes / (1024.0 * 1024.0))
         }
         val summary = if (query.isBlank()) {
-            "${records.size} wallpapers saved  •  $downloadSize digunakan"
+            "${records.size} wallpapers saved  •  $downloadSize used"
         } else {
             "${records.size} of ${allRecords.size} matching wallpapers  •  $downloadSize shown"
         }
@@ -2361,7 +2361,7 @@ class MainActivity : Activity() {
                     setOnClickListener {
                         AlertDialog.Builder(this@MainActivity)
                             .setTitle("Delete unduhan?")
-                            .setMessage("Wallpaper \"$title\" akan dihapus dari pustaka Downloads.")
+                            .setMessage("Wallpaper \"$title\" will be deleted from Downloads.")
                             .setNegativeButton("Cancel", null)
                             .setPositiveButton("Delete") { _, _ ->
                                 if (imageFile.exists() && !imageFile.delete()) {
@@ -2386,7 +2386,7 @@ class MainActivity : Activity() {
                     AlertDialog.Builder(this@MainActivity).setTitle(title).setView(preview)
                         .setNegativeButton("Info") { _, _ -> showDownloadedImageInfo(imageFile, title) }
                         .setNeutralButton("Terapkan") { _, _ -> showDownloadedApplyOptions(imageFile, title) }
-                        .setPositiveButton("Tutup", null).show()
+                        .setPositiveButton("Close", null).show()
                 }
                 list.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
             }
@@ -2402,7 +2402,7 @@ class MainActivity : Activity() {
         val format = file.extension.uppercase().ifBlank { "Unknown" }
         val date = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.getDefault()).format(java.util.Date(file.lastModified()))
         val message = "Name: " + title + "\\nResolution: " + options.outWidth + " x " + options.outHeight + "\\nFormat: " + format + "\\nSize: " + size + "\\nDate: " + date
-        AlertDialog.Builder(this@MainActivity).setTitle("Wallpaper information").setMessage(message).setPositiveButton("Tutup", null).show()
+        AlertDialog.Builder(this@MainActivity).setTitle("Wallpaper information").setMessage(message).setPositiveButton("Close", null).show()
     }
 
     private fun showDownloadedApplyOptions(file: File, title: String) {
