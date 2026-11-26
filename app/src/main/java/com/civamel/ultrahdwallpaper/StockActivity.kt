@@ -75,7 +75,7 @@ class StockActivity : Activity() {
             val body = assets.open("wallpapers.json").bufferedReader().use { it.readText() }
             parseCatalog(body)
         } catch (_: Exception) {
-            showError("Katalog bawaan tidak dapat dibaca.")
+            showError("The built-in catalog could not be read.")
             return
         }
         showGallery()
@@ -192,7 +192,7 @@ class StockActivity : Activity() {
                 isLoadingShard = false
                 if (isFinishing || isDestroyed) return@runOnUiThread
                 if (parsed == null) {
-                    Toast.makeText(this, "Halaman Stock gagal dimuat. Coba lagi.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "Stock page failed to load. Try again.", Toast.LENGTH_LONG).show()
                     renderGrid()
                     return@runOnUiThread
                 }
@@ -214,7 +214,7 @@ class StockActivity : Activity() {
 
     private fun refreshCatalogManually() {
         if (isRefreshingCatalog) {
-            Toast.makeText(this, "Katalog sedang diperbarui…", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Catalog is updating…", Toast.LENGTH_SHORT).show()
             return
         }
         isRefreshingCatalog = true
@@ -234,12 +234,12 @@ class StockActivity : Activity() {
             if (!isFinishing && !isDestroyed) runOnUiThread {
                 isRefreshingCatalog = false
                 if (index == null) {
-                    Toast.makeText(this, "Indeks katalog belum dapat diperbarui.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "The catalog index could not be updated.", Toast.LENGTH_LONG).show()
                 } else {
                     catalogIndex = index
                     loadedShardCount = 0
                     loadStockShard(0, replace = true)
-                    Toast.makeText(this, "Indeks diperbarui. Memuat halaman pertama…", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Index updated. Loading the first page…", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -322,11 +322,11 @@ class StockActivity : Activity() {
             setOnClickListener { refreshCatalogManually() }
         }, LinearLayout.LayoutParams(dp(44), dp(48)))
         root.addView(header)
-        root.addView(label("Koleksi wallpaper pilihan untuk layar perangkat", 13, secondaryText, false).apply {
+        root.addView(label("A curated wallpaper collection for your device", 13, secondaryText, false).apply {
             setPadding(dp(18), 0, dp(18), dp(12))
         })
         val search = EditText(this).apply {
-            hint = "Cari stock wallpaper"
+            hint = "Search stock wallpapers"
             textSize = 14f
             setTextColor(primaryText)
             setHintTextColor(secondaryText)
@@ -351,9 +351,9 @@ class StockActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(16), 0, dp(16), dp(8))
         }
-        sortRow.addView(label("Urutkan:", 13, secondaryText, false), LinearLayout.LayoutParams(-2, dp(42)))
+        sortRow.addView(label("Sort:", 13, secondaryText, false), LinearLayout.LayoutParams(-2, dp(42)))
         val sortSpinner = Spinner(this).apply {
-            val options = listOf("Default", "Nama A–Z", "Nama Z–A", "Kategori")
+            val options = listOf("Default", "Name A–Z", "Name Z–A", "Categories")
             adapter = ArrayAdapter(this@StockActivity, android.R.layout.simple_spinner_dropdown_item, options)
             setSelection(options.indexOf(selectedSort).coerceAtLeast(0), false)
             onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
@@ -414,9 +414,9 @@ class StockActivity : Activity() {
                 (query.isBlank() || it.title.contains(query, true) || it.category.contains(query, true) || it.tags.any { tag -> tag.contains(query, true) })
         }
         val matches = when (selectedSort) {
-            "Nama A–Z" -> filtered.sortedBy { it.title.lowercase() }
-            "Nama Z–A" -> filtered.sortedByDescending { it.title.lowercase() }
-            "Kategori" -> filtered.sortedWith(compareBy<StockItem> { it.category.lowercase() }.thenBy { it.title.lowercase() })
+            "Name A–Z" -> filtered.sortedBy { it.title.lowercase() }
+            "Name Z–A" -> filtered.sortedByDescending { it.title.lowercase() }
+            "Categories" -> filtered.sortedWith(compareBy<StockItem> { it.category.lowercase() }.thenBy { it.title.lowercase() })
             else -> filtered
         }
         if (matches.isEmpty()) {
@@ -425,15 +425,15 @@ class StockActivity : Activity() {
                 gravity = Gravity.CENTER
                 setPadding(dp(24), dp(48), dp(24), dp(48))
             }
-            emptyState.addView(label("Tidak ada wallpaper yang cocok.", 15, primaryText, true).apply {
+            emptyState.addView(label("No matching wallpapers found.", 15, primaryText, true).apply {
                 gravity = Gravity.CENTER
             })
-            emptyState.addView(label("Coba kata kunci atau kategori lain.", 13, secondaryText, false).apply {
+            emptyState.addView(label("Try another keyword or category.", 13, secondaryText, false).apply {
                 gravity = Gravity.CENTER
                 setPadding(0, dp(8), 0, dp(16))
             })
             emptyState.addView(Button(this).apply {
-                text = "Hapus filter"
+                text = "Clear filters"
                 setOnClickListener {
                     query = ""
                     selectedCategory = "All"
@@ -491,9 +491,9 @@ class StockActivity : Activity() {
         if (matches.size > visibleStockLimit || hasMore || isLoadingShard) {
             host.addView(Button(this).apply {
                 text = when {
-                    isLoadingShard -> "Memuat halaman katalog…"
+                    isLoadingShard -> "Loading catalog page…"
                     matches.size > visibleStockLimit -> "Muat lebih banyak"
-                    else -> "Muat halaman berikutnya"
+                    else -> "Load next page"
                 }
                 isEnabled = !isLoadingShard
                 setOnClickListener {
@@ -622,7 +622,7 @@ class StockActivity : Activity() {
         }
         layout.addView(preview, LinearLayout.LayoutParams(-1, dp(360)))
         val categoryInfo = TextView(this).apply {
-            text = "KATEGORI  •  " + item.category
+            text = "CATEGORY  •  " + item.category
             textSize = 12f
             setTextColor(secondaryText)
             typeface = android.graphics.Typeface.DEFAULT_BOLD
@@ -630,26 +630,26 @@ class StockActivity : Activity() {
         }
         layout.addView(categoryInfo, LinearLayout.LayoutParams(-1, -2))
         val detailInfo = TextView(this).apply {
-            text = "Pratinjau wallpaper Stock"
+            text = "Stock wallpaper preview"
             textSize = 13f
             setTextColor(primaryText)
             setPadding(dp(4), 0, dp(4), dp(6))
         }
         layout.addView(detailInfo, LinearLayout.LayoutParams(-1, -2))
         val favoriteButton = Button(this).apply {
-            text = if (item.id in favorites) "♥  Hapus dari favorit" else "♡  Tambahkan ke favorit"
+            text = if (item.id in favorites) "♥  Remove from favorites" else "♡  Add to favorites"
             setOnClickListener {
                 if (!favorites.add(item.id)) favorites.remove(item.id)
                 getSharedPreferences("wallpaper_preferences", MODE_PRIVATE).edit()
                     .putStringSet("favorite_ids", favorites.toSet()).putStringSet("favorite_titles", emptySet()).apply()
-                text = if (item.id in favorites) "♥  Hapus dari favorit" else "♡  Tambahkan ke favorit"
+                text = if (item.id in favorites) "♥  Remove from favorites" else "♡  Add to favorites"
                 renderGrid()
             }
         }
         layout.addView(favoriteButton, LinearLayout.LayoutParams(-1, dp(48)))
         AlertDialog.Builder(this).setTitle(item.title).setView(layout)
-            .setNeutralButton("Bagikan", null)
-            .setNegativeButton("Tutup", null)
+            .setNeutralButton("Share", null)
+            .setNegativeButton("Close", null)
             .setPositiveButton("Terapkan", null)
             .create().also { dialog ->
                 dialog.setOnShowListener {
@@ -790,10 +790,10 @@ class StockActivity : Activity() {
     }
 
     private fun shareItem(item: StockItem) {
-        Toast.makeText(this, "Menyiapkan gambar untuk dibagikan…", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Preparing image for sharing…", Toast.LENGTH_SHORT).show()
         loadFullImageFile(item) { imageFile ->
             if (imageFile == null) {
-                Toast.makeText(this, "Gambar gagal dimuat. Periksa koneksi internet.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Image failed to load. Check your internet connection.", Toast.LENGTH_LONG).show()
                 return@loadFullImageFile
             }
             try {
@@ -811,18 +811,18 @@ class StockActivity : Activity() {
                     clipData = android.content.ClipData.newUri(contentResolver, item.title, imageUri)
                     addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
-                startActivity(android.content.Intent.createChooser(sendIntent, "Bagikan wallpaper"))
+                startActivity(android.content.Intent.createChooser(sendIntent, "Share wallpaper"))
             } catch (e: Exception) {
-                Toast.makeText(this, "Gagal membagikan gambar: " + e.localizedMessage, Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Failed to share image: " + e.localizedMessage, Toast.LENGTH_LONG).show()
             }
         }
     }
 
     private fun applyItem(item: StockItem) {
-        Toast.makeText(this, "Menyiapkan wallpaper…", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Preparing wallpaper…", Toast.LENGTH_SHORT).show()
         loadFullImageFile(item) { imageFile ->
             if (imageFile == null) {
-                Toast.makeText(this, "Gambar gagal dimuat. Periksa koneksi internet.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Image failed to load. Check your internet connection.", Toast.LENGTH_LONG).show()
                 return@loadFullImageFile
             }
             showApplyDestinationDialog(item, imageFile)
@@ -831,12 +831,12 @@ class StockActivity : Activity() {
 
     private fun showApplyDestinationDialog(item: StockItem, imageFile: File) {
         val destinations = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            arrayOf("Layar utama", "Layar kunci", "Keduanya")
+            arrayOf("Home screen", "Lock screen", "Both")
         } else {
-            arrayOf("Layar utama")
+            arrayOf("Home screen")
         }
         AlertDialog.Builder(this)
-            .setTitle("Terapkan wallpaper")
+            .setTitle("Apply wallpaper")
             .setItems(destinations) { _, which ->
                 try {
                     val manager = WallpaperManager.getInstance(this)
@@ -852,12 +852,12 @@ class StockActivity : Activity() {
                             manager.setStream(input)
                         }
                     }
-                    Toast.makeText(this, "Wallpaper " + item.title + " diterapkan ke " + destinations[which], Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "Wallpaper " + item.title + " applied to " + destinations[which], Toast.LENGTH_LONG).show()
                 } catch (e: Exception) {
-                    Toast.makeText(this, "Gagal menerapkan wallpaper: " + e.localizedMessage, Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "Failed to apply wallpaper: " + e.localizedMessage, Toast.LENGTH_LONG).show()
                 }
             }
-            .setNegativeButton("Batal", null)
+            .setNegativeButton("Cancel", null)
             .show()
     }
 
@@ -867,7 +867,7 @@ class StockActivity : Activity() {
             gravity = Gravity.CENTER
             setPadding(dp(24), dp(24), dp(24), dp(24))
             addView(label(message, 16, ink, true))
-            addView(Button(this@StockActivity).apply { text = "Kembali"; setOnClickListener { finish() } })
+            addView(Button(this@StockActivity).apply { text = "Back"; setOnClickListener { finish() } })
         })
     }
 
