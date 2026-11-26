@@ -93,6 +93,7 @@ class MainActivity : Activity() {
     private var remoteCatalogIndex: CatalogManifest.Index? = null
     private var loadedShardCount = 0
     private var shardLoading = false
+    private var initialCatalogLoading = true
     private var adsInitialized = false
     private var adsInitializationStarted = false
     private var bannerAdRequested = false
@@ -125,7 +126,10 @@ class MainActivity : Activity() {
         showStartupLoadingScreen()
         initializeAds()
         // Start with a clean catalog: only wallpapers added by the owner in Admin are shown.
-        loadFirestoreWallpapers { /* Startup screen duration is fixed below. */ }
+        loadFirestoreWallpapers {
+            initialCatalogLoading = false
+            if (homeScreenActive && !isFinishing && !isDestroyed) buildHome()
+        }
         Handler(Looper.getMainLooper()).postDelayed({
             if (!isFinishing && !isDestroyed) buildHome()
         }, 5000L)
@@ -840,7 +844,7 @@ class MainActivity : Activity() {
             val popularTags = listOf(
                 "Nature", "City", "Cars", "Technology", "Gaming",
                 "Space", "Minimalist", "Abstract", "AMOLED", "Dark",
-                "3D", "Anime", "Architecture", "Animals", "Flowers",
+                "3D", "Anime", "Architecture", "Animals", "Girl",
                 "Fantasy", "Superheroes", "Art", "Luxury", "Aesthetic"
             )
             popularTags.forEach { tag ->
@@ -901,16 +905,34 @@ class MainActivity : Activity() {
             else -> filteredIndexes
         }
         if (visibleIndexes.isEmpty()) {
-            val emptyTitle = if (selectedTab == "Wallpaper" || selectedTab == "Home") "Belum ada wallpaper" else "Konten belum tersedia"
-            val emptyMessage = if (selectedTab == "Wallpaper" || selectedTab == "Home") "Coba ubah kategori atau kata pencarian." else "Koleksi untuk tab ini akan muncul setelah katalog menyediakan jenis kontennya."
-            val emptyState = LinearLayout(this@MainActivity).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER
-                setPadding(dp(28), dp(54), dp(28), dp(54))
-                addView(text(emptyTitle, 18, pageText, true).apply { gravity = Gravity.CENTER })
-                addView(text(emptyMessage, 13, if (darkMode) 0xffaaaaaa.toInt() else Color.GRAY, false).apply { gravity = Gravity.CENTER; setPadding(0, dp(8), 0, 0) })
+            if (initialCatalogLoading) {
+                val loadingState = LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    setPadding(dp(28), dp(54), dp(28), dp(54))
+                    val spinner = ProgressBar(this@MainActivity).apply {
+                        isIndeterminate = true
+                        if (Build.VERSION.SDK_INT >= 21) indeterminateTintList = android.content.res.ColorStateList.valueOf(pageText)
+                    }
+                    addView(spinner, LinearLayout.LayoutParams(dp(36), dp(36)).apply { gravity = Gravity.CENTER })
+                    addView(text("Loading...", 14, pageText, true).apply {
+                        gravity = Gravity.CENTER
+                        setPadding(0, dp(12), 0, 0)
+                    })
+                }
+                content.addView(loadingState, LinearLayout.LayoutParams(-1, -2))
+            } else {
+                val emptyTitle = if (selectedTab == "Wallpaper" || selectedTab == "Home") "Belum ada wallpaper" else "Konten belum tersedia"
+                val emptyMessage = if (selectedTab == "Wallpaper" || selectedTab == "Home") "Coba ubah kategori atau kata pencarian." else "Koleksi untuk tab ini akan muncul setelah katalog menyediakan jenis kontennya."
+                val emptyState = LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    setPadding(dp(28), dp(54), dp(28), dp(54))
+                    addView(text(emptyTitle, 18, pageText, true).apply { gravity = Gravity.CENTER })
+                    addView(text(emptyMessage, 13, if (darkMode) 0xffaaaaaa.toInt() else Color.GRAY, false).apply { gravity = Gravity.CENTER; setPadding(0, dp(8), 0, 0) })
+                }
+                content.addView(emptyState, LinearLayout.LayoutParams(-1, -2))
             }
-            content.addView(emptyState, LinearLayout.LayoutParams(-1, -2))
         }
         val liveTilePlayers = mutableListOf<Pair<VideoView, FrameLayout>>()
         visibleIndexes.take(visibleItemLimit).forEach { index ->
@@ -1637,7 +1659,7 @@ class MainActivity : Activity() {
         val tagChoices = listOf(
             "Nature", "City", "Cars", "Technology", "Gaming",
             "Space", "Minimalist", "Abstract", "AMOLED", "Dark",
-            "3D", "Anime", "Architecture", "Animals", "Flowers",
+            "3D", "Anime", "Architecture", "Animals", "Girl",
             "Fantasy", "Superheroes", "Art", "Luxury", "Aesthetic"
         )
         val selectedTags = linkedSetOf<String>()
