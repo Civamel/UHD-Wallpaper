@@ -744,7 +744,7 @@ class MainActivity : Activity() {
             }
         }, LinearLayout.LayoutParams(0,dp(48),1f))
         if (!showOnlyFavorites) header.addView(animatedDiamond(dp(34)))
-        listOf("moon-modern","⌕","♡","settings-modern").forEachIndexed { i,glyph ->
+        listOf("moon-filled","⌕","♡","gear-filled").forEachIndexed { i,glyph ->
             val icon = modernIcon(glyph, 40)
             icon.contentDescription = listOf("Tema","Cari","Favorit","Pengaturan")[i]
             icon.setOnClickListener {
@@ -1269,7 +1269,7 @@ class MainActivity : Activity() {
     }
 
     private fun previewCircle(symbol: String, action: () -> Unit): View {
-        val glyph = if (symbol == "↗") "share-curved" else symbol
+        val glyph = if (symbol == "↗") "share-arrow" else symbol
         val baseColor = Color.WHITE
         val icon = OutlineIconView(glyph, baseColor)
         val button = FrameLayout(this@MainActivity).apply {
@@ -1529,8 +1529,8 @@ class MainActivity : Activity() {
         root.addView(text("‹   Pengaturan",22,settingsText,true).apply { setOnClickListener { buildHome() } })
         root.addView(space(28)); root.addView(text("Pengaturan",24,settingsText,true)); root.addView(space(12))
         listOf(
-            "bell-modern" to "Notifikasi","♡" to "Favorit","◷" to "Riwayat dilihat","language-modern" to "Bahasa Aplikasi",
-            "⇩" to "Unduh","share-curved" to "Bagikan Aplikasi","☆" to "Nilai kami","✉" to "Umpan Balik","cache-modern" to "Kelola Cache"
+            "bell-modern" to "Notifikasi","♡" to "Favorit","◷" to "Riwayat dilihat","language-dual" to "Bahasa Aplikasi",
+            "⇩" to "Unduh","share-arrow" to "Bagikan Aplikasi","☆" to "Nilai kami","✉" to "Umpan Balik","cache-modern" to "Kelola Cache"
         ).forEach { (glyph,item) ->
             val row = LinearLayout(this@MainActivity).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -2640,10 +2640,63 @@ class MainActivity : Activity() {
             val p = paint
             when (glyph) {
                 "moon-modern" -> { canvas.drawArc(8f,6f,40f,42f,55f,250f,false,p); canvas.drawArc(17f,6f,43f,36f,45f,250f,false,p) }
-                "settings-modern" -> { for (i in 0..7) { canvas.save(); canvas.rotate(i*45f,24f,24f); canvas.drawRoundRect(20f,3f,28f,13f,2f,2f,p); canvas.restore() }; canvas.drawCircle(24f,24f,16f,p); canvas.drawCircle(24f,24f,6f,p) }
+                "moon-filled" -> {
+                    val oldStyle = p.style
+                    p.style = Paint.Style.FILL
+                    val moon = Path().apply {
+                        moveTo(34f, 5f)
+                        cubicTo(17f, 6f, 7f, 19f, 9f, 31f)
+                        cubicTo(11f, 44f, 25f, 48f, 37f, 39f)
+                        cubicTo(25f, 41f, 16f, 32f, 17f, 21f)
+                        cubicTo(18f, 13f, 24f, 7f, 34f, 5f)
+                        close()
+                    }
+                    canvas.save(); canvas.scale(0.86f, 0.86f, 24f, 24f); canvas.drawPath(moon, p); canvas.restore()
+                    p.style = oldStyle
+                }
+                "gear-filled" -> {
+                    val oldStyle = p.style
+                    p.style = Paint.Style.FILL
+                    val gear = Path()
+                    for (i in 0 until 32) {
+                        val angle = Math.toRadians(i * 360.0 / 32.0 - 90.0)
+                        val radius = if (i % 4 == 0 || i % 4 == 1) 22f else 17f
+                        val x = 24f + kotlin.math.cos(angle).toFloat() * radius
+                        val y = 24f + kotlin.math.sin(angle).toFloat() * radius
+                        if (i == 0) gear.moveTo(x, y) else gear.lineTo(x, y)
+                    }
+                    gear.close(); canvas.drawPath(gear, p)
+                    p.color = if (darkMode) 0xff121318.toInt() else Color.WHITE
+                    canvas.drawCircle(24f, 24f, 7f, p)
+                    p.color = if (active) 0xff36a3ff.toInt() else iconColor
+                    p.style = oldStyle
+                }
                 "bell-modern" -> { val path=Path().apply { moveTo(10f,35f); cubicTo(15f,30f,13f,22f,15f,15f); cubicTo(19f,5f,29f,5f,33f,15f); cubicTo(35f,22f,33f,30f,38f,35f); close() }; canvas.drawPath(path,p); canvas.drawLine(10f,35f,38f,35f,p); canvas.drawArc(19f,34f,29f,43f,0f,180f,false,p) }
                 "language-modern" -> { canvas.drawCircle(24f,24f,19f,p); canvas.drawOval(15f,5f,33f,43f,p); canvas.drawLine(6f,24f,42f,24f,p); canvas.drawLine(10f,14f,38f,14f,p); canvas.drawLine(10f,34f,38f,34f,p) }
+                "language-dual" -> {
+                    val oldStyle = p.style
+                    p.style = Paint.Style.STROKE
+                    p.strokeWidth = 2.6f
+                    val back = Path().apply { moveTo(19f,8f); lineTo(39f,8f); quadTo(43f,8f,43f,12f); lineTo(43f,36f); quadTo(43f,40f,39f,40f); lineTo(29f,40f) }
+                    val front = Path().apply { moveTo(8f,5f); lineTo(25f,5f); quadTo(29f,5f,29f,9f); lineTo(29f,34f); quadTo(29f,38f,25f,38f); lineTo(8f,38f); quadTo(4f,38f,4f,34f); lineTo(4f,9f); quadTo(4f,5f,8f,5f); close() }
+                    canvas.drawPath(back,p); canvas.drawPath(front,p)
+                    p.style = Paint.Style.FILL
+                    p.textSize = 21f; p.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD); canvas.drawText("G",7f,29f,p)
+                    p.textSize = 15f; canvas.drawText("文",20f,32f,p)
+                    p.style = oldStyle
+                }
                 "share-curved" -> { val path=Path().apply { moveTo(12f,31f); cubicTo(12f,14f,26f,8f,36f,16f); moveTo(27f,8f); lineTo(36f,16f); lineTo(27f,21f) }; canvas.drawPath(path,p) }
+                "share-arrow" -> {
+                    val arrow = Path().apply {
+                        moveTo(10f,40f); cubicTo(10f,25f,15f,17f,27f,15f)
+                        lineTo(27f,7f); cubicTo(27f,5f,29f,4f,31f,6f)
+                        lineTo(44f,19f); cubicTo(46f,21f,46f,23f,44f,25f)
+                        lineTo(31f,38f); cubicTo(29f,40f,27f,39f,27f,36f)
+                        lineTo(27f,29f); cubicTo(19f,29f,15f,33f,10f,40f); close()
+                    }
+                    val oldStyle=p.style; p.style=Paint.Style.STROKE; p.strokeWidth=3.4f
+                    canvas.drawPath(arrow,p); p.style=oldStyle
+                }
                 "⚑" -> { canvas.drawLine(12f,5f,12f,43f,p); val flag=Path().apply { moveTo(13f,7f); lineTo(37f,12f); lineTo(29f,22f); lineTo(13f,19f); close() }; canvas.drawPath(flag,p) }
                 "ⓘ" -> { canvas.drawCircle(24f,24f,19f,p); canvas.drawCircle(24f,14f,1.5f,p); canvas.drawLine(24f,21f,24f,34f,p) }
                 "cache-modern" -> { canvas.drawRoundRect(7f,8f,41f,40f,5f,5f,p); canvas.drawLine(7f,17f,41f,17f,p); canvas.drawLine(7f,31f,41f,31f,p); canvas.drawLine(17f,17f,17f,31f,p); canvas.drawLine(31f,17f,31f,31f,p) }
@@ -2676,8 +2729,12 @@ class MainActivity : Activity() {
                     canvas.drawCircle(24f, 24f, 6f, p)
                 }
                 "♡", "♥" -> {
-                    val path = Path().apply { moveTo(24f, 41f); cubicTo(19f,36f,5f,27f,5f,16f); cubicTo(5f,5f,19f,3f,24f,13f); cubicTo(29f,3f,43f,5f,43f,16f); cubicTo(43f,27f,29f,36f,24f,41f) }
+                    val path = Path().apply { moveTo(24f, 41f); cubicTo(19f,36f,5f,27f,5f,16f); cubicTo(5f,5f,19f,3f,24f,13f); cubicTo(29f,3f,43f,5f,43f,16f); cubicTo(43f,27f,29f,36f,24f,41f); close() }
+                    val oldStyle = p.style
+                    if (glyph == "♥") { p.style = Paint.Style.FILL; p.color = 0xffe53935.toInt() } else p.style = Paint.Style.STROKE
                     canvas.drawPath(path,p)
+                    p.style = oldStyle
+                    if (glyph == "♥") p.color = if (active) 0xff36a3ff.toInt() else iconColor
                 }
                 "♟" -> {
                     canvas.drawCircle(24f,12f,6f,p)
