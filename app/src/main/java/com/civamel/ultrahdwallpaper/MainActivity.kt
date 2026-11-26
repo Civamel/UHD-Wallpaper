@@ -1591,7 +1591,7 @@ class MainActivity : Activity() {
                 "image" to url,
                 "type" to wallpaperTypeSpinner.selectedItem.toString(),
                 "tags" to tagsInput.text.toString()
-                    .split(',', ';', '\\n')
+                    .split(',', ';', '\n')
                     .map { it.trim() }
                     .filter { it.isNotEmpty() }
                     .distinctBy { it.lowercase(java.util.Locale.ROOT) },
@@ -1599,8 +1599,17 @@ class MainActivity : Activity() {
             )
             FirebaseFirestore.getInstance().collection("wallpapers").document(id).set(data)
                 .addOnSuccessListener {
+                    names.add(name)
+                    itemIds.add(id)
+                    itemCategories.add(group)
+                    itemTypes.add(wallpaperTypeSpinner.selectedItem.toString())
+                    @Suppress("UNCHECKED_CAST")
+                    itemTags.add(data["tags"] as? List<String> ?: emptyList())
+                    thumbnailUrls.add(url)
+                    fullUrls.add(url)
                     title.text.clear()
                     category.text.clear()
+                    tagsInput.text.clear()
                     imageUrl.text.clear()
                     Toast.makeText(this, "Wallpaper berhasil disimpan", Toast.LENGTH_LONG).show()
                     save.isEnabled = true
