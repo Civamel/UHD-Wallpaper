@@ -62,7 +62,7 @@ class LiveWallpaperService : WallpaperService() {
                                 doInput = true
                             }
                             if (connection.responseCode !in 200..299) throw IllegalStateException("HTTP ${connection.responseCode}")
-                            if (connection.contentLengthLong > 50L * 1024L * 1024L) throw IllegalStateException("Video melebihi 50 MB")
+                            if (connection.contentLengthLong > 50L * 1024L * 1024L) throw IllegalStateException("Video exceeds 50 MB")
                             connection.inputStream.use { input ->
                                 FileOutputStream(temp).use { output ->
                                     val buffer = ByteArray(16 * 1024)
@@ -72,7 +72,7 @@ class LiveWallpaperService : WallpaperService() {
                                         val count = input.read(buffer)
                                         if (count < 0) break
                                         total += count
-                                        if (total > 50L * 1024L * 1024L) throw IllegalStateException("Video melebihi 50 MB")
+                                        if (total > 50L * 1024L * 1024L) throw IllegalStateException("Video exceeds 50 MB")
                                         output.write(buffer, 0, count)
                                     }
                                     output.fd.sync()
