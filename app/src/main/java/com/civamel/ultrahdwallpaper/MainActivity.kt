@@ -822,7 +822,7 @@ class MainActivity : Activity() {
             }
         }, LinearLayout.LayoutParams(0,dp(48),1f))
         if (!showOnlyFavorites) header.addView(animatedDiamond(dp(34)))
-        listOf("moon-filled","⌕","♡","gear-filled").forEachIndexed { i,glyph ->
+        listOf("moon-soft","⌕","♡","gear-filled").forEachIndexed { i,glyph ->
             val icon = modernIcon(glyph, 40)
             icon.contentDescription = listOf("Tema","Cari","Favorit","Pengaturan")[i]
             icon.setOnClickListener {
@@ -937,10 +937,10 @@ class MainActivity : Activity() {
             popularPanel.addView(tagScroll, LinearLayout.LayoutParams(-1, dp(25)))
             content.addView(popularPanel, LinearLayout.LayoutParams(-1, dp(52)).apply { setMargins(dp(12), dp(1), dp(12), dp(3)) })
         }
-        val sort=TextView(this@MainActivity).apply { text="Filter : "+sortMode+"   ▾"; textSize=13f; setTextColor(if (darkMode) Color.WHITE else Color.BLACK); setTypeface(typeface, android.graphics.Typeface.BOLD); setPadding(dp(18),dp(1),dp(12),dp(4)); setOnClickListener {
-            val options = arrayOf("Paling populer", "Terbaru", "A-Z", "Acak")
+        val sort=TextView(this@MainActivity).apply { text=localized("Filter :")+" "+localized(sortMode)+"   ▾"; textSize=13f; setTextColor(if (darkMode) Color.WHITE else Color.BLACK); setTypeface(typeface, android.graphics.Typeface.BOLD); setPadding(dp(18),dp(1),dp(12),dp(4)); setOnClickListener {
+            val options = arrayOf("Paling populer", "Terbaru", "A-Z", "Acak").map { localized(it) }.toTypedArray()
             AlertDialog.Builder(this@MainActivity).setTitle("Urutkan berdasarkan").setItems(options) { _, w ->
-                sortMode = options[w]
+                sortMode = listOf("Paling populer", "Terbaru", "A-Z", "Acak")[w]
                 preferences.edit().putString("wallpaper_sort_mode", sortMode).apply()
                 visibleItemLimit = 24
                 buildHome()
@@ -1723,7 +1723,7 @@ class MainActivity : Activity() {
         })
         val title = EditText(this).apply { hint = "Judul wallpaper"; setTextColor(fg) }
         val manageWallpapers = Button(this).apply {
-            text = "▧   Kelola Wallpaper"
+            text = "🪄   Kelola Wallpaper"
             isAllCaps = false
             setOnClickListener { showAdminWallpaperManager() }
         }
@@ -2759,7 +2759,7 @@ class MainActivity : Activity() {
         }
         setContentView(root)
     }
-    private fun search(){ val input=EditText(this@MainActivity).apply { hint="Cari wallpaper"; setText(searchQuery) }; AlertDialog.Builder(this@MainActivity).setTitle("Search").setView(input).setPositiveButton("Cari"){_,_-> searchQuery=input.text.toString().trim(); showOnlyFavorites=false; visibleItemLimit=60; buildHome() }.setNeutralButton("Hapus"){_,_-> searchQuery=""; visibleItemLimit=60; buildHome() }.setNegativeButton("Batal",null).show() }
+    private fun search(){ val input=EditText(this@MainActivity).apply { hint=localized("Cari wallpaper"); setText(searchQuery) }; AlertDialog.Builder(this@MainActivity).setTitle(localized("Search")).setView(input).setPositiveButton(localized("Cari")){_,_-> searchQuery=input.text.toString().trim(); showOnlyFavorites=false; visibleItemLimit=60; buildHome() }.setNeutralButton(localized("Hapus")){_,_-> searchQuery=""; visibleItemLimit=60; buildHome() }.setNegativeButton(localized("Batal"),null).show() }
     private fun shareWallpaper(index: Int) {
         val url = fullUrls.getOrNull(index)
         if (url.isNullOrBlank()) {
@@ -2809,7 +2809,7 @@ class MainActivity : Activity() {
     private fun modernIcon(glyph: String, size: Int): FrameLayout {
         val iconColor = if (darkMode) Color.WHITE else ink
         val icon = FrameLayout(this@MainActivity).apply {
-            background = getDrawable(android.R.drawable.list_selector_background)
+            background = null
             isClickable = true
             isFocusable = true
             clipToOutline = false
@@ -2820,6 +2820,13 @@ class MainActivity : Activity() {
             isFocusable = false
         }
         icon.addView(art, FrameLayout.LayoutParams(-1, -1))
+        icon.setOnTouchListener { _, event ->
+            when (event.actionMasked) {
+                android.view.MotionEvent.ACTION_DOWN -> art.setActive(true)
+                android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> art.setActive(false)
+            }
+            false
+        }
         icon.layoutParams = LinearLayout.LayoutParams(dp(size), dp(size))
         return icon
     }
@@ -2829,7 +2836,7 @@ class MainActivity : Activity() {
         private val iconColor: Int
     ) : View(this@MainActivity) {
         private var active = false
-        fun setActive(value: Boolean) { active = value; paint.color = if (active) 0xff36a3ff.toInt() else iconColor; invalidate() }
+        fun setActive(value: Boolean) { active = value; paint.color = if (active) 0xffffc928.toInt() else iconColor; invalidate() }
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = iconColor
             style = Paint.Style.STROKE
@@ -2848,6 +2855,20 @@ class MainActivity : Activity() {
             val p = paint
             when (glyph) {
                 "moon-modern" -> { canvas.drawArc(8f,6f,40f,42f,55f,250f,false,p); canvas.drawArc(17f,6f,43f,36f,45f,250f,false,p) }
+                "moon-soft" -> {
+                    val oldStyle = p.style
+                    p.style = Paint.Style.FILL
+                    val moon = Path().apply {
+                        moveTo(34f, 7f)
+                        cubicTo(19f, 7f, 10f, 18f, 11f, 29f)
+                        cubicTo(12f, 40f, 23f, 46f, 34f, 40f)
+                        cubicTo(26f, 41f, 19f, 35f, 18f, 27f)
+                        cubicTo(17f, 18f, 23f, 10f, 34f, 7f)
+                        close()
+                    }
+                    canvas.drawPath(moon, p)
+                    p.style = oldStyle
+                }
                 "moon-filled" -> {
                     val oldStyle = p.style
                     p.style = Paint.Style.FILL
@@ -3005,6 +3026,30 @@ class MainActivity : Activity() {
                     canvas.drawLine(15f,24f,33f,24f,p)
                     canvas.drawLine(24f,15f,24f,33f,p)
                 }
+            }
+            if (active) {
+                val sparkle = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = 0xffffc928.toInt()
+                    style = Paint.Style.STROKE
+                    strokeWidth = 2.2f
+                    strokeCap = Paint.Cap.ROUND
+                }
+                for (i in 0 until 8) {
+                    val angle = Math.toRadians(i * 45.0)
+                    val inner = 22f
+                    val outer = if (i % 2 == 0) 29f else 26f
+                    canvas.drawLine(
+                        24f + kotlin.math.cos(angle).toFloat() * inner,
+                        24f + kotlin.math.sin(angle).toFloat() * inner,
+                        24f + kotlin.math.cos(angle).toFloat() * outer,
+                        24f + kotlin.math.sin(angle).toFloat() * outer,
+                        sparkle
+                    )
+                }
+                canvas.drawCircle(8f, 12f, 1.8f, sparkle)
+                canvas.drawCircle(40f, 11f, 1.8f, sparkle)
+                canvas.drawCircle(10f, 39f, 1.8f, sparkle)
+                canvas.drawCircle(39f, 38f, 1.8f, sparkle)
             }
             canvas.restore()
         }
