@@ -927,7 +927,6 @@ class MainActivity : Activity() {
                 val liveVideo = VideoView(this@MainActivity).apply {
                     setBackgroundColor(Color.BLACK)
                     setOnClickListener { showPreview(index) }
-                    setVideoURI(Uri.parse(videoUrl))
                     setOnPreparedListener { mp ->
                         mp.isLooping = true
                         mp.setVolume(0f, 0f)
@@ -935,6 +934,7 @@ class MainActivity : Activity() {
                         if (isShown) start()
                     }
                     setOnErrorListener { _, _, _ ->
+                        tag = "failed"
                         android.util.Log.w("LiveTile", "Unable to play live tile: $name")
                         true
                     }
@@ -989,7 +989,15 @@ class MainActivity : Activity() {
                 val visibleNow = tile.isShown && tile.getLocalVisibleRect(android.graphics.Rect())
                 try {
                     if (visibleNow) {
-                        if (video.tag == true && !video.isPlaying) video.start()
+                        if (video.tag == null) {
+                            video.tag = "loading"
+                            val tileIndex = liveTilePlayers.indexOfFirst { it.first === video }
+                            val sourceIndex = visibleIndexes.take(visibleItemLimit).filter { itemTypes.getOrNull(it) == "live" }.getOrNull(tileIndex)
+                            val sourceUrl = sourceIndex?.let { fullUrls.getOrNull(it) }.orEmpty()
+                            if (sourceUrl.isNotBlank()) video.setVideoURI(Uri.parse(sourceUrl))
+                        } else if (video.tag == true && !video.isPlaying) {
+                            video.start()
+                        }
                     } else if (video.isPlaying) {
                         video.pause()
                     }
