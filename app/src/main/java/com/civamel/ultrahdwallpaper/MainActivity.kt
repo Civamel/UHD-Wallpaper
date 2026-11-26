@@ -131,9 +131,22 @@ class MainActivity : Activity() {
         val extras = extraTranslations[appLanguage] ?: extraTranslations[appLanguage.substringBefore("-")]
         extras?.get(value)?.let { return it }
         val langMap = translations[appLanguage] ?: translations[appLanguage.substringBefore("-")] ?: translations["en"]!!
-        return langMap[value] ?: if (appLanguage == "en") englishFallback(value) else value
+        return langMap[value] ?: englishFallback(value)
     }
     private fun englishFallback(value: String): String = when (value) {
+        "Batal" -> "Cancel"
+        "Tutup" -> "Close"
+        "Hapus" -> "Delete"
+        "Cari" -> "Search"
+        "Cari wallpaper" -> "Search wallpapers"
+        "Urutkan berdasarkan" -> "Sort by"
+        "Terbaru" -> "Newest"
+        "Acak" -> "Random"
+        "Katalog bawaan gagal dibaca" -> "Built-in catalog failed to load"
+        "Ukuran gambar melebihi batas" -> "Image size exceeds the limit"
+        "File gambar tidak valid" -> "Invalid image file"
+        "Banner tidak valid" -> "Invalid banner"
+
         "Memuat wallpaper…" -> "Loading wallpapers…"
         "Belum ada wallpaper" -> "No wallpapers yet"
         "Paling populer" -> "Most popular"
@@ -1466,7 +1479,7 @@ class MainActivity : Activity() {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(file.absolutePath, bounds)
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
-            throw IllegalStateException("File gambar tidak dapat dibaca")
+            throw IllegalStateException("Image file could not be read")
         }
 
         var sampleSize = 1
@@ -1479,7 +1492,7 @@ class MainActivity : Activity() {
             inPreferredConfig = Bitmap.Config.ARGB_8888
         }
         val decoded = BitmapFactory.decodeFile(file.absolutePath, options)
-            ?: throw IllegalStateException("Gagal membaca gambar wallpaper")
+            ?: throw IllegalStateException("Failed to read wallpaper image")
 
         try {
             val sourceRatio = decoded.width.toFloat() / decoded.height.toFloat()
