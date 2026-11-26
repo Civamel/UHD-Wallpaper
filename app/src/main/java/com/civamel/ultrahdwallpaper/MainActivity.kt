@@ -837,7 +837,14 @@ class MainActivity : Activity() {
             popularPanel.addView(text("Popular Tags", 11, Color.WHITE, true).apply { setPadding(dp(2), 0, 0, dp(2)) })
             val tagScroll = HorizontalScrollView(this@MainActivity).apply { isHorizontalScrollBarEnabled = false; clipToPadding = false }
             val tagRow = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-            listOf("Anime", "Cartoon", "Girl", "Nature", "Neon & Fireworks", "Tourism", "Vehicles", "Fantasy", "AI Generated").forEach { tag ->
+            val popularTags = itemTags.flatten()
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .groupBy { it.lowercase(java.util.Locale.ROOT) }
+                .map { (_, values) -> values.first() to values.size }
+                .sortedWith(compareByDescending<Pair<String, Int>> { it.second }.thenBy { it.first.lowercase(java.util.Locale.ROOT) })
+                .take(15)
+            popularTags.forEach { (tag, _) ->
                 tagRow.addView(text(tag, 10, 0xff70434b.toInt(), true).apply {
                     gravity = Gravity.CENTER
                     setPadding(dp(10), dp(3), dp(10), dp(3))
@@ -1542,6 +1549,12 @@ class MainActivity : Activity() {
         })
         val title = EditText(this).apply { hint = "Judul wallpaper"; setTextColor(fg) }
         val category = EditText(this).apply { hint = "Kategori, contoh: Nature"; setTextColor(fg) }
+        val tagsInput = EditText(this).apply {
+            hint = "Tags, pisahkan dengan koma (Nature, Forest, Relaxing)"
+            setTextColor(fg)
+            minLines = 2
+            gravity = Gravity.TOP
+        }
         val imageUrl = EditText(this).apply {
             hint = "URL gambar (https://...)"
             setTextColor(fg)
@@ -1553,6 +1566,7 @@ class MainActivity : Activity() {
         val save = Button(this).apply { text = "Simpan wallpaper" }
         root.addView(title)
         root.addView(category)
+        root.addView(tagsInput)
         root.addView(imageUrl)
         root.addView(wallpaperTypeSpinner)
         root.addView(save)
@@ -1576,7 +1590,11 @@ class MainActivity : Activity() {
                 "thumbnail" to url,
                 "image" to url,
                 "type" to wallpaperTypeSpinner.selectedItem.toString(),
-                "tags" to emptyList<String>(),
+                "tags" to tagsInput.text.toString()
+                    .split(',', ';', '\\n')
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .distinctBy { it.lowercase(java.util.Locale.ROOT) },
                 "createdAt" to com.google.firebase.Timestamp.now()
             )
             FirebaseFirestore.getInstance().collection("wallpapers").document(id).set(data)
