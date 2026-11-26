@@ -249,8 +249,41 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
             setPadding(0, dp(18), 0, dp(8))
         })
-        root.addView(Space(this), LinearLayout.LayoutParams(1, 0, 1f))
-        root.addView(ProgressBar(this).apply { isIndeterminate = true }, LinearLayout.LayoutParams(dp(42), dp(42)).apply { gravity = Gravity.CENTER })
+        val fireworks = object : View(this) {
+            private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+            private var angle = 0f
+            private val colors = intArrayOf(0xffff5252.toInt(), 0xffffc107.toInt(), 0xff40c4ff.toInt(), 0xff69f0ae.toInt(), 0xffe040fb.toInt(), 0xffff80ab.toInt(), 0xffffff00.toInt(), 0xff7c4dff.toInt())
+            private val animator = object : Runnable {
+                override fun run() {
+                    angle = (angle + 9f) % 360f
+                    invalidate()
+                    postDelayed(this, 45L)
+                }
+            }
+            init { post(animator) }
+            override fun onDraw(canvas: Canvas) {
+                super.onDraw(canvas)
+                val cx = width / 2f
+                val cy = height / 2f
+                val radius = dp(15).toFloat()
+                canvas.save()
+                canvas.rotate(angle, cx, cy)
+                for (i in 0 until 8) {
+                    val a = Math.toRadians((i * 45).toDouble())
+                    val x1 = cx + kotlin.math.cos(a).toFloat() * dp(5)
+                    val y1 = cy + kotlin.math.sin(a).toFloat() * dp(5)
+                    val x2 = cx + kotlin.math.cos(a).toFloat() * radius
+                    val y2 = cy + kotlin.math.sin(a).toFloat() * radius
+                    paint.color = colors[i]
+                    paint.strokeWidth = dp(3).toFloat()
+                    paint.strokeCap = Paint.Cap.ROUND
+                    canvas.drawLine(x1, y1, x2, y2, paint)
+                    canvas.drawCircle(x2, y2, dp(2).toFloat(), paint)
+                }
+                canvas.restore()
+            }
+        }
+        root.addView(fireworks, LinearLayout.LayoutParams(dp(48), dp(48)).apply { gravity = Gravity.CENTER })
         root.addView(text("Memuat wallpaper…", 14, 0xffcccccc.toInt(), false).apply {
             gravity = Gravity.CENTER
             setPadding(0, dp(12), 0, 0)
