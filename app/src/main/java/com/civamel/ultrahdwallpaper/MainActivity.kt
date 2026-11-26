@@ -139,7 +139,7 @@ class MainActivity : Activity() {
             setPadding(dp(24), dp(24), dp(24), dp(28))
         }
         val logo = ImageView(this).apply {
-            setImageResource(R.mipmap.splash_logo)
+            setImageResource(R.mipmap.launcher_icon)
             scaleType = ImageView.ScaleType.FIT_CENTER
             contentDescription = "Ultra HD Wallpaper"
         }
