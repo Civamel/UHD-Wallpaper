@@ -1634,7 +1634,12 @@ class MainActivity : Activity() {
             setOnClickListener { showSettings() }
         })
         val title = EditText(this).apply { hint = "Judul wallpaper"; setTextColor(fg) }
-        val category = EditText(this).apply { hint = "Kategori, contoh: Nature"; setTextColor(fg) }
+        val manageWallpapers = Button(this).apply {
+            text = "▧   Kelola Wallpaper"
+            isAllCaps = false
+            setOnClickListener { showAdminWallpaperManager() }
+        }
+        root.addView(manageWallpapers)
         val imageUrl = EditText(this).apply {
             hint = "URL gambar / video MP4 (https://...)"
             setTextColor(fg)
@@ -1689,7 +1694,6 @@ class MainActivity : Activity() {
         }
         val save = Button(this).apply { text = "Simpan wallpaper" }
         root.addView(title)
-        root.addView(category)
         root.addView(text("Pilih tag wallpaper (boleh lebih dari 4)", 14, fg, true).apply {
             setPadding(0, dp(16), 0, dp(5))
         })
@@ -1704,13 +1708,13 @@ class MainActivity : Activity() {
         })
         save.setOnClickListener {
             val name = title.text.toString().trim()
-            val group = category.text.toString().trim()
+            val group = selectedTags.firstOrNull() ?: "Abstract"
             val url = imageUrl.text.toString().trim()
             val isLive = wallpaperTypeSpinner.selectedItem.toString() == "live"
             val thumb = if (isLive) url else thumbnailUrl.text.toString().trim().ifBlank { url }
-            if (name.isBlank() || group.isBlank() || !url.startsWith("https://", ignoreCase = true) ||
+            if (name.isBlank() || selectedTags.isEmpty() || !url.startsWith("https://", ignoreCase = true) ||
                 (isLive && !url.substringBefore("?").lowercase().endsWith(".mp4"))) {
-                Toast.makeText(this, if (isLive) "Isi judul, kategori, dan URL MP4 langsung yang valid" else "Isi judul, kategori, dan URL gambar HTTPS yang valid", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, if (isLive) "Isi judul, pilih minimal satu tag, dan masukkan URL MP4 langsung yang valid" else "Isi judul, pilih minimal satu tag, dan masukkan URL gambar HTTPS yang valid", Toast.LENGTH_LONG).show()
                 return@setOnClickListener
             }
             save.isEnabled = false
@@ -1737,7 +1741,6 @@ class MainActivity : Activity() {
                     thumbnailUrls.add(thumb)
                     fullUrls.add(url)
                     title.text.clear()
-                    category.text.clear()
                     selectedTags.clear()
                     for (rowIndex in 0 until tagGrid.childCount) {
                         val row = tagGrid.getChildAt(rowIndex) as? LinearLayout ?: continue
@@ -1758,6 +1761,122 @@ class MainActivity : Activity() {
                 }
         }
         setContentView(ScrollView(this).apply { addView(root) })
+    }
+
+    private fun showAdminWallpaperManager() {
+        val dark = darkMode
+        val bg = if (dark) 0xff121318.toInt() else Color.WHITE
+        val fg = if (dark) 0xfff2f2f5.toInt() else ink
+        val muted = if (dark) 0xffa6a6ad.toInt() else Color.GRAY
+        val tags = listOf("Nature", "City", "Cars", "Technology", "Gaming", "Space", "Minimalist", "Abstract", "AMOLED", "Dark", "3D", "Anime", "Architecture", "Animals", "Girl", "Fantasy", "Superheroes", "Art", "Luxury", "Aesthetic")
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(16), dp(16), dp(20))
+            setBackgroundColor(bg)
+        }
+        root.addView(text("‹   Kelola Wallpaper", 21, fg, true).apply {
+            setPadding(0, 0, 0, dp(14))
+            setOnClickListener { showAdminPanel() }
+        })
+        val status = text("Memuat daftar wallpaper...", 13, muted, false)
+        root.addView(status)
+        val list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        root.addView(list)
+        setContentView(ScrollView(this).apply { addView(root) })
+        FirebaseFirestore.getInstance().collection("wallpapers").get()
+            .addOnSuccessListener { snapshot ->
+                if (isFinishing || isDestroyed) return@addOnSuccessListener
+                list.removeAllViews()
+                status.text = if (snapshot.isEmpty) "Belum ada wallpaper yang diunggah." else "Pilih wallpaper untuk mengedit judul dan tag."
+                for (doc in snapshot.documents) {
+                    val itemTitle = doc.getString("title").orEmpty()
+                    val type = doc.getString("type")?.lowercase() ?: "wallpaper"
+                    val imageUrl = doc.getString("thumbnail")?.takeIf { it.startsWith("https://") } ?: doc.getString("image").orEmpty()
+                    val itemTags = doc.get("tags") as? List<String> ?: emptyList()
+                    val row = LinearLayout(this).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding(dp(8), dp(8), dp(8), dp(8))
+                        background = rounded(if (dark) 0xff20232b.toInt() else 0xfff2f3f6.toInt(), 12)
+                        isClickable = true
+                        isFocusable = true
+                    }
+                    val thumb = ImageView(this).apply {
+                        scaleType = ImageView.ScaleType.CENTER_CROP
+                        setBackgroundColor(if (dark) 0xff343944.toInt() else 0xffe1e4e9.toInt())
+                    }
+                    row.addView(thumb, LinearLayout.LayoutParams(dp(66), dp(82)))
+                    if (type == "live") {
+                        thumb.setImageResource(android.R.drawable.ic_media_play)
+                    } else if (imageUrl.startsWith("https://")) {
+                        loadImage(imageUrl) { bitmap ->
+                            if (bitmap != null && !isFinishing && !isDestroyed) thumb.setImageBitmap(bitmap)
+                        }
+                    }
+                    val details = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        setPadding(dp(12), 0, 0, 0)
+                    }
+                    details.addView(text(itemTitle.ifBlank { "(Tanpa judul)" }, 14, fg, true))
+                    details.addView(text(itemTags.joinToString(" • ").ifBlank { "Belum ada tag" }, 11, muted, false).apply { maxLines = 2 })
+                    details.addView(text(if (type == "live") "LIVE WALLPAPER" else if (itemTags.contains("3D")) "3D / WALLPAPER" else "WALLPAPER", 10, muted, true))
+                    row.addView(details, LinearLayout.LayoutParams(0, -2, 1f))
+                    row.setOnClickListener {
+                        val editTitle = EditText(this).apply { setText(itemTitle); hint = "Judul wallpaper"; setTextColor(fg) }
+                        val selected = itemTags.toMutableSet()
+                        val tagGrid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+                        tags.chunked(2).forEach { pair ->
+                            val line = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+                            pair.forEach { tag ->
+                                val check = CheckBox(this).apply {
+                                    text = tag
+                                    textSize = 13f
+                                    setTextColor(fg)
+                                    isChecked = selected.contains(tag)
+                                    buttonTintList = android.content.res.ColorStateList.valueOf(if (dark) 0xffb76e79.toInt() else blue)
+                                    setOnCheckedChangeListener { _, checked -> if (checked) selected.add(tag) else selected.remove(tag) }
+                                }
+                                line.addView(check, LinearLayout.LayoutParams(0, -2, 1f))
+                            }
+                            tagGrid.addView(line)
+                        }
+                        val editor = LinearLayout(this).apply {
+                            orientation = LinearLayout.VERTICAL
+                            setPadding(dp(4), 0, dp(4), 0)
+                            addView(editTitle)
+                            addView(text("Pilih tag (20 pilihan)", 13, fg, true).apply { setPadding(0, dp(12), 0, dp(5)) })
+                            addView(tagGrid)
+                        }
+                        val dialog = AlertDialog.Builder(this).setTitle("Edit wallpaper")
+                            .setView(ScrollView(this).apply { addView(editor) })
+                            .setNegativeButton("Batal", null).setPositiveButton("Simpan", null).create()
+                        dialog.setOnShowListener {
+                            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                                val newTitle = editTitle.text.toString().trim()
+                                if (newTitle.isBlank() || selected.isEmpty()) {
+                                    Toast.makeText(this, "Judul dan minimal satu tag wajib diisi", Toast.LENGTH_SHORT).show()
+                                    return@setOnClickListener
+                                }
+                                val updatedTags = tags.filter { selected.contains(it) }
+                                dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
+                                doc.reference.update(mapOf("title" to newTitle, "tags" to updatedTags, "category" to (updatedTags.firstOrNull() ?: "Abstract")))
+                                    .addOnSuccessListener {
+                                        Toast.makeText(this, "Judul dan tag berhasil diperbarui", Toast.LENGTH_SHORT).show()
+                                        dialog.dismiss()
+                                        showAdminWallpaperManager()
+                                    }.addOnFailureListener { error ->
+                                        dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
+                                        Toast.makeText(this, "Gagal menyimpan: " + (error.localizedMessage ?: "unknown"), Toast.LENGTH_LONG).show()
+                                    }
+                            }
+                        }
+                        dialog.show()
+                    }
+                    val params = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) }
+                    list.addView(row, params)
+                }
+            }
+            .addOnFailureListener { error -> status.text = "Gagal memuat daftar wallpaper: " + (error.localizedMessage ?: "unknown") }
     }
 
     private fun loadFirestoreWallpapers(onComplete: (() -> Unit)? = null) {
