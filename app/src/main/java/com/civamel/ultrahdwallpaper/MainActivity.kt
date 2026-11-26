@@ -740,7 +740,7 @@ class MainActivity : Activity() {
             }
         }, LinearLayout.LayoutParams(0,dp(48),1f))
         if (!showOnlyFavorites) header.addView(animatedDiamond(dp(34)))
-        listOf("☾","⌕","♡","⚙").forEachIndexed { i,glyph ->
+        listOf("moon-modern","⌕","♡","settings-modern").forEachIndexed { i,glyph ->
             val icon = modernIcon(glyph, 40)
             icon.contentDescription = listOf("Tema","Cari","Favorit","Pengaturan")[i]
             icon.setOnClickListener {
@@ -1450,9 +1450,8 @@ class MainActivity : Activity() {
         root.addView(text("‹   Pengaturan",22,settingsText,true).apply { setOnClickListener { buildHome() } })
         root.addView(space(28)); root.addView(text("Pengaturan",24,settingsText,true)); root.addView(space(12))
         listOf(
-            "♟" to "Notifikasi","♡" to "Favorit","◷" to "Riwayat dilihat","文" to "Bahasa Aplikasi",
-            "▧" to "Pengubah Wallpaper Otomatis","⇩" to "Unduh","▤" to "Wallpaper Penerangan Tepi",
-            "↗" to "Bagikan Aplikasi","☆" to "Nilai kami","✉" to "Umpan Balik","▣" to "Kelola Cache"
+            "bell-modern" to "Notifikasi","♡" to "Favorit","◷" to "Riwayat dilihat","language-modern" to "Bahasa Aplikasi",
+            "⇩" to "Unduh","share-curved" to "Bagikan Aplikasi","☆" to "Nilai kami","✉" to "Umpan Balik","cache-modern" to "Kelola Cache"
         ).forEach { (glyph,item) ->
             val row = LinearLayout(this@MainActivity).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -2488,6 +2487,12 @@ class MainActivity : Activity() {
             canvas.scale(scale / 48f, scale / 48f)
             val p = paint
             when (glyph) {
+                "moon-modern" -> { canvas.drawArc(8f,6f,40f,42f,55f,250f,false,p); canvas.drawArc(17f,6f,43f,36f,45f,250f,false,p) }
+                "settings-modern" -> { for (i in 0..7) { canvas.save(); canvas.rotate(i*45f,24f,24f); canvas.drawRoundRect(20f,3f,28f,13f,2f,2f,p); canvas.restore() }; canvas.drawCircle(24f,24f,16f,p); canvas.drawCircle(24f,24f,6f,p) }
+                "bell-modern" -> { val path=Path().apply { moveTo(10f,35f); cubicTo(15f,30f,13f,22f,15f,15f); cubicTo(19f,5f,29f,5f,33f,15f); cubicTo(35f,22f,33f,30f,38f,35f); close() }; canvas.drawPath(path,p); canvas.drawLine(10f,35f,38f,35f,p); canvas.drawArc(19f,34f,29f,43f,0f,180f,false,p) }
+                "language-modern" -> { canvas.drawCircle(24f,24f,19f,p); canvas.drawOval(15f,5f,33f,43f,p); canvas.drawLine(6f,24f,42f,24f,p); canvas.drawLine(10f,14f,38f,14f,p); canvas.drawLine(10f,34f,38f,34f,p) }
+                "share-curved" -> { val path=Path().apply { moveTo(12f,31f); cubicTo(12f,14f,26f,8f,36f,16f); moveTo(27f,8f); lineTo(36f,16f); lineTo(27f,21f) }; canvas.drawPath(path,p) }
+                "cache-modern" -> { canvas.drawRoundRect(7f,8f,41f,40f,5f,5f,p); canvas.drawLine(7f,17f,41f,17f,p); canvas.drawLine(7f,31f,41f,31f,p); canvas.drawLine(17f,17f,17f,31f,p); canvas.drawLine(31f,17f,31f,31f,p) }
                 "⌕", "🔍" -> {
                     // Clean magnifier outline, matching the supplied header reference.
                     canvas.drawCircle(20f, 20f, 13f, p)
