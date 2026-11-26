@@ -2000,7 +2000,7 @@ class MainActivity : Activity() {
                                         val index = itemIds.indexOf(doc.id)
                                         if (index >= 0) {
                                             names[index] = newTitle
-                                            itemTags.set(index, updatedTags)
+                                            this@MainActivity.itemTags.set(index, updatedTags)
                                             itemCategories[index] = ""
                                         }
                                         Toast.makeText(this, "Judul dan tag berhasil diperbarui", Toast.LENGTH_SHORT).show()
