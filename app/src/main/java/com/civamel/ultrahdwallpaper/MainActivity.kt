@@ -47,7 +47,7 @@ class MainActivity : Activity() {
     private val blue = Color.rgb(183, 110, 121)
     private val purple = Color.rgb(158, 67, 238)
     private val ink = Color.rgb(28, 28, 30)
-    private val tabs = listOf("Home", "Live", "3D", "Wallpaper", "Double", "Charging Live")
+    private val tabs = listOf("Home", "Live", "3D", "Wallpaper")
     private val names = mutableListOf<String>()
     private val palettes = listOf(
         intArrayOf(0xff09090f.toInt(),0xffb76e79.toInt()), intArrayOf(0xfff5d8b4.toInt(),0xff00a9c7.toInt()),
@@ -888,8 +888,6 @@ class MainActivity : Activity() {
             val tabMatch = when (selectedTab) {
                 "Live" -> type == "live"
                 "Parallax" -> type == "parallax"
-                "Double" -> type == "double"
-                "Charging Live" -> type == "charging"
                 "Wallpaper" -> type == "wallpaper"
                 else -> true
             }
