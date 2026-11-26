@@ -1360,12 +1360,11 @@ class MainActivity : Activity() {
                 try {
                     bitmap = decodeScreenSizedWallpaper(file)
                     val manager = WallpaperManager.getInstance(this@MainActivity)
-                    // WallpaperManager does not expose launcher offset controls.
-                    // Keep the bitmap cropped to the display viewport; launcher parallax
-                    // is controlled by the home-screen app, not by this activity.
+                    // Use the same null crop hint as the downloaded-wallpaper path.
+                    // Passing the full bitmap as an explicit crop hint can trigger a
+                    // different crop/offset treatment in wallpaper providers.
                     if (Build.VERSION.SDK_INT >= 24) {
-                        val fullBitmap = Rect(0, 0, bitmap.width, bitmap.height)
-                        manager.setBitmap(bitmap, fullBitmap, true, flags)
+                        manager.setBitmap(bitmap, null, true, flags)
                     } else {
                         manager.setBitmap(bitmap)
                     }
@@ -2045,13 +2044,7 @@ class MainActivity : Activity() {
                     bitmap = decodeScreenSizedWallpaper(file)
                     val manager = WallpaperManager.getInstance(this@MainActivity)
                     if (Build.VERSION.SDK_INT >= 24) {
-                        manager.setWallpaperOffsetSteps(0f, 0f)
                         manager.setBitmap(bitmap, null, true, flags)
-                        window.decorView.post {
-                            try {
-                                manager.setWallpaperOffsets(window.decorView.windowToken, 0.5f, 0.5f)
-                            } catch (_: Exception) { }
-                        }
                     } else {
                         manager.setBitmap(bitmap)
                     }
