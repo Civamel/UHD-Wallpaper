@@ -82,7 +82,7 @@ class MainActivity : Activity() {
             billingClient.queryProductDetailsAsync(params) { result, details ->
                 if (result.responseCode == BillingClient.BillingResponseCode.OK) {
                     billingProducts.clear()
-                    details.productDetailsList.forEach { billingProducts[it.productId] = it }
+                    details.forEach { billingProducts[it.productId] = it }
                 }
                 runOnUiThread(onLoaded)
             }
