@@ -59,6 +59,7 @@ class MainActivity : Activity() {
         intArrayOf(0xff062f25.toInt(),0xff9bcf80.toInt()), intArrayOf(0xff20232a.toInt(),0xff656a73.toInt())
     )
     private val itemIds = mutableListOf<String>()
+    private val proWallpaperIds = mutableSetOf<String>()
     private val legacyFavoriteTitles = mutableSetOf<String>()
     private val thumbnailUrls = mutableListOf<String>()
     private val fullUrls = mutableListOf<String>()
@@ -1440,6 +1441,7 @@ class MainActivity : Activity() {
     }
 
     private fun applyWallpaper(index: Int) {
+        if (isProWallpaper(index)) { showProUnavailableDialog(); return }
         if (index !in fullUrls.indices) {
             Toast.makeText(this, "Image unavailable", Toast.LENGTH_LONG).show()
             return
@@ -2189,7 +2191,22 @@ class MainActivity : Activity() {
     private var pendingDownloadTitle: String = ""
     private val createImageRequest = 701
 
+    private fun isProWallpaper(index: Int): Boolean = itemIds.getOrNull(index)?.let { proWallpaperIds.contains(it) } == true
+
+    private fun showProUnavailableDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Get All Wallpaper Pro")
+            .setMessage("Wallpaper ini termasuk konten Pro. Pilih paket untuk melihat pilihan langganan atau lifetime. Pembelian akan tersedia setelah Google Play Billing disiapkan.")
+            .setItems(arrayOf("Bulanan — belum tersedia", "Tahunan — belum tersedia", "Lifetime — belum tersedia")) { dialog, _ ->
+                Toast.makeText(this, "Pembelian belum tersedia. Google Play Billing akan ditambahkan setelah Play Console siap.", Toast.LENGTH_LONG).show()
+                dialog.dismiss()
+            }
+            .setNegativeButton("Tutup", null)
+            .show()
+    }
+
     private fun requestDownload(index: Int) {
+        if (isProWallpaper(index)) { showProUnavailableDialog(); return }
         val url = fullUrls.getOrNull(index)
         if (url.isNullOrBlank()) {
             Toast.makeText(this, "Image unavailable", Toast.LENGTH_LONG).show()
@@ -2946,6 +2963,7 @@ class MainActivity : Activity() {
         }
     }
     private fun applyLiveWallpaper(index: Int) {
+        if (isProWallpaper(index)) { showProUnavailableDialog(); return }
         val liveUrl = fullUrls.getOrNull(index)
         if (liveUrl.isNullOrBlank()) {
             Toast.makeText(this@MainActivity, "Gambar live wallpaper belum tersedia", Toast.LENGTH_LONG).show()
@@ -3231,6 +3249,7 @@ class MainActivity : Activity() {
             if (itemIds.contains(id)) continue
             names.add(title)
             itemIds.add(id)
+            if (item.optBoolean("isPro", false)) proWallpaperIds.add(id)
             itemCategories.add(item.optString("category", "Abstract").ifBlank { "Abstract" })
             itemTypes.add(item.optString("type", "wallpaper").lowercase())
             val tagArray = item.optJSONArray("tags")
