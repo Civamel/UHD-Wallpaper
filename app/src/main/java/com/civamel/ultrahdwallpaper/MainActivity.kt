@@ -2086,12 +2086,17 @@ class MainActivity : Activity() {
                                 ))
                                     .addOnSuccessListener {
                                         val index = itemIds.indexOf(doc.id)
+                                        if (proActive.isChecked) {
+                                            proWallpaperIds.add(doc.id)
+                                        } else {
+                                            proWallpaperIds.remove(doc.id)
+                                        }
                                         if (index >= 0) {
                                             names[index] = newTitle
                                             this@MainActivity.itemTags.set(index, updatedTags)
                                             itemCategories[index] = ""
                                         }
-                                        Toast.makeText(this, "Judul dan tag berhasil diperbarui", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(this, "Judul, tag, dan status Pro berhasil diperbarui", Toast.LENGTH_SHORT).show()
                                         dialog.dismiss()
                                         showAdminWallpaperManager()
                                     }.addOnFailureListener { error ->
