@@ -2049,9 +2049,10 @@ class MainActivity : Activity() {
                                             .addOnSuccessListener {
                                                 val index = itemIds.indexOf(doc.id)
                                                 if (index >= 0) {
-                                                    names.removeAt(index); itemIds.removeAt(index)
-                                                    itemCategories.removeAt(index); itemTypes.removeAt(index)
-                                                    itemTags.removeAt(index); thumbnailUrls.removeAt(index); fullUrls.removeAt(index)
+                                                    names.clear(); itemIds.clear(); itemCategories.clear()
+                                                    itemTypes.clear(); itemTags.clear()
+                                                    thumbnailUrls.clear(); fullUrls.clear()
+                                                    loadFirestoreWallpapers()
                                                 }
                                                 Toast.makeText(this, "Wallpaper berhasil dihapus", Toast.LENGTH_SHORT).show()
                                                 dialog.dismiss()
