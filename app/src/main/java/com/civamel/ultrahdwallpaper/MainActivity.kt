@@ -249,7 +249,7 @@ class MainActivity : Activity() {
             .filter { it in wallpaperTagChoices }.distinct().sorted()
     private val wallpaperTagChoices = listOf(
         "Nature", "City", "Cars", "Technology", "Gaming", "Space", "Minimalist",
-        "Abstract", "AMOLED", "Dark", "3D", "Anime", "Architecture", "Animals",
+        "Abstract", "Dark", "3D", "Anime", "Architecture", "Animals",
         "Girl", "Fantasy", "Superheroes", "Foods", "Luxury", "Aesthetic"
     )
     private val itemCategories = mutableListOf<String>()
@@ -1043,7 +1043,7 @@ class MainActivity : Activity() {
             val tagRow = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
             val popularTags = listOf(
                 "Nature", "City", "Cars", "Technology", "Gaming",
-                "Space", "Minimalist", "Abstract", "AMOLED", "Dark",
+                "Space", "Minimalist", "Abstract", "Foods", "Dark",
                 "3D", "Anime", "Architecture", "Animals", "Girl",
                 "Fantasy", "Superheroes", "Art", "Luxury", "Aesthetic"
             )
@@ -1999,7 +1999,7 @@ class MainActivity : Activity() {
         val bg = if (dark) 0xff121318.toInt() else Color.WHITE
         val fg = if (dark) 0xfff2f2f5.toInt() else ink
         val muted = if (dark) 0xffa6a6ad.toInt() else Color.GRAY
-        val tags = listOf("Nature", "City", "Cars", "Technology", "Gaming", "Space", "Minimalist", "Abstract", "AMOLED", "Dark", "3D", "Anime", "Architecture", "Animals", "Girl", "Fantasy", "Superheroes", "Foods", "Luxury", "Aesthetic")
+        val tags = listOf("Nature", "City", "Cars", "Technology", "Gaming", "Space", "Minimalist", "Abstract", "Dark", "3D", "Anime", "Architecture", "Animals", "Girl", "Fantasy", "Superheroes", "Foods", "Luxury", "Aesthetic")
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(16), dp(16), dp(20))
