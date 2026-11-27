@@ -2016,17 +2016,53 @@ class MainActivity : Activity() {
                             }
                             tagGrid.addView(line)
                         }
+                        val proActive = CheckBox(this).apply {
+                            text = "Pro Aktif"
+                            textSize = 14f
+                            setTextColor(fg)
+                            isChecked = doc.getBoolean("isPro") == true
+                            buttonTintList = android.content.res.ColorStateList.valueOf(if (dark) 0xffb76e79.toInt() else blue)
+                        }
                         val editor = LinearLayout(this).apply {
                             orientation = LinearLayout.VERTICAL
                             setPadding(dp(4), 0, dp(4), 0)
                             addView(editTitle)
+                            addView(proActive)
                             addView(text("Pilih tag (20 pilihan)", 13, fg, true).apply { setPadding(0, dp(12), 0, dp(5)) })
                             addView(tagGrid)
                         }
                         val dialog = AlertDialog.Builder(this).setTitle("Edit wallpaper")
                             .setView(ScrollView(this).apply { addView(editor) })
-                            .setNegativeButton("Batal", null).setPositiveButton("Simpan", null).create()
+                            .setNegativeButton("Batal", null)
+                            .setNeutralButton("Hapus", null)
+                            .setPositiveButton("Simpan", null).create()
                         dialog.setOnShowListener {
+                            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setTextColor(0xffd32f2f.toInt())
+                            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                                AlertDialog.Builder(this)
+                                    .setTitle("Hapus wallpaper?")
+                                    .setMessage("Wallpaper ini akan dihapus dari katalog.")
+                                    .setNegativeButton("Batal", null)
+                                    .setPositiveButton("Hapus") { _, _ ->
+                                        dialog.getButton(AlertDialog.BUTTON_NEUTRAL).isEnabled = false
+                                        doc.reference.delete()
+                                            .addOnSuccessListener {
+                                                val index = itemIds.indexOf(doc.id)
+                                                if (index >= 0) {
+                                                    names.removeAt(index); itemIds.removeAt(index)
+                                                    itemCategories.removeAt(index); itemTypes.removeAt(index)
+                                                    itemTags.removeAt(index); thumbnailUrls.removeAt(index); fullUrls.removeAt(index)
+                                                }
+                                                Toast.makeText(this, "Wallpaper berhasil dihapus", Toast.LENGTH_SHORT).show()
+                                                dialog.dismiss()
+                                                showAdminWallpaperManager()
+                                            }
+                                            .addOnFailureListener { error ->
+                                                dialog.getButton(AlertDialog.BUTTON_NEUTRAL).isEnabled = true
+                                                Toast.makeText(this, "Gagal menghapus: " + (error.localizedMessage ?: "unknown"), Toast.LENGTH_LONG).show()
+                                            }
+                                    }.show()
+                            }
                             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                                 val newTitle = editTitle.text.toString().trim()
                                 if (newTitle.isBlank() || selected.isEmpty()) {
@@ -2039,7 +2075,8 @@ class MainActivity : Activity() {
                                     "title" to newTitle,
                                     "tags" to updatedTags,
                                     "category" to com.google.firebase.firestore.FieldValue.delete(),
-                                    "tagSchemaVersion" to 2
+                                    "tagSchemaVersion" to 2,
+                                    "isPro" to proActive.isChecked
                                 ))
                                     .addOnSuccessListener {
                                         val index = itemIds.indexOf(doc.id)
