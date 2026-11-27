@@ -1145,7 +1145,6 @@ class MainActivity : Activity() {
                     }
                 }
             }
-            if(index%5==1) cell.addView(ImageView(this@MainActivity).apply { setImageResource(R.drawable.crown_premium); scaleType=ImageView.ScaleType.FIT_CENTER; setPadding(dp(5),dp(4),dp(8),0); contentDescription="Pro" },FrameLayout.LayoutParams(dp(28),dp(28),Gravity.TOP or Gravity.END))
             val params=GridLayout.LayoutParams().apply { width=tileWidthPx; height=tileHeightPx; setMargins(dp(2),dp(2),dp(2),dp(2)) }
             grid.addView(cell,params)
         }
