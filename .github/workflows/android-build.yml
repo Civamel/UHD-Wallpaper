@@ -1,4 +1,4 @@
-name: Android Signed Release APK and AAB
+name: Android Signed Release APK
 
 on:
   push:
@@ -74,26 +74,18 @@ jobs:
           print(f"Generated {target} ({target.stat().st_size} bytes)")
           PY
 
-      - name: Build signed release APK and AAB
+      - name: Build signed release APK
         env:
           ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/android-signing/release-key.jks
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: gradle --no-daemon :app:assembleRelease :app:bundleRelease
+        run: gradle --no-daemon :app:assembleRelease
 
-      - name: Package APK and AAB into one ZIP
-        run: |
-          mkdir -p release-package
-          cp app/build/outputs/apk/release/app-release.apk release-package/Ultra-HD-Wallpaper-release.apk
-          cp app/build/outputs/bundle/release/app-release.aab release-package/Ultra-HD-Wallpaper-release.aab
-          cd release-package
-          zip ../Ultra-HD-Wallpaper-release-APK-AAB.zip ./*
-
-      - name: Upload release ZIP
+      - name: Upload release APK
         uses: actions/upload-artifact@v4
         with:
-          name: Ultra-HD-Wallpaper-release-APK-AAB
-          path: Ultra-HD-Wallpaper-release-APK-AAB.zip
+          name: Ultra-HD-Wallpaper-release-APK
+          path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 14
