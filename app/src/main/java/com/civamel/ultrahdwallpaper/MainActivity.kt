@@ -2197,8 +2197,10 @@ class MainActivity : Activity() {
                 if (isFinishing || isDestroyed) { onComplete?.invoke(); return@addOnSuccessListener }
                 if (snapshot.isEmpty) { onComplete?.invoke(); return@addOnSuccessListener }
                 var changed = false
+                val remoteProIds = mutableSetOf<String>()
                 for (doc in snapshot.documents) {
                     val id = doc.getString("id") ?: doc.id
+                    if (doc.getBoolean("isPro") == true) remoteProIds.add(id)
                     val title = doc.getString("title")?.trim().orEmpty()
                     val thumb = doc.getString("thumbnail")?.trim().orEmpty()
                     val image = doc.getString("image")?.trim().orEmpty()
@@ -2227,6 +2229,11 @@ class MainActivity : Activity() {
                         thumbnailUrls.add(thumb)
                         fullUrls.add(image)
                     }
+                    changed = true
+                }
+                if (proWallpaperIds != remoteProIds) {
+                    proWallpaperIds.clear()
+                    proWallpaperIds.addAll(remoteProIds)
                     changed = true
                 }
                 if (changed) {
