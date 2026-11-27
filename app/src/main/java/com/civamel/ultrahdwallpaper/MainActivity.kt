@@ -31,11 +31,79 @@ import java.util.concurrent.Executors
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
+import com.android.billingclient.api.BillingClient
+import com.android.billingclient.api.BillingClientStateListener
+import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.ProductDetails
+import com.android.billingclient.api.QueryProductDetailsParams
+import com.android.billingclient.api.BillingFlowParams
+import com.android.billingclient.api.PurchasesUpdatedListener
 
 class MainActivity : Activity() {
     // Add the separately created production AdMob IDs after the account owner provides them.
     private val ADMOB_APP_ID = "ca-app-pub-8497758897094065~8774727457"
     private val ADMOB_BANNER_ID = "ca-app-pub-8497758897094065/3522400771"
+    // Replace these placeholder IDs with products created in Play Console before release.
+    private val proProductIds = listOf("ultrahd_pro_monthly", "ultrahd_pro_yearly", "ultrahd_pro_lifetime")
+    private val billingProducts = mutableMapOf<String, ProductDetails>()
+    private var billingReady = false
+    private val billingClient: BillingClient by lazy {
+        BillingClient.newBuilder(this)
+            .setListener(PurchasesUpdatedListener { result, purchases ->
+                if (result.responseCode == BillingClient.BillingResponseCode.OK && !purchases.isNullOrEmpty()) {
+                    Toast.makeText(this, "Pembelian diterima. Akses Pro menunggu verifikasi aman.", Toast.LENGTH_LONG).show()
+                    // Do not grant Pro locally; server-side purchase verification is required.
+                } else if (result.responseCode != BillingClient.BillingResponseCode.USER_CANCELED) {
+                    Toast.makeText(this, "Pembelian belum dapat diproses: ${result.debugMessage}", Toast.LENGTH_LONG).show()
+                }
+            })
+            .enablePendingPurchases()
+            .build()
+    }
+    private fun connectBilling(onReady: (() -> Unit)? = null) {
+        if (billingReady) { onReady?.invoke(); return }
+        billingClient.startConnection(object : BillingClientStateListener {
+            override fun onBillingSetupFinished(result: BillingResult) {
+                billingReady = result.responseCode == BillingClient.BillingResponseCode.OK
+                if (billingReady) onReady?.invoke()
+            }
+            override fun onBillingServiceDisconnected() { billingReady = false }
+        })
+    }
+    private fun loadProProducts(onLoaded: () -> Unit) {
+        connectBilling {
+            val products = proProductIds.mapIndexed { index, id ->
+                QueryProductDetailsParams.Product.newBuilder()
+                    .setProductId(id)
+                    .setProductType(if (index == 2) BillingClient.ProductType.INAPP else BillingClient.ProductType.SUBS)
+                    .build()
+            }
+            val params = QueryProductDetailsParams.newBuilder().setProductList(products).build()
+            billingClient.queryProductDetailsAsync(params) { result, details ->
+                if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                    billingProducts.clear()
+                    details.productDetailsList.forEach { billingProducts[it.productId] = it }
+                }
+                runOnUiThread(onLoaded)
+            }
+        }
+    }
+    private fun launchProPurchase(productId: String) {
+        val detail = billingProducts[productId]
+        if (!billingReady || detail == null) {
+            Toast.makeText(this, "Paket belum tersedia. Pastikan produk sudah dibuat di Play Console.", Toast.LENGTH_LONG).show()
+            return
+        }
+        val paramsBuilder = BillingFlowParams.ProductDetailsParams.newBuilder().setProductDetails(detail)
+        if (detail.productType == BillingClient.ProductType.SUBS) {
+            val offer = detail.subscriptionOfferDetails?.firstOrNull()
+            if (offer == null) { Toast.makeText(this, "Penawaran langganan belum tersedia.", Toast.LENGTH_LONG).show(); return }
+            paramsBuilder.setOfferToken(offer.offerToken)
+        }
+        val flow = BillingFlowParams.newBuilder()
+            .setProductDetailsParamsList(listOf(paramsBuilder.build())).build()
+        billingClient.launchBillingFlow(this, flow)
+    }
     private data class ParsedCatalog(
         val names: MutableList<String>,
         val ids: MutableList<String>,
@@ -2207,11 +2275,16 @@ class MainActivity : Activity() {
     private fun isProWallpaper(index: Int): Boolean = itemIds.getOrNull(index)?.let { proWallpaperIds.contains(it) } == true
 
     private fun showProUnavailableDialog() {
+        val labels = arrayOf("Bulanan", "Tahunan", "Lifetime")
         AlertDialog.Builder(this)
             .setTitle("Get All Wallpaper Pro")
-            .setMessage("Wallpaper ini termasuk konten Pro. Pilih paket untuk melihat pilihan langganan atau lifetime. Pembelian akan tersedia setelah Google Play Billing disiapkan.")
-            .setItems(arrayOf("Bulanan — belum tersedia", "Tahunan — belum tersedia", "Lifetime — belum tersedia")) { dialog, _ ->
-                Toast.makeText(this, "Pembelian belum tersedia. Google Play Billing akan ditambahkan setelah Play Console siap.", Toast.LENGTH_LONG).show()
+            .setMessage("Pilih paket Pro. Harga dan ketersediaan ditampilkan oleh Google Play.")
+            .setItems(labels) { dialog, which ->
+                val id = proProductIds[which]
+                loadProProducts {
+                    if (billingProducts.containsKey(id)) launchProPurchase(id)
+                    else Toast.makeText(this, "Produk belum ditemukan di Google Play. ID sementara: $id", Toast.LENGTH_LONG).show()
+                }
                 dialog.dismiss()
             }
             .setNegativeButton("Tutup", null)
