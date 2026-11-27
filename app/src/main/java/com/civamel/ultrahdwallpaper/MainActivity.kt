@@ -875,7 +875,7 @@ class MainActivity : Activity() {
                 setLineSpacing(0f, 0.9f)
             }
         }, LinearLayout.LayoutParams(0,dp(48),1f))
-        if (!showOnlyFavorites) header.addView(animatedDiamond(dp(34)))
+        if (!showOnlyFavorites) header.addView(animatedDiamond(dp(34)).apply { setOnClickListener { showProUnavailableDialog() } })
         listOf("moon-soft","⌕","♡","gear-filled").forEachIndexed { i,glyph ->
             val icon = modernIcon(glyph, 40)
             icon.contentDescription = listOf("Theme","Search","Favorites","Settings")[i]
@@ -907,7 +907,7 @@ class MainActivity : Activity() {
         val scroll=ScrollView(this@MainActivity)
         val content=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.VERTICAL; setBackgroundColor(pageBg) }
         if(promoVisible) {
-            val promo=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(dp(14),0,dp(12),0); background=rounded(0xff70434b.toInt(),28) }
+            val promo=LinearLayout(this@MainActivity).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; setPadding(dp(14),0,dp(12),0); background=rounded(0xff70434b.toInt(),28); isClickable=true; setOnClickListener { showProUnavailableDialog() } }
             promo.addView(ImageView(this@MainActivity).apply { setImageResource(R.drawable.crown_premium); scaleType=ImageView.ScaleType.FIT_CENTER; setPadding(0,0,dp(7),0); contentDescription="Pro" },LinearLayout.LayoutParams(dp(29),dp(36)))
             promo.addView(text("Get All Wallpaper Pro!",17,Color.WHITE,true).apply { gravity = Gravity.CENTER },LinearLayout.LayoutParams(0,dp(36),1f))
             promo.addView(text("×",25,Color.WHITE,false).apply { gravity=Gravity.CENTER; setOnClickListener { promoVisible=false; buildHome() } },LinearLayout.LayoutParams(dp(30),dp(34)))
@@ -1144,6 +1144,15 @@ class MainActivity : Activity() {
                         }
                     }
                 }
+            }
+            if (isProWallpaper(index)) {
+                cell.addView(ImageView(this@MainActivity).apply {
+                    setImageResource(R.drawable.crown_premium)
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    contentDescription = "Pro wallpaper"
+                    setPadding(dp(3), dp(3), dp(3), dp(3))
+                    setBackground(rounded(0xcc000000.toInt(), 10))
+                }, FrameLayout.LayoutParams(dp(30), dp(30), Gravity.TOP or Gravity.END).apply { setMargins(0, dp(6), dp(6), 0) })
             }
             val params=GridLayout.LayoutParams().apply { width=tileWidthPx; height=tileHeightPx; setMargins(dp(2),dp(2),dp(2),dp(2)) }
             grid.addView(cell,params)
