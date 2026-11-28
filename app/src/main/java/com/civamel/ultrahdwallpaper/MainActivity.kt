@@ -1894,7 +1894,7 @@ class MainActivity : Activity() {
         }
         val tagChoices = listOf(
             "Nature", "City", "Cars", "Technology", "Gaming",
-            "Space", "Minimalist", "Abstract", "AMOLED", "Dark",
+            "Space", "Minimalist", "Abstract", "Foods", "Dark",
             "3D", "Anime", "Architecture", "Animals", "Girl",
             "Fantasy", "Superheroes", "Art", "Luxury", "Aesthetic"
         )
