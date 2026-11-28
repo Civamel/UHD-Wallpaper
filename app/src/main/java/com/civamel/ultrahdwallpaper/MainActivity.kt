@@ -148,7 +148,6 @@ class MainActivity : Activity() {
     private var selectedCategory = "All"
     private var showOnlyFavorites = false
     private var visibleItemLimit = 24
-                        catalogPage = 0
     private var catalogPage = 0
     private val slideHandler = Handler(Looper.getMainLooper())
     private var categorySlideRunnable: Runnable? = null
