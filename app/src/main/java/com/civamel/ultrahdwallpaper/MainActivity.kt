@@ -148,6 +148,8 @@ class MainActivity : Activity() {
     private var selectedCategory = "All"
     private var showOnlyFavorites = false
     private var visibleItemLimit = 24
+                        catalogPage = 0
+    private var catalogPage = 0
     private val slideHandler = Handler(Looper.getMainLooper())
     private var categorySlideRunnable: Runnable? = null
     private var downloadSortMode = "Name A-Z"
@@ -385,6 +387,7 @@ class MainActivity : Activity() {
                         preferences.edit().putString("selected_wallpaper_tab", selectedTab).apply()
                         showOnlyFavorites = false
                         visibleItemLimit = 24
+                        catalogPage = 0
                         buildHome()
                     }
                 }
@@ -416,6 +419,7 @@ class MainActivity : Activity() {
                 .putString("selected_wallpaper_tab", selectedTab)
                 .apply()
             visibleItemLimit = 24
+                        catalogPage = 0
             buildHome()
             return
         }
@@ -964,6 +968,7 @@ class MainActivity : Activity() {
                     preferences.edit().putString("selected_wallpaper_tab", selectedTab).apply()
                     showOnlyFavorites = false
                     visibleItemLimit = 24
+                        catalogPage = 0
                     buildHome()
                 }
             }
@@ -1002,6 +1007,7 @@ class MainActivity : Activity() {
                         selectedTab = "Wallpaper"
                         showOnlyFavorites = false
                         visibleItemLimit = 24
+                        catalogPage = 0
                         buildHome()
                     }
                 }
@@ -1052,7 +1058,8 @@ class MainActivity : Activity() {
                     gravity = Gravity.CENTER
                     setPadding(dp(10), dp(3), dp(10), dp(3))
                     background = rounded(0xffffe8ee.toInt(), 16)
-                    setOnClickListener { searchQuery = tag; showOnlyFavorites = false; visibleItemLimit = 24; buildHome() }
+                    setOnClickListener { searchQuery = tag; showOnlyFavorites = false; visibleItemLimit = 24
+                        catalogPage = 0; buildHome() }
                 }, LinearLayout.LayoutParams(-2, dp(23)).apply { setMargins(dp(2), 0, dp(5), 0) })
             }
             tagScroll.addView(tagRow)
@@ -1065,6 +1072,7 @@ class MainActivity : Activity() {
                 sortMode = listOf("Paling populer", "Newest", "A-Z", "Acak")[w]
                 preferences.edit().putString("wallpaper_sort_mode", sortMode).apply()
                 visibleItemLimit = 24
+                        catalogPage = 0
                 buildHome()
             }.show()
         }}
@@ -1146,8 +1154,11 @@ class MainActivity : Activity() {
                 content.addView(emptyState, LinearLayout.LayoutParams(-1, -2))
             }
         }
+        val pageSize = 24
+        val pageStart = catalogPage * pageSize
+        val pageIndexes = visibleIndexes.drop(pageStart).take(pageSize)
         val liveTilePlayers = mutableListOf<Pair<VideoView, FrameLayout>>()
-        visibleIndexes.take(visibleItemLimit).forEach { index ->
+        pageIndexes.forEach { index ->
             val name = names[index]
             val cell=FrameLayout(this@MainActivity)
             val isLiveTile = itemTypes.getOrNull(index) == "live"
@@ -1234,7 +1245,7 @@ class MainActivity : Activity() {
                         if (video.tag == null) {
                             video.tag = "loading"
                             val tileIndex = liveTilePlayers.indexOfFirst { it.first === video }
-                            val sourceIndex = visibleIndexes.take(visibleItemLimit).filter { itemTypes.getOrNull(it) == "live" }.getOrNull(tileIndex)
+                            val sourceIndex = pageIndexes.filter { itemTypes.getOrNull(it) == "live" }.getOrNull(tileIndex)
                             val sourceUrl = sourceIndex?.let { fullUrls.getOrNull(it) }.orEmpty()
                             if (sourceUrl.isNotBlank()) video.setVideoURI(Uri.parse(sourceUrl))
                         } else if (video.tag == true && !video.isPlaying) {
@@ -1248,27 +1259,41 @@ class MainActivity : Activity() {
         }
         scroll.setOnScrollChangeListener { _, _, _, _, _ -> updateVisibleLiveTiles() }
         scroll.post { updateVisibleLiveTiles() }
-        if (visibleIndexes.size > visibleItemLimit || hasMoreCatalogShards()) {
-            val hasVisibleRemainder = visibleIndexes.size > visibleItemLimit
-            val remaining = (visibleIndexes.size - visibleItemLimit).coerceAtLeast(0)
-            val moreButton = Button(this@MainActivity).apply {
-                text = if (shardLoading) "Loading catalog page…" else "Next"
-                isAllCaps = false
-                isEnabled = !shardLoading
-                setTextColor(Color.WHITE)
-                background = rounded(0xff70434b.toInt(), 28)
-                setOnClickListener {
-                    if (visibleIndexes.size > visibleItemLimit) {
-                        visibleItemLimit += 24
-                        buildHome()
-                    } else {
-                        loadNextCatalogShard()
-                    }
-                }
+        val hasPreviousPage = catalogPage > 0
+        val hasNextPage = visibleIndexes.size > (catalogPage + 1) * pageSize || hasMoreCatalogShards()
+        if (hasPreviousPage || hasNextPage || shardLoading) {
+            val pageControls = LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER
+                setPadding(dp(12), dp(12), dp(12), dp(18))
             }
-            content.addView(moreButton, LinearLayout.LayoutParams(-1, dp(35)).apply {
-                setMargins(dp(18), dp(14), dp(18), dp(18))
-            })
+            if (hasPreviousPage) {
+                pageControls.addView(Button(this@MainActivity).apply {
+                    text = "Sebelumnya"
+                    isAllCaps = false
+                    setTextColor(Color.WHITE)
+                    background = rounded(0xff70434b.toInt(), 24)
+                    setOnClickListener { catalogPage = (catalogPage - 1).coerceAtLeast(0); buildHome() }
+                }, LinearLayout.LayoutParams(0, dp(40), 1f).apply { setMargins(dp(4), 0, dp(4), 0) })
+            }
+            if (hasNextPage || shardLoading) {
+                pageControls.addView(Button(this@MainActivity).apply {
+                    text = if (shardLoading) "Memuat…" else "Next"
+                    isAllCaps = false
+                    isEnabled = !shardLoading
+                    setTextColor(Color.WHITE)
+                    background = rounded(0xff70434b.toInt(), 24)
+                    setOnClickListener {
+                        if (visibleIndexes.size > (catalogPage + 1) * pageSize) {
+                            catalogPage += 1
+                            buildHome()
+                        } else if (hasMoreCatalogShards()) {
+                            loadNextCatalogShard()
+                        }
+                    }
+                }, LinearLayout.LayoutParams(0, dp(40), 1f).apply { setMargins(dp(4), 0, dp(4), 0) })
+            }
+            content.addView(pageControls, LinearLayout.LayoutParams(-1, -2))
         }
         scroll.addView(content)
         val swipeRefresh = SwipeRefreshLayout(this@MainActivity).apply {
@@ -2791,6 +2816,7 @@ class MainActivity : Activity() {
             .putString("selected_wallpaper_tab", selectedTab)
             .apply()
         visibleItemLimit = 24
+                        catalogPage = 0
         buildHome()
     }
     private fun showCategories(){
@@ -2830,6 +2856,7 @@ class MainActivity : Activity() {
                         .putString("selected_wallpaper_tab", selectedTab)
                         .apply()
                     visibleItemLimit = 24
+                        catalogPage = 0
                     showOnlyFavorites = false
                     buildHome()
                 }
@@ -3376,6 +3403,7 @@ class MainActivity : Activity() {
             remoteCatalogIndex = index
             loadedShardCount = loaded
             visibleItemLimit = 24
+                        catalogPage = 0
             buildHome()
         } catch (_: Exception) {
             // Keep the previously loaded bundled or legacy cache when sharded cache is invalid.
@@ -3491,6 +3519,7 @@ class MainActivity : Activity() {
                 appendCatalogItems(result.second)
                 loadedShardCount = result.first.shards.size
                 visibleItemLimit = 24
+                        catalogPage = 0
                 buildHome()
             }
         }.start()
